@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math/rand"
 	"net/http"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
@@ -53,6 +56,13 @@ var manager = ClientManager{
 	clients: make(map[string]*Client),
 }
 
+// --- Constants ---
+const (
+	WaterMovePenalty = 500 * time.Millisecond
+	BaseMoveCooldown = 100 * time.Millisecond
+	WorldSize        = 50 // Generates a world from -50 to +50
+)
+
 // --- Message Structs ---
 type WebSocketMessage struct {
 	Type    string          `json:"type"`
@@ -63,16 +73,54 @@ type MovePayload struct {
 	Direction string `json:"direction"`
 }
 
-// --- NEW: Structs for initial state message ---
 type PlayerState struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
+	X int `json:"x"`
+	Y int `json:"y"`
 }
 
 type InitialStateMessage struct {
 	Type     string                 `json:"type"`
 	PlayerId string                 `json:"playerId"`
 	Players  map[string]PlayerState `json:"players"`
+	World    map[string]string      `json:"world"`
+}
+
+func generateWorld() {
+	log.Println("Generating world terrain...")
+	worldKey := "world:zone:0"
+
+	// Check if world already exists to avoid regeneration on restart
+	if rdb.Exists(ctx, worldKey).Val() > 0 {
+		log.Println("World already exists in Redis. Skipping generation.")
+		return
+	}
+
+	pipe := rdb.Pipeline()
+	for x := -WorldSize; x <= WorldSize; x++ {
+		for y := -WorldSize; y <= WorldSize; y++ {
+			coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
+			noise := rand.Float64()
+			var terrainType string
+			if noise > 0.95 {
+				terrainType = "rock"
+			} else if noise > 0.90 {
+				terrainType = "tree"
+			} else if noise > 0.88 {
+				terrainType = "water"
+			} else {
+				terrainType = "ground"
+			}
+			pipe.HSet(ctx, worldKey, coordKey, terrainType)
+		}
+	}
+	// Ensure spawn point is clear
+	pipe.HSet(ctx, worldKey, "0,0", "ground")
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		log.Fatalf("Failed to generate world: %v", err)
+	}
+	log.Println("World generation complete.")
 }
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -87,15 +135,15 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	manager.Add(client)
 	log.Printf("Player %s connected.", playerID)
 
-	spawnX, spawnY := 0.0, 0.0
+	spawnX, spawnY := 0, 0
 	playerKey := playerID
 
 	pipe := rdb.Pipeline()
-	pipe.HSet(ctx, playerKey, "x", spawnX, "y", spawnY)
+	pipe.HSet(ctx, playerKey, "x", spawnX, "y", spawnY, "canMoveAt", time.Now().UnixMilli())
 	pipe.GeoAdd(ctx, "zone:0:positions", &redis.GeoLocation{
 		Name:      playerKey,
-		Longitude: spawnX,
-		Latitude:  spawnY,
+		Longitude: float64(spawnX),
+		Latitude:  float64(spawnY),
 	})
 	_, err = pipe.Exec(ctx)
 	if err != nil {
@@ -104,11 +152,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// --- START FIX: Send initial state to the new player ---
-
-	// 1. Get all players in the zone
-	locations, err := rdb.GeoRadius(ctx, "zone:0:positions", 0, 0, &redis.GeoRadiusQuery{
-		Radius:    99999, // A huge radius to get everyone
+	// --- Send initial state to the new player ---
+	locations, err := rdb.GeoRadius(ctx, "zone:0:positions", float64(spawnX), float64(spawnY), &redis.GeoRadiusQuery{
+		Radius:    99999,
 		Unit:      "km",
 		WithCoord: true,
 	}).Result()
@@ -116,29 +162,29 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error getting players for initial state: %v", err)
 	}
 
-	// 2. Build the current players map
 	allPlayersState := make(map[string]PlayerState)
 	for _, loc := range locations {
-		allPlayersState[loc.Name] = PlayerState{X: loc.Longitude, Y: loc.Latitude}
+		allPlayersState[loc.Name] = PlayerState{X: int(loc.Longitude), Y: int(loc.Latitude)}
 	}
 
-	// 3. Create and send the initial state message
+	// Fetch world data for the viewport
+	worldData, err := rdb.HGetAll(ctx, "world:zone:0").Result()
+	if err != nil {
+		log.Printf("Could not fetch world data: %v", err)
+	}
+
 	initialState := InitialStateMessage{
 		Type:     "initial_state",
 		PlayerId: playerID,
 		Players:  allPlayersState,
+		World:    worldData,
 	}
 
-	// Use WriteJSON for convenience, it handles marshalling
 	if err := client.Conn.WriteJSON(initialState); err != nil {
 		log.Printf("Error sending initial state: %v", err)
-		// Don't return, still want to try broadcasting join
 	}
 
-	// --- END FIX ---
-
-	// --- START FIX 2: Broadcast that a new player has joined ---
-
+	// Broadcast that a new player has joined
 	joinMsg := map[string]interface{}{
 		"type":     "player_joined",
 		"playerId": playerID,
@@ -147,8 +193,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonMsg, _ := json.Marshal(joinMsg)
 	rdb.Publish(ctx, "world_updates", string(jsonMsg))
-
-	// --- END FIX 2 ---
 
 	go handleIncomingMessages(client)
 }
@@ -159,7 +203,6 @@ func handleIncomingMessages(client *Client) {
 		rdb.Del(ctx, client.ID)
 		rdb.ZRem(ctx, "zone:0:positions", client.ID)
 
-		// Broadcast that the player has left
 		leftMsg := map[string]interface{}{"type": "player_left", "playerId": client.ID}
 		jsonMsg, _ := json.Marshal(leftMsg)
 		rdb.Publish(ctx, "world_updates", string(jsonMsg))
@@ -196,34 +239,59 @@ func processMove(client *Client, payload json.RawMessage) {
 		return
 	}
 
-	// Using HGetAll for simplicity, as we need to parse from string anyway
-	vals, err := rdb.HGetAll(ctx, client.ID).Result()
+	// --- Movement Validation Logic ---
+	playerData, err := rdb.HGetAll(ctx, client.ID).Result()
 	if err != nil {
-		log.Printf("Could not get coords for player %s", client.ID)
+		log.Printf("Could not get data for player %s", client.ID)
 		return
 	}
 
-	var x, y float64
-	json.Unmarshal([]byte(vals["x"]), &x)
-	json.Unmarshal([]byte(vals["y"]), &y)
-
-	switch moveData.Direction {
-	case "up":
-		y--
-	case "down":
-		y++
-	case "left":
-		x--
-	case "right":
-		x++
+	canMoveAt, _ := strconv.ParseInt(playerData["canMoveAt"], 10, 64)
+	if time.Now().UnixMilli() < canMoveAt {
+		return // Player is on cooldown
 	}
 
+	currentX, _ := strconv.Atoi(playerData["x"])
+	currentY, _ := strconv.Atoi(playerData["y"])
+
+	targetX, targetY := currentX, currentY
+	switch moveData.Direction {
+	case "up":
+		targetY--
+	case "down":
+		targetY++
+	case "left":
+		targetX--
+	case "right":
+		targetX++
+	}
+
+	// Check terrain for collision
+	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
+	terrainType, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
+	if err != nil {
+		terrainType = "void" // Treat unknown space as a wall
+	}
+
+	if terrainType == "rock" || terrainType == "tree" || terrainType == "void" {
+		return // Invalid move, collision
+	}
+
+	// Apply movement penalty/cooldown
+	var nextMoveTime int64
+	if terrainType == "water" {
+		nextMoveTime = time.Now().Add(WaterMovePenalty).UnixMilli()
+	} else {
+		nextMoveTime = time.Now().Add(BaseMoveCooldown).UnixMilli()
+	}
+
+	// Update player state in Redis
 	pipe := rdb.Pipeline()
-	pipe.HSet(ctx, client.ID, "x", x, "y", y)
+	pipe.HSet(ctx, client.ID, "x", targetX, "y", targetY, "canMoveAt", nextMoveTime)
 	pipe.GeoAdd(ctx, "zone:0:positions", &redis.GeoLocation{
 		Name:      client.ID,
-		Longitude: x,
-		Latitude:  y,
+		Longitude: float64(targetX),
+		Latitude:  float64(targetY),
 	})
 	_, err = pipe.Exec(ctx)
 	if err != nil {
@@ -231,11 +299,12 @@ func processMove(client *Client, payload json.RawMessage) {
 		return
 	}
 
+	// Broadcast the successful move
 	updateMsg := map[string]interface{}{
 		"type":     "player_moved",
 		"playerId": client.ID,
-		"x":        x,
-		"y":        y,
+		"x":        targetX,
+		"y":        targetY,
 	}
 	jsonMsg, _ := json.Marshal(updateMsg)
 	rdb.Publish(ctx, "world_updates", string(jsonMsg))
@@ -249,6 +318,15 @@ func broadcastUpdates() {
 	for msg := range ch {
 		manager.mu.Lock()
 		for _, client := range manager.clients {
+			// A simple optimization: don't send move updates back to the sender
+			// as they have client-side prediction. This can be more complex
+			// if you need to correct their position.
+			var updateData map[string]interface{}
+			json.Unmarshal([]byte(msg.Payload), &updateData)
+			if updateData["type"] == "player_moved" && updateData["playerId"] == client.ID {
+				// continue
+			}
+
 			err := client.Conn.WriteMessage(websocket.TextMessage, []byte(msg.Payload))
 			if err != nil {
 				log.Printf("Write error for client %s: %v", client.ID, err)
@@ -270,6 +348,9 @@ func main() {
 		log.Fatalf("Could not connect to Redis: %v", err)
 	}
 	log.Println("Successfully connected to Redis.")
+
+	rand.Seed(time.Now().UnixNano())
+	generateWorld()
 
 	http.HandleFunc("/ws", handleWebSocket)
 	http.Handle("/", http.FileServer(http.Dir("./")))
