@@ -107,11 +107,18 @@ export function renderViewport() {
                 : tileData.type;
             cell.className = finalClass;
 
-            if (tileData.type === 'tree' || tileData.type === 'rock') {
+            if (tileData.type === 'tree' || tileData.type === 'rock' || tileData.type === 'wooden_wall') {
                 const overlay = document.createElement('div');
                 overlay.className = 'damage-overlay';
-                const maxHealth = tileData.type === 'tree' ? 2 : 4;
-                overlay.style.opacity = String(1 - (Math.max(0, tileData.health) / maxHealth));
+
+                // Determine the max health based on the tile type
+                let maxHealth = 1; // Default to 1 to avoid division by zero
+                if (tileData.type === 'tree') maxHealth = 2;
+                if (tileData.type === 'rock') maxHealth = 4;
+                if (tileData.type === 'wooden_wall') maxHealth = 10;
+                
+                const healthPercent = Math.max(0, tileData.health / maxHealth);
+                overlay.style.opacity = String(1 - healthPercent);
                 cell.appendChild(overlay);
             }
             gameContainer.appendChild(cell);

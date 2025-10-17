@@ -106,13 +106,11 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 
 	// 2. Check Adjacency
 	targetX, targetY := interactData.X, interactData.Y
-	distX := (currentX - targetX) * (currentX - targetX)
-	distY := (currentY - targetY) * (currentY - targetY)
-	if (distX + distY) != 1 {
+	if ((currentX-targetX)*(currentX-targetX) + (currentY-targetY)*(currentY-targetY)) != 1 {
 		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
 	}
 
-	// 3. Get Resource Tile Data from Redis
+	// 3. Get Tile Data and check if it's interactable
 	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
 	tileJSON, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
 	if err != nil {
@@ -121,56 +119,63 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	var tile models.WorldTile
 	json.Unmarshal([]byte(tileJSON), &tile)
 
-	if tile.Type != "tree" && tile.Type != "rock" {
-		return nil, nil // Not a gatherable resource
+	// --- THIS IS THE FIX ---
+	// Store the original type before we modify it.
+	originalTileType := tile.Type
+	// --- END OF FIX ---
+
+	if originalTileType != "tree" && originalTileType != "rock" && originalTileType != "wooden_wall" {
+		return nil, nil
 	}
 
-	// 4. Process Gathering by decrementing health
+	// 4. Process the interaction
 	tile.Health--
 
-	// Announce the damage to all players for visual feedback
 	damageMsg := models.ResourceDamagedMessage{
-		Type:      "resource_damaged",
-		X:         targetX,
-		Y:         targetY,
-		NewHealth: tile.Health,
+		Type: "resource_damaged", X: targetX, Y: targetY, NewHealth: tile.Health,
 	}
 	PublishUpdate(damageMsg)
 
-	var resourceGained string
-	if tile.Type == "tree" {
-		resourceGained = "wood"
-	}
-	if tile.Type == "rock" {
-		resourceGained = "rock"
+	var inventoryUpdateMsg *models.InventoryUpdateMessage
+
+	// 5. Handle resource gain for gathering actions
+	if originalTileType == "tree" || originalTileType == "rock" {
+		var resourceGained string
+		if originalTileType == "tree" {
+			resourceGained = "wood"
+		}
+		if originalTileType == "rock" {
+			resourceGained = "rock"
+		}
+
+		newAmount, _ := rdb.HIncrBy(ctx, "player:inventory:"+playerID, resourceGained, 1).Result()
+		inventoryUpdateMsg = &models.InventoryUpdateMessage{
+			Type: "inventory_update", Resource: resourceGained, Amount: int(newAmount),
+		}
 	}
 
-	// 5. Check if Resource is Depleted
+	// 6. Check if the object is depleted/destroyed
 	if tile.Health <= 0 {
 		tile.Type = "ground"
-		// Announce the final world change (depletion)
 		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: "ground"}
 		PublishUpdate(worldUpdateMsg)
+
+		// --- THIS IS THE FIX ---
+		// Now we check the *original* type. If it was a wall, we remove the lock.
+		if originalTileType == "wooden_wall" {
+			log.Printf("Wall at %s destroyed, removing lock.", targetCoordKey)
+			rdb.Del(ctx, "lock:tile:"+targetCoordKey)
+		}
+		// --- END OF FIX ---
 	}
 
-	// 6. Update the tile's state in Redis
+	// 7. Update the world state in Redis
 	newTileJSON, _ := json.Marshal(tile)
 	rdb.HSet(ctx, "world:zone:0", targetCoordKey, string(newTileJSON))
-
-	// 7. Add resource to player's inventory
-	inventoryKey := "player:inventory:" + playerID
-	newAmount, _ := rdb.HIncrBy(ctx, inventoryKey, resourceGained, 1).Result()
-
-	inventoryUpdateMsg := &models.InventoryUpdateMessage{
-		Type:     "inventory_update",
-		Resource: resourceGained,
-		Amount:   int(newAmount),
-	}
 
 	// 8. Set Action Cooldown
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 
-	// On success, return the inventory update message and no correction
 	return nil, inventoryUpdateMsg
 }
 
