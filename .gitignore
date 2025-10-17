@@ -1,0 +1,35 @@
+# .gitignore
+
+# Go / Backend specific
+# Ignore the compiled executable file for Windows
+mmo-game.exe
+# Ignore executables for other OS's just in case
+mmo-game
+
+# Frontend (Vite / Node.js) specific files
+# All of these are prefixed with client/
+
+# Ignore the massive folder of downloaded dependencies
+client/node_modules/
+
+# Ignore the production build output directory
+client/dist/
+
+# Ignore Vite's cache and temporary files
+client/.vite/
+
+# Ignore log files
+client/*.log
+client/npm-debug.log*
+client/yarn-error.log*
+client/pnpm-debug.log*
+
+# Ignore local environment variables files
+# These often contain secret keys and should never be committed
+client/.env
+client/.env.*.local
+client/.env.local
+
+# IDE / Editor specific folders
+.idea/
+.vscode/
