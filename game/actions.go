@@ -37,8 +37,15 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	}
 
 	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
-	terrainType, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
-	if err != nil || terrainType == "rock" || terrainType == "tree" {
+	tileJSON, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
+	if err != nil {
+		return nil // Target tile doesn't exist (out of bounds)
+	}
+	var tile models.WorldTile
+	json.Unmarshal([]byte(tileJSON), &tile)
+
+	// Check for terrain collision
+	if tile.Type == "rock" || tile.Type == "tree" {
 		return nil
 	}
 
@@ -46,11 +53,12 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	wasSet, err := rdb.SetNX(ctx, targetTileKey, playerID, 0).Result()
 
 	if err != nil || !wasSet {
+		// Tile is locked by another player, send correction
 		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}
 	}
 
 	cooldown := BaseActionCooldown
-	if terrainType == "water" {
+	if tile.Type == "water" {
 		cooldown = WaterMovePenalty
 	}
 	nextActionTime := time.Now().Add(cooldown).UnixMilli()
@@ -104,45 +112,52 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
 	}
 
-	// 3. Check Resource Type
+	// 3. Get Resource Tile Data from Redis
 	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
-	terrainType, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
-	if err != nil || (terrainType != "tree" && terrainType != "rock") {
-		return nil, nil
-	}
-
-	// 4. Process Gathering by decrementing health
-	healthKey := "world:health:zone:0"
-	newHealth, err := rdb.HIncrBy(ctx, healthKey, targetCoordKey, -1).Result()
+	tileJSON, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
 	if err != nil {
 		return nil, nil
 	}
+	var tile models.WorldTile
+	json.Unmarshal([]byte(tileJSON), &tile)
+
+	if tile.Type != "tree" && tile.Type != "rock" {
+		return nil, nil // Not a gatherable resource
+	}
+
+	// 4. Process Gathering by decrementing health
+	tile.Health--
+
+	// Announce the damage to all players for visual feedback
+	damageMsg := models.ResourceDamagedMessage{
+		Type:      "resource_damaged",
+		X:         targetX,
+		Y:         targetY,
+		NewHealth: tile.Health,
+	}
+	PublishUpdate(damageMsg)
 
 	var resourceGained string
-	if terrainType == "tree" {
+	if tile.Type == "tree" {
 		resourceGained = "wood"
 	}
-	if terrainType == "rock" {
+	if tile.Type == "rock" {
 		resourceGained = "rock"
 	}
 
 	// 5. Check if Resource is Depleted
-	if newHealth <= 0 {
-		pipe := rdb.Pipeline()
-		pipe.HSet(ctx, "world:zone:0", targetCoordKey, "ground")
-		pipe.HDel(ctx, healthKey, targetCoordKey)
-		pipe.Exec(ctx)
-
-		worldUpdateMsg := models.WorldUpdateMessage{
-			Type: "world_update",
-			X:    targetX,
-			Y:    targetY,
-			Tile: "ground",
-		}
+	if tile.Health <= 0 {
+		tile.Type = "ground"
+		// Announce the final world change (depletion)
+		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: "ground"}
 		PublishUpdate(worldUpdateMsg)
 	}
 
-	// 6. Add to Inventory
+	// 6. Update the tile's state in Redis
+	newTileJSON, _ := json.Marshal(tile)
+	rdb.HSet(ctx, "world:zone:0", targetCoordKey, string(newTileJSON))
+
+	// 7. Add resource to player's inventory
 	inventoryKey := "player:inventory:" + playerID
 	newAmount, _ := rdb.HIncrBy(ctx, inventoryKey, resourceGained, 1).Result()
 
@@ -152,7 +167,7 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 		Amount:   int(newAmount),
 	}
 
-	// 7. Set Action Cooldown
+	// 8. Set Action Cooldown
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 
 	// On success, return the inventory update message and no correction

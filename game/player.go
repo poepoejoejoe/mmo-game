@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"log"
 	"mmo-game/models"
 	"strconv"
@@ -61,7 +62,18 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	for _, loc := range locations {
 		allPlayersState[loc.Name] = models.PlayerState{X: int(loc.Longitude), Y: int(loc.Latitude)}
 	}
-	worldData, _ := rdb.HGetAll(ctx, "world:zone:0").Result()
+	// --- THIS IS THE FIX ---
+	// 1. Fetch the raw map of strings from Redis.
+	worldDataRaw, _ := rdb.HGetAll(ctx, "world:zone:0").Result()
+	// 2. Create a new, correctly-typed map.
+	worldDataTyped := make(map[string]models.WorldTile)
+	// 3. Loop through the raw data, unmarshal each JSON string into a struct, and add it to the new map.
+	for coord, tileJSON := range worldDataRaw {
+		var tile models.WorldTile
+		json.Unmarshal([]byte(tileJSON), &tile)
+		worldDataTyped[coord] = tile
+	}
+	// --- END OF FIX ---
 	inventoryData, _ := rdb.HGetAll(ctx, inventoryKey).Result()
 
 	// Construct the welcome message.
@@ -69,7 +81,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		Type:      "initial_state",
 		PlayerId:  playerID,
 		Players:   allPlayersState,
-		World:     worldData,
+		World:     worldDataTyped,
 		Inventory: inventoryData,
 	}
 

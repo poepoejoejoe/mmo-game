@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let clientState = {
         playerId: null,
         players: {},
-        world: {},
+        world: {}, // Will now store objects: { type, health }
         inventory: {}
     };
 
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cooldownBar.style.transform = "translateX(-100%)";
         cooldownBar.style.transition = "none";
 
-        // Force a browser reflow. This is a trick to ensure the CSS animation restarts correctly.
+        // Force a browser reflow to ensure the CSS animation restarts correctly.
         cooldownBar.offsetHeight;
 
         cooldownBar.style.transition = `transform ${duration}ms linear`;
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Updates the inventory display with the latest counts.
+     * Updates the inventory display with the latest counts from the client state.
      */
     function updateInventoryUI() {
         invWood.textContent = clientState.inventory.wood || 0;
@@ -93,6 +93,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
 
+            case 'resource_damaged':
+                const damagedKey = `${msg.x},${msg.y}`;
+                if (clientState.world[damagedKey]) {
+                    clientState.world[damagedKey].health = msg.newHealth;
+                    // Trigger a temporary visual flash on the tile
+                    showHitEffect(msg.x, msg.y);
+                }
+                break;
+
             case 'player_moved':
                 if (clientState.players[msg.playerId]) {
                     clientState.players[msg.playerId].x = msg.x;
@@ -109,9 +118,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
 
             case 'world_update':
-                // A tile in the world has changed (e.g., a tree was chopped down).
-                const key = `${msg.x},${msg.y}`;
-                clientState.world[key] = msg.tile;
+                // A tile's type has fundamentally changed (e.g., a tree was depleted).
+                const worldUpdateKey = `${msg.x},${msg.y}`;
+                if (clientState.world[worldUpdateKey]) {
+                    clientState.world[worldUpdateKey].type = msg.tile;
+                    clientState.world[worldUpdateKey].health = 0; // Depleted resources have 0 health.
+                }
                 break;
 
             case 'inventory_update':
@@ -136,11 +148,42 @@ document.addEventListener('DOMContentLoaded', () => {
         playerCoordsEl.textContent = 'Connection error.';
     };
 
-    // --- Rendering Engine ---
+    // --- Rendering Engine & Helpers ---
 
-    function getTileTypeFromState(x, y) {
+    function getTileData(x, y) {
         const key = `${x},${y}`;
-        return clientState.world[key] || 'void'; // Default to 'void' if not in map
+        return clientState.world[key] || { type: 'void', health: 0 };
+    }
+
+    /**
+     * Creates a temporary "flash" animation on a specific world tile.
+     * @param {number} x The world x-coordinate of the tile.
+     * @param {number} y The world y-coordinate of the tile.
+     */
+    function showHitEffect(x, y) {
+        const me = clientState.players[clientState.playerId];
+        if (!me) return;
+
+        // Calculate the tile's position within the current viewport
+        const halfWidth = Math.floor(VIEWPORT_WIDTH / 2);
+        const halfHeight = Math.floor(VIEWPORT_HEIGHT / 2);
+        const viewX = x - (me.x - halfWidth);
+        const viewY = y - (me.y - halfHeight);
+
+        // Check if the affected tile is actually visible on screen
+        if (viewX >= 0 && viewX < VIEWPORT_WIDTH && viewY >= 0 && viewY < VIEWPORT_HEIGHT) {
+            const cellIndex = viewY * VIEWPORT_WIDTH + viewX;
+            const cell = gameContainer.children[cellIndex];
+            if (cell) {
+                const hitEffect = document.createElement('div');
+                hitEffect.className = 'hit-effect';
+                cell.appendChild(hitEffect);
+                // Automatically remove the effect element after the animation finishes
+                setTimeout(() => {
+                    hitEffect.remove();
+                }, 200);
+            }
+        }
     }
 
     function renderViewport() {
@@ -151,10 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
         gameContainer.style.gridTemplateColumns = `repeat(${VIEWPORT_WIDTH}, ${TILE_SIZE}px)`;
         gameContainer.style.gridTemplateRows = `repeat(${VIEWPORT_HEIGHT}, ${TILE_SIZE}px)`;
 
-        const halfWidth = Math.floor(VIEWPORT_WIDTH / 2);
-        const halfHeight = Math.floor(VIEWPORT_HEIGHT / 2);
-        const startX = me.x - halfWidth;
-        const startY = me.y - halfHeight;
+        const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
+        const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
 
         for (let j = 0; j < VIEWPORT_HEIGHT; j++) {
             for (let i = 0; i < VIEWPORT_WIDTH; i++) {
@@ -171,14 +212,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
+                const tileData = getTileData(worldX, worldY);
                 let finalClass = 'grid-cell';
-                if (playerOnTile) {
-                    finalClass += playerOnTile === clientState.playerId ? ' player' : ' other-player';
-                } else {
-                    finalClass += ` ${getTileTypeFromState(worldX, worldY)}`;
-                }
-
+                finalClass += playerOnTile ? (playerOnTile === clientState.playerId ? ' player' : ' other-player') : ` ${tileData.type}`;
                 cell.className = finalClass;
+
+                // Add damage overlay for resources
+                if (tileData.type === 'tree' || tileData.type === 'rock') {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'damage-overlay';
+                    const maxHealth = tileData.type === 'tree' ? 2 : 4;
+                    const healthPercent = Math.max(0, tileData.health / maxHealth);
+                    overlay.style.opacity = 1 - healthPercent;
+                    cell.appendChild(overlay);
+                }
                 gameContainer.appendChild(cell);
             }
         }
@@ -200,8 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const me = clientState.players[clientState.playerId];
-        let targetX = me.x;
-        let targetY = me.y;
+        let targetX = me.x, targetY = me.y;
 
         switch (direction) {
             case 'up': targetY--; break;
@@ -213,33 +259,26 @@ document.addEventListener('DOMContentLoaded', () => {
         // Client-side prediction for player collision
         for (const id in clientState.players) {
             if (clientState.players[id].x === targetX && clientState.players[id].y === targetY) {
-                return; // Tile is blocked by another player
+                return;
             }
         }
 
-        // Client-side prediction for terrain collision
-        const targetTileType = getTileTypeFromState(targetX, targetY);
-        if (targetTileType === 'rock' || targetTileType === 'tree' || targetTileType === 'void') {
+        const targetTileData = getTileData(targetX, targetY);
+        if (targetTileData.type === 'rock' || targetTileData.type === 'tree' || targetTileData.type === 'void') {
             return;
         }
 
-        // Optimistically move the player on the client for a responsive feel
         me.x = targetX;
         me.y = targetY;
         renderViewport();
 
         let cooldown = ACTION_COOLDOWN;
-        if (targetTileType === 'water') {
+        if (targetTileData.type === 'water') {
             cooldown = WATER_PENALTY;
         }
         startCooldown(cooldown);
 
-        // Send the move request to the server for validation
-        const msg = {
-            type: 'move',
-            payload: { direction: direction }
-        };
-        ws.send(JSON.stringify(msg));
+        ws.send(JSON.stringify({ type: 'move', payload: { direction: direction } }));
     }
 
     function handleMouseClick(e) {
@@ -248,20 +287,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const me = clientState.players[clientState.playerId];
         if (!me) return;
 
-        // 1. Calculate which world tile was clicked
         const rect = gameContainer.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
 
-        const halfWidth = Math.floor(VIEWPORT_WIDTH / 2);
-        const halfHeight = Math.floor(VIEWPORT_HEIGHT / 2);
-        const startX = me.x - halfWidth;
-        const startY = me.y - halfHeight;
+        const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
+        const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
 
         const tileX = Math.floor(clickX / TILE_SIZE) + startX;
         const tileY = Math.floor(clickY / TILE_SIZE) + startY;
 
-        // 2. Check if the tile is adjacent to the player (not diagonal)
         const distX = Math.abs(me.x - tileX);
         const distY = Math.abs(me.y - tileY);
 
@@ -269,19 +304,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return; // Not adjacent
         }
 
-        // 3. Check if the tile is a gatherable resource
-        const tileType = getTileTypeFromState(tileX, tileY);
-        if (tileType !== 'tree' && tileType !== 'rock') {
+        const tileData = getTileData(tileX, tileY);
+        if (tileData.type !== 'tree' && tileData.type !== 'rock') {
             return;
         }
 
-        // 4. Start the action cooldown and send the interaction request
         startCooldown(ACTION_COOLDOWN);
-
-        const msg = {
-            type: 'interact',
-            payload: { x: tileX, y: tileY }
-        };
-        ws.send(JSON.stringify(msg));
+        ws.send(JSON.stringify({ type: 'interact', payload: { x: tileX, y: tileY } }));
     }
 });
