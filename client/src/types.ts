@@ -70,7 +70,7 @@ export interface WorldUpdateMessage extends ServerMessage {
     type: 'world_update';
     x: number;
     y: number;
-    tile: string;
+    tile: WorldTile; // Expect the whole object now, not just a string
 }
 
 export interface InventoryUpdateMessage extends ServerMessage {

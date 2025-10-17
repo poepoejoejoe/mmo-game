@@ -60,10 +60,10 @@ type StateCorrectionMessage struct {
 }
 
 type WorldUpdateMessage struct {
-	Type string `json:"type"`
-	X    int    `json:"x"`
-	Y    int    `json:"y"`
-	Tile string `json:"tile"`
+	Type string    `json:"type"`
+	X    int       `json:"x"`
+	Y    int       `json:"y"`
+	Tile WorldTile `json:"tile"`
 }
 
 type InventoryUpdateMessage struct {
