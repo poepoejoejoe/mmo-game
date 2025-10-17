@@ -35,7 +35,7 @@ function handleKeyDown(e: KeyboardEvent) {
     if (['rock', 'tree', 'void'].includes(targetTileData.type)) return;
 
     // Optimistic update
-    state.setPlayerPosition(me.id, targetX, targetY);
+    state.setPlayerPosition(state.getState().playerId!, targetX, targetY);
 
     const cooldown = targetTileData.type === 'water' ? WATER_PENALTY : ACTION_COOLDOWN;
     canPerformAction = false;
