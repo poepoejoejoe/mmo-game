@@ -25,7 +25,8 @@ func FindOpenSpawnPoint(playerID string) (int, int) {
 				var tile models.WorldTile
 				json.Unmarshal([]byte(tileJSON), &tile)
 
-				if tile.Type != "rock" && tile.Type != "tree" {
+				// UPDATED: Also check for wooden_wall
+				if tile.Type != "rock" && tile.Type != "tree" && tile.Type != "wooden_wall" {
 					log.Printf("Found open spawn for %s at (%d, %d)", playerID, x, y)
 					return x, y
 				}

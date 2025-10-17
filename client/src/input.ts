@@ -89,9 +89,10 @@ function handleMouseClick(e: MouseEvent) {
         startCooldownAndSend({ type: 'place_item', payload: { item: 'wooden_wall', x: tileX, y: tileY } });
 
     } else {
-        // --- GATHER LOGIC (existing logic) ---
+        // --- GATHER/ATTACK LOGIC ---
         const tileData = state.getTileData(tileX, tileY);
-        if (!['tree', 'rock'].includes(tileData.type)) return;
+        // UPDATED: Now allows clicking on walls
+        if (!['tree', 'rock', 'wooden_wall'].includes(tileData.type)) return;
 
         startCooldownAndSend({ type: 'interact', payload: { x: tileX, y: tileY } });
     }
