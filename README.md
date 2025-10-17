@@ -2,43 +2,56 @@
 
 This project is a simple, scalable backend for a 2D grid-based massively multiplayer online game. It uses Go for the server logic, Redis for high-performance state management, and WebSockets for real-time communication with the front end.
 
-This serves as a foundational example of a modern, authoritative game server architecture.
-
----
+The frontend is a modern TypeScript application built with Vite.
 
 ## 🚀 Technologies Used
 
 * **Backend:** Go (Golang)
 * **State Store:** Redis
-* **Communication:** WebSockets (`gorilla/websocket` library)
-* **Frontend:** HTML, CSS, and vanilla JavaScript
-
----
+* **Communication:** WebSockets
+* **Frontend:** TypeScript, Vite
 
 ## ✅ Prerequisites
 
-Before you begin, ensure you have the following installed on your system:
+Before you begin, ensure you have the following installed:
 
 1.  **Go:** Version 1.18 or newer. ([Installation Guide](https://go.dev/doc/install))
-2.  **Redis:** The server needs an active Redis instance to connect to. ([Installation Guide](https://redis.io/docs/getting-started/installation/))
-
----
+2.  **Redis:** An active Redis instance. ([Installation Guide](https://redis.io/docs/getting-started/installation/))
+3.  **Node.js:** Version 18 (LTS) or newer. ([Installation Guide](https://nodejs.org/))
 
 ## 🛠️ Setup and Running the Project
 
-Follow these steps to get the game server and client running on your local machine.
+This project now has two distinct parts: the **Go backend** and the **Vite frontend**. You will need to run them in two separate terminals.
 
+### Terminal 1: Running the Backend
 
-### 1. Start Redis
+1.  **Open a terminal** in the project's root directory (`mmo-game/`).
+2.  **Start your Redis server** if it's not already running.
+3.  **Use the run script** to build and start the Go server:
+    ```bash
+    .\run.bat
+    ```
+    The server will start on `http://localhost:8080`.
 
-Make sure your Redis server is running. If you installed it locally, you can typically start it by running the `redis-server` command in your terminal. You should see the Redis logo and a confirmation that the server is running.
+### Terminal 2: Running the Frontend
 
+1.  **Open a second terminal** in the project's root directory.
+2.  **Navigate into the client directory:**
+    ```bash
+    cd client
+    ```
+3.  **Install dependencies** (only needs to be done once):
+    ```bash
+    npm install
+    ```
+4.  **Start the Vite development server:**
+    ```bash
+    npm run dev
+    ```
+    The frontend server will start, likely on `http://localhost:5173`.
 
+### 5. Play the Game!
 
-### 2. Install Go Dependencies and Run!
+Open your web browser and navigate to the address provided by the Vite server (e.g., **http://localhost:5173**). Do **not** go to the Go server's address.
 
-Open a terminal or command prompt in your project directory and run the `go mod tidy` command. This will read your `go.mod` file and automatically download the required libraries (`redis`, `websocket`, `uuid`).
-
-```bash
-go mod tidy
-.\run.bat
+The Vite server will serve the game, and its built-in proxy will automatically handle communicating with your Go backend.
