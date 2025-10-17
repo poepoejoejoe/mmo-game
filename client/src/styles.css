@@ -74,6 +74,39 @@ body {
     align-items: center;
 }
 
+/* --- NEW STYLES for Crafting --- */
+#crafting button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+#crafting button:hover:not(:disabled) {
+    background-color: #2980b9;
+}
+
+#crafting button:disabled {
+    background-color: #555;
+    color: #999;
+    cursor: not-allowed;
+}
+
+.wooden_wall { 
+    background-color: #8a6d3b; 
+    border: 1px solid #5a4a2a;
+}
+
+#game-container.build-mode {
+    cursor: crosshair;
+    border: 2px solid #3498db;
+}
+
 #inventory h3 {
     margin: 0 0 5px 0;
     font-size: 1em;

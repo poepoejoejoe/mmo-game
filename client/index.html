@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MMO Grid World</title>
-    <!-- Vite will automatically handle linking the CSS -->
     <link rel="stylesheet" href="/src/styles.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   </head>
@@ -16,6 +15,7 @@
         <div class="controls">
             <span>Use Arrow Keys or WASD to Move</span>
             <span>Left-click adjacent resources to gather</span>
+            <span>Press 'B' to enter/exit Build Mode</span>
         </div>
         <div id="player-id"></div>
     </div>
@@ -26,14 +26,23 @@
             <div id="inventory-list">
                 <div>Wood: <span id="inv-wood">0</span></div>
                 <div>Rock: <span id="inv-rock">0</span></div>
+                <!-- NEW: Inventory slot for crafted walls -->
+                <div>Walls: <span id="inv-wooden_wall">0</span></div>
             </div>
         </div>
+
+        <div id="crafting">
+            <h3>Crafting</h3>
+            <button id="craft-wall-btn" disabled>
+                Craft Wall (10 Wood)
+            </button>
+        </div>
+        
         <div id="action-cooldown">
             <div id="cooldown-bar"></div>
             <div id="cooldown-text">Ready</div>
         </div>
     </div>
-    <!-- This script tag is the entry point for our Vite application -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

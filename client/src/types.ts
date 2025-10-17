@@ -15,7 +15,12 @@ export interface ClientState {
     playerId: string | null;
     players: Record<string, PlayerState>;
     world: Record<string, WorldTile>;
-    inventory: Record<string, number>;
+    inventory: {
+        wood?: number;
+        rock?: number;
+        wooden_wall?: number; // <-- NEW
+        [key: string]: number | undefined; // Allow other string keys
+    };
 }
 
 // --- WebSocket Message Types ---

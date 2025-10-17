@@ -8,6 +8,8 @@ const cooldownBar = document.getElementById('cooldown-bar') as HTMLDivElement;
 const cooldownText = document.getElementById('cooldown-text')!;
 const invWood = document.getElementById('inv-wood')!;
 const invRock = document.getElementById('inv-rock')!;
+const invWoodenWall = document.getElementById('inv-wooden_wall')!;
+const craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement; // <-- NEW
 
 export function startCooldown(duration: number): void {
     cooldownText.textContent = "Working...";
@@ -21,10 +23,38 @@ export function startCooldown(duration: number): void {
     }, duration);
 }
 
+/**
+ * Updates the crafting UI based on the player's current inventory.
+ */
+export function updateCraftingUI(): void {
+    const inventory = state.getState().inventory;
+    const woodCount = inventory.wood || 0;
+    
+    // Enable the button only if the player has enough wood
+    craftWallBtn.disabled = woodCount < 10;
+}
+
 export function updateInventoryUI(): void {
     const inventory = state.getState().inventory;
     invWood.textContent = String(inventory.wood || 0);
     invRock.textContent = String(inventory.rock || 0);
+    invWoodenWall.textContent = String(inventory.wooden_wall || 0); // <-- NEW
+
+    // Also update the crafting UI whenever inventory changes
+    updateCraftingUI();
+}
+
+// --- NEW FUNCTION ---
+/**
+ * Toggles the visual indicators for build mode.
+ * @param {boolean} isActive Whether build mode should be active.
+ */
+export function setBuildModeActive(isActive: boolean): void {
+    if (isActive) {
+        gameContainer.classList.add('build-mode');
+    } else {
+        gameContainer.classList.remove('build-mode');
+    }
 }
 
 export function showHitEffect(x: number, y: number) {
