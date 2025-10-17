@@ -10,14 +10,15 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// ProcessMove handles a player's move request with collision detection.
+// ProcessMove handles a player's move request with collision detection and cooldowns.
+// It returns a state correction message if the move is invalid, otherwise nil.
 func ProcessMove(playerID string, direction string) *models.StateCorrectionMessage {
 	playerData, err := rdb.HGetAll(ctx, playerID).Result()
 	if err != nil {
 		return nil
 	}
-	canMoveAt, _ := strconv.ParseInt(playerData["canMoveAt"], 10, 64)
-	if time.Now().UnixMilli() < canMoveAt {
+	nextActionAt, _ := strconv.ParseInt(playerData["nextActionAt"], 10, 64)
+	if time.Now().UnixMilli() < nextActionAt {
 		return nil
 	}
 
@@ -48,15 +49,14 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}
 	}
 
-	// The constants defined in state.go are used here.
-	cooldown := BaseMoveCooldown
+	cooldown := BaseActionCooldown
 	if terrainType == "water" {
 		cooldown = WaterMovePenalty
 	}
-	nextMoveTime := time.Now().Add(cooldown).UnixMilli()
+	nextActionTime := time.Now().Add(cooldown).UnixMilli()
 
 	pipe := rdb.Pipeline()
-	pipe.HSet(ctx, playerID, "x", targetX, "y", targetY, "canMoveAt", nextMoveTime)
+	pipe.HSet(ctx, playerID, "x", targetX, "y", targetY, "nextActionAt", nextActionTime)
 	pipe.GeoAdd(ctx, "zone:0:positions", &redis.GeoLocation{Name: playerID, Longitude: float64(targetX), Latitude: float64(targetY)})
 	_, err = pipe.Exec(ctx)
 	if err != nil {
@@ -71,10 +71,95 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	updateMsg := map[string]interface{}{"type": "player_moved", "playerId": playerID, "x": targetX, "y": targetY}
 	PublishUpdate(updateMsg)
 
-	return nil // Return nil on success
+	return nil
 }
 
-// PublishUpdate sends a message to the Redis world_updates channel.
+// ProcessInteract handles a player's request to gather a resource.
+// It returns a correction message on failure or an inventory update on success.
+func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
+	var interactData models.InteractPayload
+	if err := json.Unmarshal(payload, &interactData); err != nil {
+		return nil, nil
+	}
+
+	playerData, err := rdb.HGetAll(ctx, playerID).Result()
+	if err != nil {
+		return nil, nil
+	}
+
+	// 1. Check Action Cooldown
+	nextActionAt, _ := strconv.ParseInt(playerData["nextActionAt"], 10, 64)
+	if time.Now().UnixMilli() < nextActionAt {
+		return nil, nil
+	}
+
+	currentX, _ := strconv.Atoi(playerData["x"])
+	currentY, _ := strconv.Atoi(playerData["y"])
+
+	// 2. Check Adjacency
+	targetX, targetY := interactData.X, interactData.Y
+	distX := (currentX - targetX) * (currentX - targetX)
+	distY := (currentY - targetY) * (currentY - targetY)
+	if (distX + distY) != 1 {
+		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+	}
+
+	// 3. Check Resource Type
+	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
+	terrainType, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
+	if err != nil || (terrainType != "tree" && terrainType != "rock") {
+		return nil, nil
+	}
+
+	// 4. Process Gathering by decrementing health
+	healthKey := "world:health:zone:0"
+	newHealth, err := rdb.HIncrBy(ctx, healthKey, targetCoordKey, -1).Result()
+	if err != nil {
+		return nil, nil
+	}
+
+	var resourceGained string
+	if terrainType == "tree" {
+		resourceGained = "wood"
+	}
+	if terrainType == "rock" {
+		resourceGained = "rock"
+	}
+
+	// 5. Check if Resource is Depleted
+	if newHealth <= 0 {
+		pipe := rdb.Pipeline()
+		pipe.HSet(ctx, "world:zone:0", targetCoordKey, "ground")
+		pipe.HDel(ctx, healthKey, targetCoordKey)
+		pipe.Exec(ctx)
+
+		worldUpdateMsg := models.WorldUpdateMessage{
+			Type: "world_update",
+			X:    targetX,
+			Y:    targetY,
+			Tile: "ground",
+		}
+		PublishUpdate(worldUpdateMsg)
+	}
+
+	// 6. Add to Inventory
+	inventoryKey := "player:inventory:" + playerID
+	newAmount, _ := rdb.HIncrBy(ctx, inventoryKey, resourceGained, 1).Result()
+
+	inventoryUpdateMsg := &models.InventoryUpdateMessage{
+		Type:     "inventory_update",
+		Resource: resourceGained,
+		Amount:   int(newAmount),
+	}
+
+	// 7. Set Action Cooldown
+	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+
+	// On success, return the inventory update message and no correction
+	return nil, inventoryUpdateMsg
+}
+
+// PublishUpdate sends a message to the Redis world_updates channel for broadcasting.
 func PublishUpdate(message interface{}) {
 	jsonMsg, err := json.Marshal(message)
 	if err != nil {
