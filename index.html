@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MMO Grid World</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -16,179 +16,11 @@
     <div id="game-container"></div>
     <div id="info-panel">
         <div id="player-coords">Connecting to server...</div>
-        <div class="controls">Use Arrow Keys to Move</div>
+        <div class="controls">Use Arrow Keys or WASD to Move</div>
         <div id="player-id"></div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const gameContainer = document.getElementById('game-container');
-            const playerCoordsEl = document.getElementById('player-coords');
-            const playerIdEl = document.getElementById('player-id');
-            
-            const ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
-
-            const VIEWPORT_WIDTH = 31;
-            const VIEWPORT_HEIGHT = 21;
-            const TILE_SIZE = 20;
-
-            let clientState = {
-                playerId: null,
-                players: {},
-                world: {} 
-            };
-            
-            // --- Client-side movement prediction ---
-            let canMove = true;
-            const WATER_PENALTY = 500; // ms
-            const BASE_COOLDOWN = 100; // ms
-
-            ws.onopen = () => {
-                console.log('Connected to the server.');
-                playerCoordsEl.textContent = 'Connected! Waiting for world state...';
-                document.addEventListener('keydown', handleKeyDown);
-            };
-
-            ws.onmessage = (event) => {
-                const msg = JSON.parse(event.data);
-                
-                switch(msg.type) {
-                    case 'initial_state':
-                        clientState.playerId = msg.playerId;
-                        clientState.players = msg.players;
-                        clientState.world = msg.world; // Populate world from server
-                        playerIdEl.textContent = `Your ID: ${msg.playerId}`;
-                        break;
-                    
-                    case 'player_moved':
-                        if (msg.players) { // Handle potential full state sync
-                           clientState.players = msg.players;
-                        } else if (clientState.players[msg.playerId]) {
-                            clientState.players[msg.playerId].x = msg.x;
-                            clientState.players[msg.playerId].y = msg.y;
-                        }
-                        break;
-
-                    case 'player_joined':
-                         clientState.players[msg.playerId] = { x: msg.x, y: msg.y };
-                         break;
-                    
-                    case 'player_left':
-                        delete clientState.players[msg.playerId];
-                        break;
-                }
-                
-                renderViewport();
-            };
-
-            ws.onclose = () => {
-                console.log('Disconnected from the server.');
-                playerCoordsEl.textContent = 'Disconnected. Please refresh.';
-                document.removeEventListener('keydown', handleKeyDown);
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket Error:', error);
-                playerCoordsEl.textContent = 'Connection error.';
-            };
-            
-            // --- Rendering Engine ---
-            function getTileTypeFromState(x, y) {
-                const key = `${x},${y}`;
-                return clientState.world[key] || 'void'; // Default to 'void' if not in map
-            }
-
-            function renderViewport() {
-                const me = clientState.players[clientState.playerId];
-                if (!me) {
-                    return;
-                }
-
-                gameContainer.innerHTML = '';
-                gameContainer.style.gridTemplateColumns = `repeat(${VIEWPORT_WIDTH}, ${TILE_SIZE}px)`;
-                gameContainer.style.gridTemplateRows = `repeat(${VIEWPORT_HEIGHT}, ${TILE_SIZE}px)`;
-
-                const halfWidth = Math.floor(VIEWPORT_WIDTH / 2);
-                const halfHeight = Math.floor(VIEWPORT_HEIGHT / 2);
-                const startX = me.x - halfWidth;
-                const startY = me.y - halfHeight;
-
-                for (let j = 0; j < VIEWPORT_HEIGHT; j++) {
-                    for (let i = 0; i < VIEWPORT_WIDTH; i++) {
-                        const cell = document.createElement('div');
-                        const worldX = startX + i;
-                        const worldY = startY + j;
-
-                        let playerOnTile = null;
-                        for (const id in clientState.players) {
-                            const p = clientState.players[id];
-                            if (p.x === worldX && p.y === worldY) {
-                                playerOnTile = id;
-                                break;
-                            }
-                        }
-
-                        let finalClass = 'grid-cell';
-                         if (playerOnTile) {
-                            finalClass += playerOnTile === clientState.playerId ? ' player' : ' other-player';
-                        } else {
-                            finalClass += ` ${getTileTypeFromState(worldX, worldY)}`;
-                        }
-                        
-                        cell.className = finalClass;
-                        gameContainer.appendChild(cell);
-                    }
-                }
-
-                playerCoordsEl.textContent = `Your Position: (${me.x}, ${me.y})`;
-            }
-
-            // --- Input Handling ---
-            function handleKeyDown(e) {
-                if (!canMove || !clientState.playerId) return;
-
-                let direction = null;
-                switch (e.key) {
-                    case 'ArrowUp': direction = 'up'; break;
-                    case 'ArrowDown': direction = 'down'; break;
-                    case 'ArrowLeft': direction = 'left'; break;
-                    case 'ArrowRight': direction = 'right'; break;
-                    default: return;
-                }
-                
-                // Client-side prediction for smoother feel
-                const me = clientState.players[clientState.playerId];
-                let targetX = me.x;
-                let targetY = me.y;
-
-                switch (direction) {
-                    case 'up':    targetY--; break;
-                    case 'down':  targetY++; break;
-                    case 'left':  targetX--; break;
-                    case 'right': targetX++; break;
-                }
-
-                const targetTileType = getTileTypeFromState(targetX, targetY);
-                if (targetTileType === 'rock' || targetTileType === 'tree' || targetTileType === 'void') {
-                    return; // Don't send invalid move to server
-                }
-
-                let cooldown = BASE_COOLDOWN;
-                if (targetTileType === 'water') {
-                    cooldown = WATER_PENALTY;
-                }
-
-                canMove = false;
-                setTimeout(() => { canMove = true; }, cooldown);
-                
-                // Send the input to the server
-                const msg = {
-                    type: 'move',
-                    payload: { direction: direction }
-                };
-                ws.send(JSON.stringify(msg));
-            }
-        });
-    </script>
+    <!-- Load the external JavaScript file -->
+    <script src="game.js"></script>
 </body>
 </html>

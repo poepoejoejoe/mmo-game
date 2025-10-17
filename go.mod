@@ -1,4 +1,4 @@
-module mmo-server
+module mmo-game
 
 go 1.22
 
