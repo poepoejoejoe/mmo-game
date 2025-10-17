@@ -10,8 +10,7 @@ import {
     WorldUpdateMessage 
 } from './types';
 import * as state from './state';
-import { renderViewport, updateCraftingUI, updateInventoryUI } from './ui';
-
+import { renderViewport, updateInventoryUI, showHitEffect, updateTile, updateCraftingUI } from './ui'; // Import updateTile
 const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
 /**
@@ -43,6 +42,8 @@ function handleMessage(event: MessageEvent) {
         case 'resource_damaged': {
             const damageMsg = msg as ResourceDamagedMessage;
             state.setResourceHealth(damageMsg.x, damageMsg.y, damageMsg.newHealth);
+            showHitEffect(damageMsg.x, damageMsg.y);
+            updateTile(damageMsg.x, damageMsg.y);
             // We don't need to re-render here, the hit effect is enough visual feedback
             break;
         }
@@ -63,7 +64,8 @@ function handleMessage(event: MessageEvent) {
         }
         case 'world_update': {
             const updateMsg = msg as WorldUpdateMessage;
-            state.setWorldTile(updateMsg.x, updateMsg.y, updateMsg.tile);
+            const key = `${updateMsg.x},${updateMsg.y}`;
+            state.getState().world[key] = updateMsg.tile;
             break;
         }
         case 'inventory_update': {

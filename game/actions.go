@@ -157,7 +157,8 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	// 6. Check if the object is depleted/destroyed
 	if tile.Health <= 0 {
 		tile.Type = "ground"
-		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: "ground"}
+		groundTile := models.WorldTile{Type: "ground", Health: 0}
+		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: groundTile}
 		PublishUpdate(worldUpdateMsg)
 
 		// --- THIS IS THE FIX ---
@@ -325,7 +326,7 @@ func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCo
 		}
 
 		// 7. Broadcast and send inventory update
-		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: "wooden_wall"}
+		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: newWallTile}
 		PublishUpdate(worldUpdateMsg)
 
 		inventoryUpdateMsg := &models.InventoryUpdateMessage{Type: "inventory_update", Resource: "wooden_wall", Amount: int(newAmount.Val())}

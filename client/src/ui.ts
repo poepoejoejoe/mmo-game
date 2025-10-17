@@ -107,25 +107,77 @@ export function renderViewport() {
                 : tileData.type;
             cell.className = finalClass;
 
+            // --- THIS IS THE UPDATED LOGIC ---
             if (tileData.type === 'tree' || tileData.type === 'rock' || tileData.type === 'wooden_wall') {
-                const overlay = document.createElement('div');
-                overlay.className = 'damage-overlay';
-
-                // Determine the max health based on the tile type
-                let maxHealth = 1; // Default to 1 to avoid division by zero
+                let maxHealth = 1;
                 if (tileData.type === 'tree') maxHealth = 2;
                 if (tileData.type === 'rock') maxHealth = 4;
                 if (tileData.type === 'wooden_wall') maxHealth = 10;
-                
-                const healthPercent = Math.max(0, tileData.health / maxHealth);
-                overlay.style.opacity = String(1 - healthPercent);
-                cell.appendChild(overlay);
+
+                // Only show cracks if the resource is actually damaged
+                if (tileData.health < maxHealth) {
+                    const crackOverlay = document.createElement('div');
+                    const damagePercent = 1 - (tileData.health / maxHealth);
+                    // Use Math.min to ensure we never try to render a non-existent crack-10
+                    const crackStage = Math.min(9, Math.floor(damagePercent * 10));
+                    
+                    crackOverlay.className = `crack-overlay crack-${crackStage}`;
+                    cell.appendChild(crackOverlay);
+                }
             }
+            // --- END OF UPDATED LOGIC ---
+
             gameContainer.appendChild(cell);
         }
     }
     playerCoordsEl.textContent = `Your Position: (${me.x}, ${me.y})`;
-    if(clientState.playerId) {
+    if (clientState.playerId) {
         playerIdEl.textContent = `Your ID: ${clientState.playerId}`;
+    }
+}
+
+/**
+ * Finds a specific tile in the DOM and updates its crack overlay.
+ * This is used for targeted updates without a full re-render.
+ * @param {number} x The world x-coordinate of the tile.
+ * @param {number} y The world y-coordinate of the tile.
+ */
+export function updateTile(x: number, y: number) {
+    const me = state.getMyPlayer();
+    if (!me) return;
+
+    // Calculate the tile's position within the current viewport
+    const halfWidth = Math.floor(VIEWPORT_WIDTH / 2);
+    const halfHeight = Math.floor(VIEWPORT_HEIGHT / 2);
+    const viewX = x - (me.x - halfWidth);
+    const viewY = y - (me.y - halfHeight);
+    
+    if (viewX >= 0 && viewX < VIEWPORT_WIDTH && viewY >= 0 && viewY < VIEWPORT_HEIGHT) {
+        const cellIndex = viewY * VIEWPORT_WIDTH + viewX;
+        const cell = gameContainer.children[cellIndex];
+        if (cell) {
+            // Remove any existing crack overlay
+            const existingOverlay = cell.querySelector('.crack-overlay');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+
+            // Add the new, updated crack overlay
+            const tileData = state.getTileData(x, y);
+            let maxHealth = 1;
+            if (tileData.type === 'tree') maxHealth = 2;
+            if (tileData.type === 'rock') maxHealth = 4;
+            if (tileData.type === 'wooden_wall') maxHealth = 10;
+
+            if (tileData.health < maxHealth) {
+                const crackOverlay = document.createElement('div');
+                const damagePercent = 1 - (tileData.health / maxHealth);
+                // Use Math.min to ensure we don't go past crack-9
+                const crackStage = Math.min(9, Math.floor(damagePercent * 10));
+                
+                crackOverlay.className = `crack-overlay crack-${crackStage}`;
+                cell.appendChild(crackOverlay);
+            }
+        }
     }
 }
