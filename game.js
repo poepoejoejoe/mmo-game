@@ -146,10 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- NEW: Client-side prediction for player collision ---
         // Loop through all known players to see if the target tile is occupied.
-        console.log(clientState)
         for (const id in clientState.players) {
             const p = clientState.players[id];
-            console.log(p)
             if (p.x === targetX && p.y === targetY) {
                 console.log('blocked')
                 return; 

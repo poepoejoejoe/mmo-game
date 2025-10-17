@@ -41,5 +41,4 @@ Open a terminal or command prompt in your project directory and run the `go mod 
 
 ```bash
 go mod tidy
-go run .
-
+.\run.bat
