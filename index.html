@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        /* Add a style for the "void" tiles */
         .void { background-color: #000; }
     </style>
 </head>
@@ -16,11 +15,27 @@
     <div id="game-container"></div>
     <div id="info-panel">
         <div id="player-coords">Connecting to server...</div>
-        <div class="controls">Use Arrow Keys or WASD to Move</div>
+        <div class="controls">
+            <span>Use Arrow Keys or WASD to Move</span>
+            <span>Left-click adjacent resources to gather</span>
+        </div>
         <div id="player-id"></div>
     </div>
 
-    <!-- Load the external JavaScript file -->
+    <div id="ui-bottom-bar">
+        <div id="inventory">
+            <h3>Inventory</h3>
+            <div id="inventory-list">
+                <div>Wood: <span id="inv-wood">0</span></div>
+                <div>Rock: <span id="inv-rock">0</span></div>
+            </div>
+        </div>
+        <div id="action-cooldown">
+            <div id="cooldown-bar"></div>
+            <div id="cooldown-text">Ready</div>
+        </div>
+    </div>
+
     <script src="game.js"></script>
 </body>
 </html>
