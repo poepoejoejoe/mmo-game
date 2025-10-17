@@ -10,7 +10,7 @@ import {
     WorldUpdateMessage 
 } from './types';
 import * as state from './state';
-import { renderViewport, updateInventoryUI } from './ui';
+import { renderViewport, updateCraftingUI, updateInventoryUI } from './ui';
 
 const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
@@ -32,6 +32,7 @@ function handleMessage(event: MessageEvent) {
             const stateMsg = msg as InitialStateMessage;
             state.setInitialState(stateMsg.playerId, stateMsg.players, stateMsg.world, stateMsg.inventory);
             updateInventoryUI();
+            updateCraftingUI();
             break;
         }
         case 'state_correction': {

@@ -45,7 +45,7 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	json.Unmarshal([]byte(tileJSON), &tile)
 
 	// Check for terrain collision
-	if tile.Type == "rock" || tile.Type == "tree" {
+	if tile.Type == "rock" || tile.Type == "tree" || tile.Type == "wooden_wall" {
 		return nil
 	}
 
@@ -172,6 +172,164 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 
 	// On success, return the inventory update message and no correction
 	return nil, inventoryUpdateMsg
+}
+
+// --- NEW FUNCTION ---
+// ProcessCraft handles a player's request to craft an item from resources.
+func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.InventoryUpdateMessage, *models.StateCorrectionMessage) {
+	var craftData models.CraftPayload
+	if err := json.Unmarshal(payload, &craftData); err != nil {
+		return nil, nil // Invalid payload
+	}
+
+	// Check for action cooldown
+	playerData, err := rdb.HGetAll(ctx, playerID).Result()
+	if err != nil {
+		return nil, nil
+	}
+	nextActionAt, _ := strconv.ParseInt(playerData["nextActionAt"], 10, 64)
+	if time.Now().UnixMilli() < nextActionAt {
+		return nil, nil
+	}
+
+	var updates []*models.InventoryUpdateMessage
+	inventoryKey := "player:inventory:" + playerID
+
+	// --- Crafting Logic for Wooden Wall ---
+	if craftData.Item == "wooden_wall" {
+		// 1. Check if player has enough wood
+		currentWoodStr, err := rdb.HGet(ctx, inventoryKey, "wood").Result()
+		if err != nil {
+			currentWoodStr = "0"
+		} // If no wood, treat as 0
+		currentWood, _ := strconv.Atoi(currentWoodStr)
+
+		if currentWood < WoodPerWall {
+			log.Printf("Player %s failed to craft wall: not enough wood.", playerID)
+			return nil, nil // Not enough resources
+		}
+
+		// 2. Atomically update inventory
+		pipe := rdb.Pipeline()
+		newWood := pipe.HIncrBy(ctx, inventoryKey, "wood", -WoodPerWall)
+		newWalls := pipe.HIncrBy(ctx, inventoryKey, "wooden_wall", 1)
+		_, err = pipe.Exec(ctx)
+		if err != nil {
+			log.Printf("Redis error during crafting for player %s: %v", playerID, err)
+			return nil, nil
+		}
+
+		// 3. Create inventory update messages to send back to the client
+		updates = append(updates, &models.InventoryUpdateMessage{
+			Type: "inventory_update", Resource: "wood", Amount: int(newWood.Val()),
+		})
+		updates = append(updates, &models.InventoryUpdateMessage{
+			Type: "inventory_update", Resource: "wooden_wall", Amount: int(newWalls.Val()),
+		})
+
+		log.Printf("Player %s crafted a wooden wall.", playerID)
+	}
+
+	// Set action cooldown after a successful craft
+	if len(updates) > 0 {
+		rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+	}
+
+	return updates, nil
+}
+
+// --- NEW FUNCTION ---
+// ProcessPlaceItem handles a player's request to build an item in the world.
+func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
+	var placeData models.PlaceItemPayload
+	if err := json.Unmarshal(payload, &placeData); err != nil {
+		return nil, nil
+	}
+
+	playerData, err := rdb.HGetAll(ctx, playerID).Result()
+	if err != nil {
+		return nil, nil
+	}
+
+	// 1. Check Action Cooldown
+	nextActionAt, _ := strconv.ParseInt(playerData["nextActionAt"], 10, 64)
+	if time.Now().UnixMilli() < nextActionAt {
+		return nil, nil
+	}
+
+	currentX, _ := strconv.Atoi(playerData["x"])
+	currentY, _ := strconv.Atoi(playerData["y"])
+
+	// 2. Check Adjacency (must be 1 tile away)
+	targetX, targetY := placeData.X, placeData.Y
+	distX := (currentX - targetX) * (currentX - targetX)
+	distY := (currentY - targetY) * (currentY - targetY)
+	if (distX + distY) != 1 {
+		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+	}
+
+	inventoryKey := "player:inventory:" + playerID
+	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
+
+	// --- Logic for Wooden Wall ---
+	if placeData.Item == "wooden_wall" {
+		// 3. Check Inventory
+		wallCountStr, err := rdb.HGet(ctx, inventoryKey, "wooden_wall").Result()
+		if err != nil {
+			return nil, nil
+		} // Player has no walls
+		wallCount, _ := strconv.Atoi(wallCountStr)
+		if wallCount < 1 {
+			return nil, nil // Not enough walls
+		}
+
+		// 4. Check Target Tile
+		tileJSON, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
+		if err != nil {
+			return nil, nil
+		} // Tile doesn't exist
+		var tile models.WorldTile
+		json.Unmarshal([]byte(tileJSON), &tile)
+
+		if tile.Type != "ground" {
+			return nil, nil // Can only build on empty ground
+		}
+
+		// 5. Try to lock the target tile to ensure it's not occupied
+		targetTileLockKey := "lock:tile:" + targetCoordKey
+		wasSet, err := rdb.SetNX(ctx, targetTileLockKey, "world_object", 0).Result()
+		if err != nil || !wasSet {
+			// Failed to lock, tile is occupied by a player.
+			return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+		}
+
+		// 6. All checks passed. Execute the build.
+		newWallTile := models.WorldTile{Type: "wooden_wall", Health: HealthWall}
+		newTileJSON, _ := json.Marshal(newWallTile)
+
+		pipe := rdb.Pipeline()
+		// Decrement wall from inventory
+		newAmount := pipe.HIncrBy(ctx, inventoryKey, "wooden_wall", -1)
+		// Update the world tile
+		pipe.HSet(ctx, "world:zone:0", targetCoordKey, string(newTileJSON))
+		_, err = pipe.Exec(ctx)
+		if err != nil {
+			// Rollback the lock if something went wrong
+			rdb.Del(ctx, targetTileLockKey)
+			return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+		}
+
+		// 7. Broadcast and send inventory update
+		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: "wooden_wall"}
+		PublishUpdate(worldUpdateMsg)
+
+		inventoryUpdateMsg := &models.InventoryUpdateMessage{Type: "inventory_update", Resource: "wooden_wall", Amount: int(newAmount.Val())}
+
+		rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+		return nil, inventoryUpdateMsg
+	}
+
+	return nil, nil
 }
 
 // PublishUpdate sends a message to the Redis world_updates channel for broadcasting.

@@ -23,6 +23,12 @@ const (
 
 	// The number of interactions required to deplete a Rock resource.
 	HealthRock = 4
+
+	// Recipe definition: The amount of wood required to craft one wall.
+	WoodPerWall = 10
+
+	// The number of health points a newly placed wall has.
+	HealthWall = 10
 )
 
 // releaseLockScript is a Redis Lua script that provides a safe, atomic way to

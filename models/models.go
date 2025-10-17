@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 )
 
+type CraftPayload struct {
+	Item string `json:"item"`
+}
+
 // --- NEW ---
 // WorldTile represents the complete state of a single tile in the world.
 type WorldTile struct {
@@ -66,4 +70,10 @@ type InventoryUpdateMessage struct {
 	Type     string `json:"type"`
 	Resource string `json:"resource"`
 	Amount   int    `json:"amount"`
+}
+
+type PlaceItemPayload struct {
+	Item string `json:"item"`
+	X    int    `json:"x"`
+	Y    int    `json:"y"`
 }
