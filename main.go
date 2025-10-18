@@ -99,6 +99,8 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 	game.GenerateWorld()
+	game.InitializeNPCs() // <-- NEW: Spawn NPCs
+	go game.StartAILoop() // <-- NEW: Start the NPC AI loop
 
 	hub := newHub()
 	go hub.run()

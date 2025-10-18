@@ -10,28 +10,21 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// --- UPDATED ---
-// Now generic for any entity
+// (FindOpenSpawnPoint remains the same)
 func FindOpenSpawnPoint(entityID string) (int, int) {
 	x, y, dx, dy := 0, 0, 0, -1
 	for i := 0; i < (WorldSize * 2); i++ {
 		for j := 0; j < (i/2 + 1); j++ {
-			// Use RedisKey constant
 			tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
-			// Use generic entityID
 			wasSet, _ := rdb.SetNX(ctx, tileKey, entityID, 0).Result()
 			if wasSet {
-				// Use RedisKey constant
 				tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), strconv.Itoa(x)+","+strconv.Itoa(y)).Result()
 				if err != nil {
 					continue
 				}
 				var tile models.WorldTile
 				json.Unmarshal([]byte(tileJSON), &tile)
-
-				// --- BUG FIX ---
-				// UPDATED: Check the behavioral property
-				props := TileDefs[TileType(tile.Type)] // Cast string to TileType
+				props := TileDefs[TileType(tile.Type)]
 				if !props.IsCollidable {
 					log.Printf("Found open spawn for %s at (%d, %d)", entityID, x, y)
 					return x, y
@@ -45,28 +38,20 @@ func FindOpenSpawnPoint(entityID string) (int, int) {
 	return 0, 0
 }
 
-// InitializePlayer sets up a new player's state in Redis and prepares the initial welcome message.
 func InitializePlayer(playerID string) *models.InitialStateMessage {
 	log.Printf("Initializing player %s.", playerID)
-	// Use the generic spawn finder
 	spawnX, spawnY := FindOpenSpawnPoint(playerID)
-	// Use RedisKey constant
 	inventoryKey := string(RedisKeyPlayerInventory) + playerID
 
 	pipe := rdb.Pipeline()
-	// Set the player's position, cooldown, and NEW entityType
+	// Set the player's position, cooldown, and entityType
 	pipe.HSet(ctx, playerID,
 		"x", spawnX,
 		"y", spawnY,
 		"nextActionAt", time.Now().UnixMilli(),
-		"entityType", string(EntityTypePlayer), // <-- NEW
+		"entityType", string(EntityTypePlayer), // This is the internal type
 	)
-	// Add the player to the geospatial index.
-	// Use RedisKey constant
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
-
-	// Give every new player a starting inventory.
-	// Use ItemType constants
 	pipe.HSet(ctx, inventoryKey, string(ItemWood), 100, string(ItemWoodenWall), 10)
 
 	_, err := pipe.Exec(ctx)
@@ -75,17 +60,34 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		return nil
 	}
 
-	// Gather all data needed for the initial state message.
-	// Use RedisKey constant
+	// --- UPDATED: Gather all entity types for initial state ---
 	locations, _ := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), 0, 0, &redis.GeoRadiusQuery{Radius: 99999, Unit: "km", WithCoord: true}).Result()
-	// --- UPDATED ---
-	// Use new EntityState model
 	allEntitiesState := make(map[string]models.EntityState)
-	for _, loc := range locations {
-		allEntitiesState[loc.Name] = models.EntityState{X: int(loc.Longitude), Y: int(loc.Latitude)}
-	}
 
-	// Use RedisKey constant
+	// This is an N+1 query. We can optimize this later with Lua or by
+	// storing entity type directly in the GeoSet (if possible) or a separate set.
+	// For now, this is functional.
+	for _, loc := range locations {
+		// Get the entity's type from its hash
+		entityData, err := rdb.HGetAll(ctx, loc.Name).Result()
+		if err != nil {
+			continue
+		}
+
+		entityType := entityData["entityType"] // "player" or "npc"
+		// If it's an NPC, use its more specific type
+		if npcType, ok := entityData["npcType"]; ok && entityType == string(EntityTypeNPC) {
+			entityType = npcType // e.g., "slime"
+		}
+
+		allEntitiesState[loc.Name] = models.EntityState{
+			X:    int(loc.Longitude),
+			Y:    int(loc.Latitude),
+			Type: entityType, // Send the specific type
+		}
+	}
+	// --- END UPDATE ---
+
 	worldDataRaw, _ := rdb.HGetAll(ctx, string(RedisKeyWorldZone0)).Result()
 	worldDataTyped := make(map[string]models.WorldTile)
 	for coord, tileJSON := range worldDataRaw {
@@ -96,46 +98,42 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 
 	inventoryData, _ := rdb.HGetAll(ctx, inventoryKey).Result()
 
-	// Construct the welcome message.
-	// Use ServerEventType constant
 	initialState := &models.InitialStateMessage{
 		Type:      string(ServerEventInitialState),
 		PlayerId:  playerID,
-		Entities:  allEntitiesState, // <-- RENAMED
+		Entities:  allEntitiesState, // This map now includes the 'type'
 		World:     worldDataTyped,
 		Inventory: inventoryData,
 	}
 
-	// Announce the new player's arrival to everyone else.
-	// Use ServerEventType constant
-	joinMsg := map[string]interface{}{"type": string(ServerEventPlayerJoined), "playerId": playerID, "x": spawnX, "y": spawnY}
+	// Announce the new player's arrival to everyone else
+	joinMsg := map[string]interface{}{
+		"entityId": playerID,
+		"x":        spawnX,
+		"y":        spawnY,
+		"type":     string(EntityTypePlayer), // <-- NEW: Send the type
+	}
 	PublishUpdate(joinMsg)
 
 	return initialState
 }
 
-// CleanupPlayer removes a player's data and their tile lock from Redis.
+// (CleanupPlayer remains the same as previous step)
 func CleanupPlayer(playerID string) {
 	log.Printf("Cleaning up player %s.", playerID)
 	playerData, err := rdb.HGetAll(ctx, playerID).Result()
-	if err == nil {
-		// Use generic helper
-		currentX, currentY := GetEntityPosition(playerData)
-		// Use RedisKey constant
-		currentTileKey := string(RedisKeyLockTile) + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
-		releaseLockScript.Run(ctx, rdb, []string{currentTileKey}, playerID)
+	if err != nil {
+		log.Printf("Could not get player data for cleanup: %v", err)
+		CleanupEntity(playerID, nil)
+		return
 	}
 
-	pipe := rdb.Pipeline()
-	pipe.Del(ctx, playerID)
-	// Use RedisKey constant
-	pipe.ZRem(ctx, string(RedisKeyZone0Positions), playerID)
-	// Also delete the player's inventory on cleanup
-	// Use RedisKey constant
-	pipe.Del(ctx, string(RedisKeyPlayerInventory)+playerID)
-	pipe.Exec(ctx)
+	CleanupEntity(playerID, playerData)
 
-	// Use ServerEventType constant
-	leftMsg := map[string]interface{}{"type": string(ServerEventPlayerLeft), "playerId": playerID}
-	PublishUpdate(leftMsg)
+	pipe := rdb.Pipeline()
+	pipe.Del(ctx, string(RedisKeyPlayerInventory)+playerID)
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		log.Printf("Error cleaning up player inventory for %s: %v", playerID, err)
+	}
 }

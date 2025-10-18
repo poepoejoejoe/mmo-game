@@ -1,9 +1,9 @@
 import { 
     InitialStateMessage, 
     InventoryUpdateMessage, 
-    PlayerJoinedMessage, 
-    PlayerLeftMessage, 
-    EntityMovedMessage, // <-- RENAMED
+    EntityJoinedMessage,
+    EntityLeftMessage,
+    EntityMovedMessage,
     ResourceDamagedMessage, 
     ServerMessage, 
     StateCorrectionMessage, 
@@ -12,17 +12,15 @@ import {
 import * as state from './state';
 import { updateInventoryUI, updatePlayerIdDisplay } from './ui';
 
+// (ws and send function remain the same)
 const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
-/**
- * Sends a message object to the WebSocket server.
- * @param message The message object to send.
- */
 export function send(message: object) {
     if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(message));
     }
 }
+
 
 function handleMessage(event: MessageEvent) {
     const msg: ServerMessage = JSON.parse(event.data);
@@ -30,37 +28,35 @@ function handleMessage(event: MessageEvent) {
     switch (msg.type) {
         case 'initial_state': {
             const stateMsg = msg as InitialStateMessage;
-            // Use new entities field
-            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory); // <-- UPDATED
+            // state.setInitialState now receives the full entity map
+            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory);
             updateInventoryUI();
-            updatePlayerIdDisplay(); // Update the player ID display
+            updatePlayerIdDisplay();
             break;
         }
         case 'state_correction': {
             const correctMsg = msg as StateCorrectionMessage;
-            // Use new generic function
-            state.setEntityPosition(state.getState().playerId!, correctMsg.x, correctMsg.y); // <-- UPDATED
+            state.setEntityPosition(state.getState().playerId!, correctMsg.x, correctMsg.y);
             break;
         }
-        // --- RENAMED and UPDATED ---
         case 'entity_moved': { 
             const moveMsg = msg as EntityMovedMessage;
-            // Use new entityId field and new generic function
-            state.setEntityPosition(moveMsg.entityId, moveMsg.x, moveMsg.y); // <-- UPDATED
+            state.setEntityPosition(moveMsg.entityId, moveMsg.x, moveMsg.y);
             break;
         }
-        case 'player_joined': {
-            const joinMsg = msg as PlayerJoinedMessage;
-            // Use new generic function
-            state.addEntity(joinMsg.playerId, joinMsg.x, joinMsg.y); // <-- UPDATED
+        case 'entity_joined': {
+            const joinMsg = msg as EntityJoinedMessage;
+            // --- UPDATED ---
+            // Pass the new 'type' field to our state function
+            state.addEntity(joinMsg.entityId, joinMsg.x, joinMsg.y, joinMsg.type);
             break;
         }
-        case 'player_left': {
-            const leftMsg = msg as PlayerLeftMessage;
-            // Use new generic function
-            state.removeEntity(leftMsg.playerId); // <-- UPDATED
+        case 'entity_left': {
+            const leftMsg = msg as EntityLeftMessage;
+            state.removeEntity(leftMsg.entityId);
             break;
         }
+        // (Other cases remain the same)
         case 'world_update': {
             const updateMsg = msg as WorldUpdateMessage;
             const key = `${updateMsg.x},${updateMsg.y}`;
@@ -81,6 +77,7 @@ function handleMessage(event: MessageEvent) {
     }
 }
 
+// (initializeNetwork remains the same)
 export function initializeNetwork() {
     ws.onmessage = handleMessage;
 
@@ -92,7 +89,6 @@ export function initializeNetwork() {
     ws.onclose = () => {
         console.log('Disconnected from the server.');
         document.getElementById('player-coords')!.textContent = 'Disconnected. Please refresh.';
-        // We should also remove input listeners here
     };
 
     ws.onerror = (error) => {

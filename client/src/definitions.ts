@@ -72,10 +72,38 @@ export const tileDefs: Record<string, TileProperties> = {
 };
 
 /**
- * A helper function to safely get properties for a tile type.
- * @param tileType The type of the tile (e.g., 'ground', 'tree').
- * @returns The properties for that tile, or void properties if not found.
+ * Helper function to safely get tile properties, defaulting to 'void'.
  */
-export function getTileProperties(tileType: string): TileProperties {
-    return tileDefs[tileType] || tileDefs['void'];
+export function getTileProperties(type: string): TileProperties {
+    return tileDefs[type] || tileDefs['void'];
+}
+
+
+// --- NEW: Entity Definitions ---
+
+export interface EntityProperties {
+    color: string;
+}
+
+// The master definition map for all entity types.
+export const entityDefs: Record<string, EntityProperties> = {
+    'player': {
+        color: '#3498db', // Blue
+    },
+    'slime': {
+        color: '#b3db45ff', // Green
+    },
+    'default': {
+        color: '#e74c3c', // Red (for other players/unknown)
+    }
+};
+
+/**
+ * Helper function to safely get entity properties.
+ */
+export function getEntityProperties(type: string, entityId: string, myPlayerId: string | null): EntityProperties {
+    if (entityId === myPlayerId) {
+        return entityDefs['player'];
+    }
+    return entityDefs[type] || entityDefs['default'];
 }

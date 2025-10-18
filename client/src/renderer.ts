@@ -1,15 +1,14 @@
 import * as state from './state';
 import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, TILE_SIZE } from './constants';
-import { getTileProperties } from './definitions';
+// --- UPDATED ---
+import { getTileProperties, getEntityProperties } from './definitions';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 
-// --- Asset Loading ---
+// (Asset loading functions remain the same...)
 const crackImages: HTMLImageElement[] = [];
 let assetsLoaded = false;
-
-// Pre-loads all the crack SVG images into memory for fast rendering.
 function loadAssets() {
     const crackSVGs = [
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L7.5 7.5' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
@@ -38,33 +37,24 @@ function loadAssets() {
     });
 }
 
-// --- Rendering Functions ---
-
+// (drawWorld remains the same)
 function drawWorld(startX: number, startY: number) {
     if (!ctx) return;
-
     for (let y = 0; y < VIEWPORT_HEIGHT; y++) {
         for (let x = 0; x < VIEWPORT_WIDTH; x++) {
             const tileX = startX + x;
             const tileY = startY + y;
             const tileData = state.getTileData(tileX, tileY);
             const tileProps = getTileProperties(tileData.type);
-
-            // Draw the base tile color
             ctx.fillStyle = tileProps.color;
             ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-
-            // Draw health/damage overlay if the tile has a max health
             if (tileProps.maxHealth > 0 && tileData.health < tileProps.maxHealth) {
                 if (tileData.health <= 0) {
-                    // If health is 0 or less, draw nothing (it will be ground)
                 } else {
-                    // Draw crack overlay
                     const crackIndex = Math.min(
                         crackImages.length - 1, 
                         Math.floor((1 - (tileData.health / tileProps.maxHealth)) * (crackImages.length - 1))
                     );
-                    
                     if (assetsLoaded && crackImages[crackIndex]) {
                         ctx.drawImage(crackImages[crackIndex], x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                     }
@@ -74,53 +64,42 @@ function drawWorld(startX: number, startY: number) {
     }
 }
 
-// --- RENAMED and UPDATED ---
+
 function drawEntities(startX: number, startY: number) {
     if (!ctx) return;
 
-    const allEntities = state.getState().entities; // <-- UPDATED
+    const allEntities = state.getState().entities;
     const myPlayerId = state.getState().playerId;
 
-    for (const entityId in allEntities) { // <-- UPDATED
-        // Distinguish between this client's player and other entities
-        if (entityId === myPlayerId) {
-            ctx.fillStyle = '#3498db'; // My player color
-        } else {
-            // Later, we can check entity type (NPC vs Player)
-            ctx.fillStyle = '#e74c3c'; // Other entity color
-        }
+    for (const entityId in allEntities) {
+        const entity = allEntities[entityId];
+        
+        // --- UPDATED ---
+        // Get color from our new definition helper
+        const props = getEntityProperties(entity.type, entityId, myPlayerId);
+        ctx.fillStyle = props.color;
+        // --- END UPDATE ---
 
-        const entity = allEntities[entityId]; // <-- UPDATED
         const screenX = (entity.x - startX) * TILE_SIZE;
         const screenY = (entity.y - startY) * TILE_SIZE;
 
-        // Simple square for now
         ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
     }
 }
 
-// --- Main Game Loop ---\
-
+// (render, gameLoop, initializeRenderer, startRenderLoop remain the same)
+// ...
 function render() {
-    const me = state.getMyEntity(); // <-- UPDATED
+    const me = state.getMyEntity();
     if (!me || !ctx) return;
-
-    // Clear the entire canvas for the new frame
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Calculate the top-left corner of the viewport based on the player's position
     const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
     const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
-
-    // Draw layers in order: world first, then entities on top
     drawWorld(startX, startY);
-    drawEntities(startX, startY); // <-- UPDATED
-
-    // Update the coordinate display in the UI panel
+    drawEntities(startX, startY);
     document.getElementById('player-coords')!.textContent = `Your Position: (${me.x}, ${me.y})`;
 }
 
-// The main game loop function, which calls itself continuously
 function gameLoop() {
     render();
     requestAnimationFrame(gameLoop);
@@ -133,23 +112,17 @@ export function initializeRenderer() {
         return;
     }
     ctx = canvas.getContext('2d')!;
-
-    // Set the canvas dimensions based on our constants
     canvas.width = VIEWPORT_WIDTH * TILE_SIZE;
     canvas.height = VIEWPORT_HEIGHT * TILE_SIZE;
-
-    // Start loading assets
     loadAssets();
 }
 
 export function startRenderLoop() {
-    // Wait for the initial state to be set before starting the loop
     const checkState = () => {
-        if (state.getMyEntity()) { // <-- UPDATED
+        if (state.getMyEntity()) {
             console.log("Initial state received. Starting render loop.");
             gameLoop();
         } else {
-            // If state isn't ready, check again on the next frame
             requestAnimationFrame(checkState);
         }
     };

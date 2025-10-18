@@ -34,23 +34,24 @@ type InteractPayload struct {
 	Y int `json:"y"`
 }
 
-// --- RENAMED ---
-// EntityState represents the position of any entity in the world.
+// --- UPDATED ---
+// EntityState represents the position and type of any entity.
 type EntityState struct {
-	X int `json:"x"`
-	Y int `json:"y"`
+	X    int    `json:"x"`
+	Y    int    `json:"y"`
+	Type string `json:"type"` // <-- NEW (e.g., "player", "slime")
 }
 
-// --- UPDATED ---
 // InitialStateMessage now sends a map of all entities.
 type InitialStateMessage struct {
 	Type      string                 `json:"type"`
 	PlayerId  string                 `json:"playerId"`
-	Entities  map[string]EntityState `json:"entities"` // <-- RENAMED
+	Entities  map[string]EntityState `json:"entities"` // This map now includes 'type'
 	World     map[string]WorldTile   `json:"world"`
 	Inventory map[string]string      `json:"inventory"`
 }
 
+// (Other models remain the same)
 type StateCorrectionMessage struct {
 	Type string `json:"type"`
 	X    int    `json:"x"`

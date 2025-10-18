@@ -1,10 +1,10 @@
 // This file acts as the "blueprint" for all our data.
 // It ensures that both we and the LLM know the exact shape of our objects.
 
-// --- RENAMED ---
 export interface EntityState {
     x: number;
     y: number;
+    type: string;
 }
 
 export interface WorldTile {
@@ -12,55 +12,52 @@ export interface WorldTile {
     health: number;
 }
 
-// --- UPDATED ---
 export interface ClientState {
     playerId: string | null;
-    entities: Record<string, EntityState>; // <-- RENAMED
+    entities: Record<string, EntityState>; // Already renamed
     world: Record<string, WorldTile>;
     inventory: {
         wood?: number;
         rock?: number;
         wooden_wall?: number;
-        [key: string]: number | undefined; // Allow other string keys
+        [key: string]: number | undefined;
     };
 }
 
 // --- WebSocket Message Types ---
 
-// A generic wrapper for all messages from the server
 export interface ServerMessage {
     type: string;
-    // We'll cast the payload later based on the type
     [key: string]: any; 
 }
 
-// --- UPDATED ---
 export interface InitialStateMessage extends ServerMessage {
     type: 'initial_state';
     playerId: string;
-    entities: Record<string, EntityState>; // <-- RENAMED
+    entities: Record<string, EntityState>; // Already renamed
     world: Record<string, WorldTile>;
-    inventory: Record<string, string>; // Comes as string from Redis
+    inventory: Record<string, string>;
+}
+
+export interface EntityMovedMessage extends ServerMessage {
+    type: 'entity_moved';
+    entityId: string;
+    x: number;
+    y: number;
 }
 
 // --- RENAMED and UPDATED ---
-export interface EntityMovedMessage extends ServerMessage {
-    type: 'entity_moved'; // <-- RENAMED
-    entityId: string;   // <-- RENAMED
+export interface EntityJoinedMessage extends ServerMessage {
+    type: 'entity_joined'; // <-- RENAMED
+    entityId: string;    // <-- RENAMED
     x: number;
     y: number;
 }
 
-export interface PlayerJoinedMessage extends ServerMessage {
-    type: 'player_joined';
-    playerId: string;
-    x: number;
-    y: number;
-}
-
-export interface PlayerLeftMessage extends ServerMessage {
-    type: 'player_left';
-    playerId: string;
+// --- RENAMED and UPDATED ---
+export interface EntityLeftMessage extends ServerMessage {
+    type: 'entity_left'; // <-- RENAMED
+    entityId: string;  // <-- RENAMED
 }
 
 export interface ResourceDamagedMessage extends ServerMessage {
@@ -74,7 +71,7 @@ export interface WorldUpdateMessage extends ServerMessage {
     type: 'world_update';
     x: number;
     y: number;
-    tile: WorldTile; // Expect the whole object now, not just a string
+    tile: WorldTile;
 }
 
 export interface InventoryUpdateMessage extends ServerMessage {

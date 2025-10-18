@@ -1,9 +1,9 @@
-import { ClientState, WorldTile, EntityState } from './types'; // <-- UPDATED
+import { ClientState, WorldTile, EntityState } from './types';
 
 // The global client state object. It is private to this module.
 const clientState: ClientState = {
     playerId: null,
-    entities: {}, // <-- RENAMED
+    entities: {},
     world: {},
     inventory: {}
 };
@@ -14,10 +14,9 @@ export function getState(): ClientState {
     return clientState;
 }
 
-// --- RENAMED ---
 export function getMyEntity(): EntityState | undefined {
     if (!clientState.playerId) return undefined;
-    return clientState.entities[clientState.playerId]; // <-- UPDATED
+    return clientState.entities[clientState.playerId];
 }
 
 export function getTileData(x: number, y: number): WorldTile {
@@ -27,39 +26,37 @@ export function getTileData(x: number, y: number): WorldTile {
 
 // --- State Mutators (Setters) ---
 
-// --- UPDATED ---
 export function setInitialState(
     playerId: string, 
-    entities: Record<string, EntityState>, // <-- RENAMED
+    entities: Record<string, EntityState>, // This map now includes 'type'
     world: Record<string, WorldTile>, 
     inventory: Record<string, string>
 ) {
     clientState.playerId = playerId;
-    clientState.entities = entities; // <-- UPDATED
+    clientState.entities = entities; // Directly assign the map
     clientState.world = world;
     for (const resource in inventory) {
         clientState.inventory[resource] = parseInt(inventory[resource], 10);
     }
 }
 
-// --- RENAMED and UPDATED ---
 export function setEntityPosition(entityId: string, x: number, y: number) {
-    if (clientState.entities[entityId]) { // <-- UPDATED
-        clientState.entities[entityId].x = x; // <-- UPDATED
-        clientState.entities[entityId].y = y; // <-- UPDATED
+    if (clientState.entities[entityId]) {
+        clientState.entities[entityId].x = x;
+        clientState.entities[entityId].y = y;
     }
 }
 
-// --- RENAMED and UPDATED ---
-export function addEntity(entityId: string, x: number, y: number) {
-    clientState.entities[entityId] = { x, y }; // <-- UPDATED
+// --- UPDATED ---
+export function addEntity(entityId: string, x: number, y: number, type: string) {
+    clientState.entities[entityId] = { x, y, type }; // Add with type
 }
 
-// --- RENAMED and UPDATED ---
 export function removeEntity(entityId: string) {
-    delete clientState.entities[entityId]; // <-- UPDATED
+    delete clientState.entities[entityId];
 }
 
+// (Other functions remain the same)
 export function setWorldTile(x: number, y: number, type: string, health: number = 0) {
     const key = `${x},${y}`;
     if (clientState.world[key]) {

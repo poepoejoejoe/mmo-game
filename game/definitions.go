@@ -7,7 +7,7 @@ type EntityType string
 
 const (
 	EntityTypePlayer EntityType = "player"
-	EntityTypeNPC    EntityType = "npc"
+	EntityTypeNPC    EntityType = "npc" // <-- NEW
 )
 
 // TileType defines the string literals for tile types.
@@ -49,9 +49,9 @@ const (
 	ServerEventWorldUpdate     ServerEventType = "world_update"
 	ServerEventInventoryUpdate ServerEventType = "inventory_update"
 	ServerEventResourceDamaged ServerEventType = "resource_damaged"
-	ServerEventPlayerJoined    ServerEventType = "player_joined"
-	ServerEventPlayerLeft      ServerEventType = "player_left"
-	ServerEventEntityMoved     ServerEventType = "entity_moved" // <-- RENAMED
+	ServerEventEntityJoined    ServerEventType = "entity_joined" // <-- RENAMED
+	ServerEventEntityLeft      ServerEventType = "entity_left"   // <-- RENAMED
+	ServerEventEntityMoved     ServerEventType = "entity_moved"
 )
 
 // MoveDirection defines the valid move directions.
@@ -74,6 +74,7 @@ const (
 	RedisKeyWorldZone0      RedisKey = "world:zone:0"
 	RedisKeyZone0Positions  RedisKey = "zone:0:positions"
 	RedisKeyLockWorldObject RedisKey = "world_object"
+	NPCSlimePrefix          RedisKey = "npc:slime:" // <-- NEW
 )
 
 // --- END NEW CONSTANTS ---
