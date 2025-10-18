@@ -8,27 +8,29 @@ import (
 	"time"
 )
 
-// CanPlayerAct checks if a player is off cooldown and returns their data.
-// It fetches player data and checks their 'nextActionAt' timestamp.
-func CanPlayerAct(playerID string) (bool, map[string]string) {
-	playerData, err := rdb.HGetAll(ctx, playerID).Result()
+// --- RENAMED ---
+// CanEntityAct checks if an entity is off cooldown and returns their data.
+// It fetches entity data and checks their 'nextActionAt' timestamp.
+func CanEntityAct(entityID string) (bool, map[string]string) {
+	entityData, err := rdb.HGetAll(ctx, entityID).Result()
 	if err != nil {
-		log.Printf("Failed to get player data for %s: %v", playerID, err)
+		log.Printf("Failed to get entity data for %s: %v", entityID, err)
 		return false, nil
 	}
 
-	nextActionAt, _ := strconv.ParseInt(playerData["nextActionAt"], 10, 64)
+	nextActionAt, _ := strconv.ParseInt(entityData["nextActionAt"], 10, 64)
 	if time.Now().UnixMilli() < nextActionAt {
-		return false, playerData // On cooldown
+		return false, entityData // On cooldown
 	}
 
-	return true, playerData
+	return true, entityData
 }
 
-// GetPlayerPosition parses X and Y coordinates from player data.
-func GetPlayerPosition(playerData map[string]string) (int, int) {
-	x, _ := strconv.Atoi(playerData["x"])
-	y, _ := strconv.Atoi(playerData["y"])
+// --- RENAMED ---
+// GetEntityPosition parses X and Y coordinates from entity data.
+func GetEntityPosition(entityData map[string]string) (int, int) {
+	x, _ := strconv.Atoi(entityData["x"])
+	y, _ := strconv.Atoi(entityData["y"])
 	return x, y
 }
 
@@ -43,7 +45,8 @@ func IsAdjacent(x1, y1, x2, y2 int) bool {
 // GetWorldTile fetches a tile from Redis and unmarshals it and its properties.
 func GetWorldTile(x, y int) (*models.WorldTile, *TileProperties, error) {
 	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
-	tileJSON, err := rdb.HGet(ctx, "world:zone:0", coordKey).Result()
+	// Use RedisKey constant
+	tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), coordKey).Result()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -54,12 +57,15 @@ func GetWorldTile(x, y int) (*models.WorldTile, *TileProperties, error) {
 		return nil, nil, err
 	}
 
+	// --- BUG FIX ---
+	// Cast tile.Type string to TileType for map lookup
 	props, ok := TileDefs[TileType(tile.Type)]
 	if !ok {
 		log.Printf("Unknown tile type %s at %s", tile.Type, coordKey)
 		// Fallback to ground properties to be safe
-		props = TileDefs["ground"]
+		props = TileDefs[TileTypeGround]
 	}
+	// --- END BUG FIX ---
 
 	return &tile, &props, nil
 }
@@ -71,5 +77,6 @@ func PublishUpdate(message interface{}) {
 		log.Printf("Error marshalling message for publish: %v", err)
 		return
 	}
+	// Use Redis topic constant (if you add one, e.g., "world_updates")
 	rdb.Publish(ctx, "world_updates", string(jsonMsg))
 }

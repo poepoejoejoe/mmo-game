@@ -1,9 +1,9 @@
-import { ClientState, WorldTile, PlayerState } from './types';
+import { ClientState, WorldTile, EntityState } from './types'; // <-- UPDATED
 
 // The global client state object. It is private to this module.
 const clientState: ClientState = {
     playerId: null,
-    players: {},
+    entities: {}, // <-- RENAMED
     world: {},
     inventory: {}
 };
@@ -14,9 +14,10 @@ export function getState(): ClientState {
     return clientState;
 }
 
-export function getMyPlayer(): PlayerState | undefined {
+// --- RENAMED ---
+export function getMyEntity(): EntityState | undefined {
     if (!clientState.playerId) return undefined;
-    return clientState.players[clientState.playerId];
+    return clientState.entities[clientState.playerId]; // <-- UPDATED
 }
 
 export function getTileData(x: number, y: number): WorldTile {
@@ -26,33 +27,37 @@ export function getTileData(x: number, y: number): WorldTile {
 
 // --- State Mutators (Setters) ---
 
+// --- UPDATED ---
 export function setInitialState(
     playerId: string, 
-    players: Record<string, PlayerState>, 
+    entities: Record<string, EntityState>, // <-- RENAMED
     world: Record<string, WorldTile>, 
     inventory: Record<string, string>
 ) {
     clientState.playerId = playerId;
-    clientState.players = players;
+    clientState.entities = entities; // <-- UPDATED
     clientState.world = world;
     for (const resource in inventory) {
         clientState.inventory[resource] = parseInt(inventory[resource], 10);
     }
 }
 
-export function setPlayerPosition(playerId: string, x: number, y: number) {
-    if (clientState.players[playerId]) {
-        clientState.players[playerId].x = x;
-        clientState.players[playerId].y = y;
+// --- RENAMED and UPDATED ---
+export function setEntityPosition(entityId: string, x: number, y: number) {
+    if (clientState.entities[entityId]) { // <-- UPDATED
+        clientState.entities[entityId].x = x; // <-- UPDATED
+        clientState.entities[entityId].y = y; // <-- UPDATED
     }
 }
 
-export function addPlayer(playerId: string, x: number, y: number) {
-    clientState.players[playerId] = { x, y };
+// --- RENAMED and UPDATED ---
+export function addEntity(entityId: string, x: number, y: number) {
+    clientState.entities[entityId] = { x, y }; // <-- UPDATED
 }
 
-export function removePlayer(playerId: string) {
-    delete clientState.players[playerId];
+// --- RENAMED and UPDATED ---
+export function removeEntity(entityId: string) {
+    delete clientState.entities[entityId]; // <-- UPDATED
 }
 
 export function setWorldTile(x: number, y: number, type: string, health: number = 0) {

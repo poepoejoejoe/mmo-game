@@ -2,6 +2,14 @@ package game
 
 // --- NEW CONSTANTS ---
 
+// EntityType defines the type of an entity.
+type EntityType string
+
+const (
+	EntityTypePlayer EntityType = "player"
+	EntityTypeNPC    EntityType = "npc"
+)
+
 // TileType defines the string literals for tile types.
 type TileType string
 
@@ -43,7 +51,7 @@ const (
 	ServerEventResourceDamaged ServerEventType = "resource_damaged"
 	ServerEventPlayerJoined    ServerEventType = "player_joined"
 	ServerEventPlayerLeft      ServerEventType = "player_left"
-	ServerEventPlayerMoved     ServerEventType = "player_moved"
+	ServerEventEntityMoved     ServerEventType = "entity_moved" // <-- RENAMED
 )
 
 // MoveDirection defines the valid move directions.
@@ -72,19 +80,19 @@ const (
 
 // Recipe defines the ingredients required to craft an item.
 type Recipe struct {
-	Ingredients map[ItemType]int // A map of resource names to the required amount.
-	Yield       int              // How many items are produced.
+	Ingredients map[ItemType]int // Use new type
+	Yield       int
 }
 
 // TileProperties defines the behavioral attributes of a game object.
 type TileProperties struct {
-	IsCollidable    bool     // Player cannot move into this tile.
-	IsGatherable    bool     // Player can gather resources from this.
-	IsDestructible  bool     // Player can attack and destroy this.
-	IsBuildableOn   bool     // Players can place items on this tile.
-	MovementPenalty bool     // Moving into this tile applies a penalty.
-	GatherResource  ItemType // The item resource gained when gathered.
-	MaxHealth       int      // The starting health of this object.
+	IsCollidable    bool
+	IsGatherable    bool
+	IsDestructible  bool
+	IsBuildableOn   bool
+	MovementPenalty bool
+	GatherResource  ItemType // Use new type
+	MaxHealth       int
 }
 
 // TileDefs is our master map of all tile definitions.
@@ -93,7 +101,6 @@ var TileDefs map[TileType]TileProperties // Use new type
 // RecipeDefs is our master map of all crafting recipes.
 var RecipeDefs map[ItemType]Recipe // Use new type
 
-// The init() function runs automatically to populate our definition maps.
 func init() {
 	TileDefs = make(map[TileType]TileProperties)
 	RecipeDefs = make(map[ItemType]Recipe)

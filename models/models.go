@@ -8,15 +8,11 @@ type CraftPayload struct {
 	Item string `json:"item"`
 }
 
-// --- NEW ---
-// WorldTile represents the complete state of a single tile in the world.
 type WorldTile struct {
 	Type   string `json:"type"`
 	Health int    `json:"health"`
 }
 
-// --- NEW ---
-// ResourceDamagedMessage is broadcast to all clients when a resource takes damage.
 type ResourceDamagedMessage struct {
 	Type      string `json:"type"`
 	X         int    `json:"x"`
@@ -38,17 +34,19 @@ type InteractPayload struct {
 	Y int `json:"y"`
 }
 
-type PlayerState struct {
+// --- RENAMED ---
+// EntityState represents the position of any entity in the world.
+type EntityState struct {
 	X int `json:"x"`
 	Y int `json:"y"`
 }
 
 // --- UPDATED ---
-// InitialStateMessage.World now sends the more complex WorldTile objects.
+// InitialStateMessage now sends a map of all entities.
 type InitialStateMessage struct {
 	Type      string                 `json:"type"`
 	PlayerId  string                 `json:"playerId"`
-	Players   map[string]PlayerState `json:"players"`
+	Entities  map[string]EntityState `json:"entities"` // <-- RENAMED
 	World     map[string]WorldTile   `json:"world"`
 	Inventory map[string]string      `json:"inventory"`
 }

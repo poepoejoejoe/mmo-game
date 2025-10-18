@@ -1,7 +1,8 @@
 // This file acts as the "blueprint" for all our data.
 // It ensures that both we and the LLM know the exact shape of our objects.
 
-export interface PlayerState {
+// --- RENAMED ---
+export interface EntityState {
     x: number;
     y: number;
 }
@@ -11,14 +12,15 @@ export interface WorldTile {
     health: number;
 }
 
+// --- UPDATED ---
 export interface ClientState {
     playerId: string | null;
-    players: Record<string, PlayerState>;
+    entities: Record<string, EntityState>; // <-- RENAMED
     world: Record<string, WorldTile>;
     inventory: {
         wood?: number;
         rock?: number;
-        wooden_wall?: number; // <-- NEW
+        wooden_wall?: number;
         [key: string]: number | undefined; // Allow other string keys
     };
 }
@@ -32,17 +34,19 @@ export interface ServerMessage {
     [key: string]: any; 
 }
 
+// --- UPDATED ---
 export interface InitialStateMessage extends ServerMessage {
     type: 'initial_state';
     playerId: string;
-    players: Record<string, PlayerState>;
+    entities: Record<string, EntityState>; // <-- RENAMED
     world: Record<string, WorldTile>;
     inventory: Record<string, string>; // Comes as string from Redis
 }
 
-export interface PlayerMovedMessage extends ServerMessage {
-    type: 'player_moved';
-    playerId: string;
+// --- RENAMED and UPDATED ---
+export interface EntityMovedMessage extends ServerMessage {
+    type: 'entity_moved'; // <-- RENAMED
+    entityId: string;   // <-- RENAMED
     x: number;
     y: number;
 }

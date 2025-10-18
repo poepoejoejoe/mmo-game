@@ -4,7 +4,7 @@ import { setBuildModeActive, startCooldown } from './ui';
 import { ACTION_COOLDOWN, TILE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, WATER_PENALTY } from './constants';
 import { getTileProperties } from './definitions';
 
-const gameCanvas = document.getElementById('game-canvas')!;
+const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
 let canPerformAction = true;
 let isBuildMode = false;
@@ -19,100 +19,110 @@ let interactionInterval: number | null = null;
  * @param {number} tileY The world y-coordinate of the target tile.
  */
 function performInteraction(tileX: number, tileY: number) {
-    if (!canPerformAction || !state.getMyPlayer()) return;
+    if (!canPerformAction || !state.getMyEntity()) return; // <-- UPDATED
 
-    const me = state.getMyPlayer()!;
+    const me = state.getMyEntity()!; // <-- UPDATED
     // Check adjacency for any mouse action
     if (Math.abs(me.x - tileX) + Math.abs(me.y - tileY) !== 1) return;
 
     // Logic for Build Mode
     if (isBuildMode) {
         const inventory = state.getState().inventory;
-        if ((inventory.wooden_wall || 0) < 1) return;
-
+        if ((inventory.wooden_wall || 0) < 1) return; // Not enough walls
+        
         const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
-        if (!targetTileProps.isBuildableOn) return;
+        if (!targetTileProps.isBuildableOn) return; // Can't build here
 
         startActionCooldown(ACTION_COOLDOWN);
         network.send({ type: 'place_item', payload: { item: 'wooden_wall', x: tileX, y: tileY } });
 
-    // Logic for Gather/Attack Mode
-    } else {
-        const tileData = state.getTileData(tileX, tileY);
-        const props = getTileProperties(tileData.type);
-        if (!props.isGatherable && !props.isDestructible) return;
+    } 
+    // Logic for Gather/Interact Mode
+    else {
+        const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
+        if (!targetTileProps.isGatherable && !targetTileProps.isDestructible) return; // Nothing to interact with
 
-        startActionCooldown(ACTION_COOLDOWN);
+        const cooldown = targetTileProps.movementPenalty ? WATER_PENALTY : ACTION_COOLDOWN;
+        startActionCooldown(cooldown);
         network.send({ type: 'interact', payload: { x: tileX, y: tileY } });
     }
 }
 
+
 function handleKeyDown(e: KeyboardEvent) {
-    // Toggling build mode
-    if (e.key.toLowerCase() === 'b') {
-        isBuildMode = !isBuildMode;
-        console.log(`Build mode: ${isBuildMode}`);
-        setBuildModeActive(isBuildMode);
-        return;
+    if (!canPerformAction || !state.getMyEntity()) return; // <-- UPDATED
+
+    let dx = 0;
+    let dy = 0;
+
+    switch (e.key) {
+        case 'w':
+        case 'ArrowUp':
+            dy = -1;
+            break;
+        case 's':
+        case 'ArrowDown':
+            dy = 1;
+            break;
+        case 'a':
+        case 'ArrowLeft':
+            dx = -1;
+            break;
+        case 'd':
+        case 'ArrowRight':
+            dx = 1;
+            break;
+        case 'b': // Build mode toggle
+            isBuildMode = !isBuildMode;
+            setBuildModeActive(isBuildMode);
+            return; // Don't perform a move action
+        default:
+            return; // Ignore other keys
     }
 
-    if (!canPerformAction || !state.getMyPlayer()) return;
+    if (dx === 0 && dy === 0) return;
+    
+    const me = state.getMyEntity()!; // <-- UPDATED
+    const targetTile = state.getTileData(me.x + dx, me.y + dy);
+    const targetProps = getTileProperties(targetTile.type);
 
-    let direction: string | null = null;
-    switch (e.key.toLowerCase()) {
-        case 'arrowup': case 'w': direction = 'up'; break;
-        case 'arrowdown': case 's': direction = 'down'; break;
-        case 'arrowleft': case 'a': direction = 'left'; break;
-        case 'arrowright': case 'd': direction = 'right'; break;
-        default: return;
-    }
+    if (targetProps.isCollidable) return; // Don't send move if it's a wall
 
-    const me = state.getMyPlayer()!;
-    let targetX = me.x, targetY = me.y;
-
-    switch (direction) {
-        case 'up': targetY--; break;
-        case 'down': targetY++; break;
-        case 'left': targetX--; break;
-        case 'right': targetX++; break;
-    }
-
-    // Client-side prediction for player collision
-    if (Object.values(state.getState().players).some(p => p.x === targetX && p.y === targetY)) return;
-
-    // Client-side prediction for terrain collision
-    const targetTileData = state.getTileData(targetX, targetY);
-    const props = getTileProperties(targetTileData.type);
-    if (props.isCollidable) return;
-
-    // Optimistic update for responsive feel
-    state.setPlayerPosition(state.getState().playerId!, targetX, targetY);
-
-    const cooldown = props.movementPenalty ? WATER_PENALTY : ACTION_COOLDOWN;
+    const cooldown = targetProps.movementPenalty ? WATER_PENALTY : ACTION_COOLDOWN;
     startActionCooldown(cooldown);
 
-    network.send({ type: 'move', payload: { direction } });
+    const directionMap: { [key: string]: string } = {
+        '-1,0': 'left',
+        '1,0': 'right',
+        '0,-1': 'up',
+        '0,1': 'down',
+    };
+    const dirKey = `${dx},${dy}`;
+    network.send({ type: 'move', payload: { direction: directionMap[dirKey] } });
 }
 
 function handleMouseDown(e: MouseEvent) {
-    if (e.button !== 0) return; // Ignore right-clicks
-
-    if (interactionInterval) {
-        clearInterval(interactionInterval);
-    }
+    if (e.button !== 0) return; // Only respond to left-click
 
     const tryInteraction = () => {
-        const me = state.getMyPlayer();
+        const me = state.getMyEntity(); // <-- UPDATED
         if (!me) return;
 
         const rect = gameCanvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
+        const scaleX = gameCanvas.width / rect.width;
+        const scaleY = gameCanvas.height / rect.height;
+
+        const canvasX = (e.clientX - rect.left) * scaleX;
+        const canvasY = (e.clientY - rect.top) * scaleY;
+
+        const tileGridX = Math.floor(canvasX / TILE_SIZE);
+        const tileGridY = Math.floor(canvasY / TILE_SIZE);
 
         const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
         const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
-        const tileX = Math.floor(clickX / TILE_SIZE) + startX;
-        const tileY = Math.floor(clickY / TILE_SIZE) + startY;
+
+        const tileX = tileGridX + startX;
+        const tileY = tileGridY + startY;
 
         performInteraction(tileX, tileY);
     };

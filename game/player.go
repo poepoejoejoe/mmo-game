@@ -10,13 +10,16 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-func FindOpenSpawnPoint(playerID string) (int, int) {
+// --- UPDATED ---
+// Now generic for any entity
+func FindOpenSpawnPoint(entityID string) (int, int) {
 	x, y, dx, dy := 0, 0, 0, -1
 	for i := 0; i < (WorldSize * 2); i++ {
 		for j := 0; j < (i/2 + 1); j++ {
 			// Use RedisKey constant
 			tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
-			wasSet, _ := rdb.SetNX(ctx, tileKey, playerID, 0).Result()
+			// Use generic entityID
+			wasSet, _ := rdb.SetNX(ctx, tileKey, entityID, 0).Result()
 			if wasSet {
 				// Use RedisKey constant
 				tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), strconv.Itoa(x)+","+strconv.Itoa(y)).Result()
@@ -26,10 +29,11 @@ func FindOpenSpawnPoint(playerID string) (int, int) {
 				var tile models.WorldTile
 				json.Unmarshal([]byte(tileJSON), &tile)
 
-				// Use TileType constant
-				props := TileDefs[TileType(tile.Type)]
+				// --- BUG FIX ---
+				// UPDATED: Check the behavioral property
+				props := TileDefs[TileType(tile.Type)] // Cast string to TileType
 				if !props.IsCollidable {
-					log.Printf("Found open spawn for %s at (%d, %d)", playerID, x, y)
+					log.Printf("Found open spawn for %s at (%d, %d)", entityID, x, y)
 					return x, y
 				}
 			}
@@ -37,30 +41,33 @@ func FindOpenSpawnPoint(playerID string) (int, int) {
 		}
 		dx, dy = -dy, dx
 	}
-	log.Printf("Could not find open spawn point, defaulting to (0,0) for player %s", playerID)
+	log.Printf("Could not find open spawn point, defaulting to (0,0) for entity %s", entityID)
 	return 0, 0
 }
 
 // InitializePlayer sets up a new player's state in Redis and prepares the initial welcome message.
 func InitializePlayer(playerID string) *models.InitialStateMessage {
 	log.Printf("Initializing player %s.", playerID)
+	// Use the generic spawn finder
 	spawnX, spawnY := FindOpenSpawnPoint(playerID)
 	// Use RedisKey constant
 	inventoryKey := string(RedisKeyPlayerInventory) + playerID
 
 	pipe := rdb.Pipeline()
-	// Set the player's position and initial action cooldown.
-	pipe.HSet(ctx, playerID, "x", spawnX, "y", spawnY, "nextActionAt", time.Now().UnixMilli())
-	// Add the player to the geospatial index for proximity queries.
+	// Set the player's position, cooldown, and NEW entityType
+	pipe.HSet(ctx, playerID,
+		"x", spawnX,
+		"y", spawnY,
+		"nextActionAt", time.Now().UnixMilli(),
+		"entityType", string(EntityTypePlayer), // <-- NEW
+	)
+	// Add the player to the geospatial index.
 	// Use RedisKey constant
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
 
-	// --- THIS IS THE CHANGE ---
-	// For testing purposes, give every new player a starting inventory.
-	// HSet can take multiple field-value pairs at once.
+	// Give every new player a starting inventory.
 	// Use ItemType constants
 	pipe.HSet(ctx, inventoryKey, string(ItemWood), 100, string(ItemWoodenWall), 10)
-	// --- END OF CHANGE ---
 
 	_, err := pipe.Exec(ctx)
 	if err != nil {
@@ -71,9 +78,11 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	// Gather all data needed for the initial state message.
 	// Use RedisKey constant
 	locations, _ := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), 0, 0, &redis.GeoRadiusQuery{Radius: 99999, Unit: "km", WithCoord: true}).Result()
-	allPlayersState := make(map[string]models.PlayerState)
+	// --- UPDATED ---
+	// Use new EntityState model
+	allEntitiesState := make(map[string]models.EntityState)
 	for _, loc := range locations {
-		allPlayersState[loc.Name] = models.PlayerState{X: int(loc.Longitude), Y: int(loc.Latitude)}
+		allEntitiesState[loc.Name] = models.EntityState{X: int(loc.Longitude), Y: int(loc.Latitude)}
 	}
 
 	// Use RedisKey constant
@@ -92,7 +101,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	initialState := &models.InitialStateMessage{
 		Type:      string(ServerEventInitialState),
 		PlayerId:  playerID,
-		Players:   allPlayersState,
+		Entities:  allEntitiesState, // <-- RENAMED
 		World:     worldDataTyped,
 		Inventory: inventoryData,
 	}
@@ -110,8 +119,8 @@ func CleanupPlayer(playerID string) {
 	log.Printf("Cleaning up player %s.", playerID)
 	playerData, err := rdb.HGetAll(ctx, playerID).Result()
 	if err == nil {
-		currentX, _ := strconv.Atoi(playerData["x"])
-		currentY, _ := strconv.Atoi(playerData["y"])
+		// Use generic helper
+		currentX, currentY := GetEntityPosition(playerData)
 		// Use RedisKey constant
 		currentTileKey := string(RedisKeyLockTile) + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
 		releaseLockScript.Run(ctx, rdb, []string{currentTileKey}, playerID)

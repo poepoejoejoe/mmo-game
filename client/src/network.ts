@@ -3,7 +3,7 @@ import {
     InventoryUpdateMessage, 
     PlayerJoinedMessage, 
     PlayerLeftMessage, 
-    PlayerMovedMessage, 
+    EntityMovedMessage, // <-- RENAMED
     ResourceDamagedMessage, 
     ServerMessage, 
     StateCorrectionMessage, 
@@ -30,35 +30,35 @@ function handleMessage(event: MessageEvent) {
     switch (msg.type) {
         case 'initial_state': {
             const stateMsg = msg as InitialStateMessage;
-            state.setInitialState(stateMsg.playerId, stateMsg.players, stateMsg.world, stateMsg.inventory);
+            // Use new entities field
+            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory); // <-- UPDATED
             updateInventoryUI();
             updatePlayerIdDisplay(); // Update the player ID display
             break;
         }
         case 'state_correction': {
             const correctMsg = msg as StateCorrectionMessage;
-            state.setPlayerPosition(state.getState().playerId!, correctMsg.x, correctMsg.y);
+            // Use new generic function
+            state.setEntityPosition(state.getState().playerId!, correctMsg.x, correctMsg.y); // <-- UPDATED
             break;
         }
-        case 'resource_damaged': {
-            const damageMsg = msg as ResourceDamagedMessage;
-            state.setResourceHealth(damageMsg.x, damageMsg.y, damageMsg.newHealth);
-            // We don't need to re-render here, the hit effect is enough visual feedback
-            break;
-        }
-        case 'player_moved': {
-            const moveMsg = msg as PlayerMovedMessage;
-            state.setPlayerPosition(moveMsg.playerId, moveMsg.x, moveMsg.y);
+        // --- RENAMED and UPDATED ---
+        case 'entity_moved': { 
+            const moveMsg = msg as EntityMovedMessage;
+            // Use new entityId field and new generic function
+            state.setEntityPosition(moveMsg.entityId, moveMsg.x, moveMsg.y); // <-- UPDATED
             break;
         }
         case 'player_joined': {
             const joinMsg = msg as PlayerJoinedMessage;
-            state.addPlayer(joinMsg.playerId, joinMsg.x, joinMsg.y);
+            // Use new generic function
+            state.addEntity(joinMsg.playerId, joinMsg.x, joinMsg.y); // <-- UPDATED
             break;
         }
         case 'player_left': {
             const leftMsg = msg as PlayerLeftMessage;
-            state.removePlayer(leftMsg.playerId);
+            // Use new generic function
+            state.removeEntity(leftMsg.playerId); // <-- UPDATED
             break;
         }
         case 'world_update': {
@@ -71,6 +71,11 @@ function handleMessage(event: MessageEvent) {
             const invMsg = msg as InventoryUpdateMessage;
             state.setInventoryItem(invMsg.resource, invMsg.amount);
             updateInventoryUI();
+            break;
+        }
+        case 'resource_damaged': {
+            const damageMsg = msg as ResourceDamagedMessage;
+            state.setResourceHealth(damageMsg.x, damageMsg.y, damageMsg.newHealth);
             break;
         }
     }
@@ -92,6 +97,5 @@ export function initializeNetwork() {
 
     ws.onerror = (error) => {
         console.error('WebSocket Error:', error);
-        document.getElementById('player-coords')!.textContent = 'Connection error.';
     };
 }

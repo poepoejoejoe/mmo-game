@@ -16,17 +16,20 @@ func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.Inventory
 		return nil, nil
 	}
 
-	canAct, _ := CanPlayerAct(playerID)
+	// Use new generic helper
+	canAct, _ := CanEntityAct(playerID)
 	if !canAct {
 		return nil, nil
 	}
 
+	// --- BUG FIX ---
 	// Use the ItemType constant for the map lookup
 	recipe, ok := RecipeDefs[ItemType(craftData.Item)]
 	if !ok {
 		log.Printf("Player %s tried to craft unknown item: %s", playerID, craftData.Item)
 		return nil, nil
 	}
+	// --- END BUG FIX ---
 
 	// Use the RedisKey constant for the inventory key
 	inventoryKey := string(RedisKeyPlayerInventory) + playerID

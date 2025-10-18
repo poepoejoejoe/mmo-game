@@ -14,12 +14,14 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 		return nil, nil
 	}
 
-	canAct, playerData := CanPlayerAct(playerID)
+	// Use new generic helper
+	canAct, playerData := CanEntityAct(playerID)
 	if !canAct {
 		return nil, nil
 	}
 
-	currentX, currentY := GetPlayerPosition(playerData)
+	// Use new generic helper
+	currentX, currentY := GetEntityPosition(playerData)
 	targetX, targetY := interactData.X, interactData.Y
 
 	if !IsAdjacent(currentX, currentY, targetX, targetY) {
@@ -93,12 +95,14 @@ func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCo
 		return nil, nil
 	}
 
-	canAct, playerData := CanPlayerAct(playerID)
+	// Use new generic helper
+	canAct, playerData := CanEntityAct(playerID)
 	if !canAct {
 		return nil, nil
 	}
 
-	currentX, currentY := GetPlayerPosition(playerData)
+	// Use new generic helper
+	currentX, currentY := GetEntityPosition(playerData)
 	targetX, targetY := placeData.X, placeData.Y
 
 	if !IsAdjacent(currentX, currentY, targetX, targetY) {

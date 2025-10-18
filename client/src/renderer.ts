@@ -14,73 +14,95 @@ function loadAssets() {
     const crackSVGs = [
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L7.5 7.5' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 M8 8 L10 9' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M8 8 L10 9 L12 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M8 8 L10 9 L12 11 M8 8 L7 10 L5 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 M8 8 L10 9 L12 11 L14 10 M8 8 L7 10 L5 11 L3 9' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 M8 8 L7 10 L5 11 L3 9 L1 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
+        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 M8 8 L10 9 L12 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
+        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
+        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M8 8 L7 10 L5 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
+        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M8 8 L7 10 L5 11 L3 9 L1 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
+        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M1 15 L4 12 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4 L5 5' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M1 15 L4 12 M4 12 L6 13 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M15 15 L14 16 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4 L5 5 M3 4 L2 2 M8 8 L9 7 M12 5 L14 4' stroke='rgba(44,62,80,0.8)' stroke-width='0.8' fill='none'/%3e%3c/svg%3e",
+        "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M1 15 L4 12 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e"
     ];
-
+    
     let loadedCount = 0;
-    crackSVGs.forEach(svgData => {
+    crackSVGs.forEach((svg, index) => {
         const img = new Image();
-        img.src = svgData;
+        img.src = svg;
         img.onload = () => {
+            crackImages[index] = img;
             loadedCount++;
             if (loadedCount === crackSVGs.length) {
                 assetsLoaded = true;
-                console.log("Crack assets loaded.");
+                console.log("All crack assets loaded.");
             }
         };
-        crackImages.push(img);
     });
 }
 
-// --- Drawing Functions ---
+// --- Rendering Functions ---
 
 function drawWorld(startX: number, startY: number) {
-    for (let j = 0; j < VIEWPORT_HEIGHT; j++) {
-        for (let i = 0; i < VIEWPORT_WIDTH; i++) {
-            const worldX = startX + i;
-            const worldY = startY + j;
-            const tileData = state.getTileData(worldX, worldY);
-            const props = getTileProperties(tileData.type);
+    if (!ctx) return;
+
+    for (let y = 0; y < VIEWPORT_HEIGHT; y++) {
+        for (let x = 0; x < VIEWPORT_WIDTH; x++) {
+            const tileX = startX + x;
+            const tileY = startY + y;
+            const tileData = state.getTileData(tileX, tileY);
+            const tileProps = getTileProperties(tileData.type);
 
             // Draw the base tile color
-            ctx.fillStyle = props.color;
-            ctx.fillRect(i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.fillStyle = tileProps.color;
+            ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
 
-            // Draw crack overlays on top if the tile is damaged
-            if (assetsLoaded && (props.isGatherable || props.isDestructible)) {
-                if (tileData.health < props.maxHealth) {
-                    const damagePercent = 1 - (tileData.health / props.maxHealth);
-                    const crackStage = Math.min(9, Math.floor(damagePercent * 10));
-                    ctx.drawImage(crackImages[crackStage], i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            // Draw health/damage overlay if the tile has a max health
+            if (tileProps.maxHealth > 0 && tileData.health < tileProps.maxHealth) {
+                if (tileData.health <= 0) {
+                    // If health is 0 or less, draw nothing (it will be ground)
+                } else {
+                    // Draw crack overlay
+                    const crackIndex = Math.min(
+                        crackImages.length - 1, 
+                        Math.floor((1 - (tileData.health / tileProps.maxHealth)) * (crackImages.length - 1))
+                    );
+                    
+                    if (assetsLoaded && crackImages[crackIndex]) {
+                        ctx.drawImage(crackImages[crackIndex], x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
                 }
             }
         }
     }
 }
 
-function drawPlayers(startX: number, startY: number) {
-    const clientState = state.getState();
-    for (const playerId in clientState.players) {
-        const player = clientState.players[playerId];
-        const screenX = (player.x - startX) * TILE_SIZE;
-        const screenY = (player.y - startY) * TILE_SIZE;
-        
-        ctx.fillStyle = playerId === clientState.playerId ? '#3498db' : '#e74c3c';
+// --- RENAMED and UPDATED ---
+function drawEntities(startX: number, startY: number) {
+    if (!ctx) return;
+
+    const allEntities = state.getState().entities; // <-- UPDATED
+    const myPlayerId = state.getState().playerId;
+
+    for (const entityId in allEntities) { // <-- UPDATED
+        // Distinguish between this client's player and other entities
+        if (entityId === myPlayerId) {
+            ctx.fillStyle = '#3498db'; // My player color
+        } else {
+            // Later, we can check entity type (NPC vs Player)
+            ctx.fillStyle = '#e74c3c'; // Other entity color
+        }
+
+        const entity = allEntities[entityId]; // <-- UPDATED
+        const screenX = (entity.x - startX) * TILE_SIZE;
+        const screenY = (entity.y - startY) * TILE_SIZE;
+
+        // Simple square for now
         ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
     }
 }
 
-// --- Main Game Loop ---
+// --- Main Game Loop ---\
 
 function render() {
-    const me = state.getMyPlayer();
+    const me = state.getMyEntity(); // <-- UPDATED
     if (!me || !ctx) return;
 
     // Clear the entire canvas for the new frame
@@ -90,9 +112,9 @@ function render() {
     const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
     const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
 
-    // Draw layers in order: world first, then players on top
+    // Draw layers in order: world first, then entities on top
     drawWorld(startX, startY);
-    drawPlayers(startX, startY);
+    drawEntities(startX, startY); // <-- UPDATED
 
     // Update the coordinate display in the UI panel
     document.getElementById('player-coords')!.textContent = `Your Position: (${me.x}, ${me.y})`;
@@ -116,11 +138,20 @@ export function initializeRenderer() {
     canvas.width = VIEWPORT_WIDTH * TILE_SIZE;
     canvas.height = VIEWPORT_HEIGHT * TILE_SIZE;
 
-    // Begin loading visual assets
+    // Start loading assets
     loadAssets();
 }
 
 export function startRenderLoop() {
-    // Kick off the continuous rendering loop
-    gameLoop();
+    // Wait for the initial state to be set before starting the loop
+    const checkState = () => {
+        if (state.getMyEntity()) { // <-- UPDATED
+            console.log("Initial state received. Starting render loop.");
+            gameLoop();
+        } else {
+            // If state isn't ready, check again on the next frame
+            requestAnimationFrame(checkState);
+        }
+    };
+    checkState();
 }

@@ -9,13 +9,17 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-func ProcessMove(playerID string, direction string) *models.StateCorrectionMessage {
-	canAct, playerData := CanPlayerAct(playerID)
+// --- UPDATED ---
+// ProcessMove now handles any entity, not just players.
+func ProcessMove(entityID string, direction string) *models.StateCorrectionMessage {
+	// Use new generic helper
+	canAct, entityData := CanEntityAct(entityID)
 	if !canAct {
 		return nil
 	}
 
-	currentX, currentY := GetPlayerPosition(playerData)
+	// Use new generic helper
+	currentX, currentY := GetEntityPosition(entityData)
 	targetX, targetY := currentX, currentY
 
 	// Use MoveDirection constants
@@ -42,7 +46,8 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
 	// Use RedisKey constant
 	targetTileKey := string(RedisKeyLockTile) + targetCoordKey
-	wasSet, err := rdb.SetNX(ctx, targetTileKey, playerID, 0).Result()
+	// Lock the tile for the entity
+	wasSet, err := rdb.SetNX(ctx, targetTileKey, entityID, 0).Result()
 	if err != nil || !wasSet {
 		// Tile is locked, send state correction
 		// Use ServerEventType constant
@@ -56,23 +61,31 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	nextActionTime := time.Now().Add(cooldown).UnixMilli()
 
 	pipe := rdb.Pipeline()
-	pipe.HSet(ctx, playerID, "x", targetX, "y", targetY, "nextActionAt", nextActionTime)
-	// Use RedisKey constant
-	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(targetX), Latitude: float64(targetY)})
+	// Update the entity's hash
+	pipe.HSet(ctx, entityID, "x", targetX, "y", targetY, "nextActionAt", nextActionTime)
+	// Use RedisKey constant and update the entity's GeoSet position
+	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: entityID, Longitude: float64(targetX), Latitude: float64(targetY)})
 	_, err = pipe.Exec(ctx)
 	if err != nil {
-		log.Printf("Error updating player state, rolling back lock for tile %s", targetCoordKey)
-		releaseLockScript.Run(ctx, rdb, []string{targetTileKey}, playerID)
+		log.Printf("Error updating entity state, rolling back lock for tile %s", targetCoordKey)
+		releaseLockScript.Run(ctx, rdb, []string{targetTileKey}, entityID)
 		// Use ServerEventType constant
 		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}
 	}
 
 	// Use RedisKey constant
 	currentTileKey := string(RedisKeyLockTile) + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
-	releaseLockScript.Run(ctx, rdb, []string{currentTileKey}, playerID)
+	// Release the lock using the entity's ID
+	releaseLockScript.Run(ctx, rdb, []string{currentTileKey}, entityID)
 
-	// Use ServerEventType constant
-	updateMsg := map[string]interface{}{"type": string(ServerEventPlayerMoved), "playerId": playerID, "x": targetX, "y": targetY}
+	// --- UPDATED MESSAGE ---
+	// Use new ServerEventType constant and generic "entityId"
+	updateMsg := map[string]interface{}{
+		"type":     string(ServerEventEntityMoved),
+		"entityId": entityID,
+		"x":        targetX,
+		"y":        targetY,
+	}
 	PublishUpdate(updateMsg)
 
 	return nil
