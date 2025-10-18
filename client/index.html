@@ -4,12 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MMO Grid World</title>
+    <!-- Vite will automatically handle linking the CSS during development -->
     <link rel="stylesheet" href="/src/styles.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   </head>
   <body>
     <h1>MMO Grid World</h1>
-    <div id="game-container"></div>
+    
+    <!-- The game world is now rendered on this single canvas element -->
+    <canvas id="game-canvas"></canvas>
+    
     <div id="info-panel">
         <div id="player-coords">Connecting to server...</div>
         <div class="controls">
@@ -20,13 +24,13 @@
         <div id="player-id"></div>
     </div>
 
+    <!-- UI bar at the bottom of the screen -->
     <div id="ui-bottom-bar">
         <div id="inventory">
             <h3>Inventory</h3>
             <div id="inventory-list">
                 <div>Wood: <span id="inv-wood">0</span></div>
                 <div>Rock: <span id="inv-rock">0</span></div>
-                <!-- NEW: Inventory slot for crafted walls -->
                 <div>Walls: <span id="inv-wooden_wall">0</span></div>
             </div>
         </div>
@@ -43,6 +47,8 @@
             <div id="cooldown-text">Ready</div>
         </div>
     </div>
+
+    <!-- This script tag is the entry point for the entire TypeScript application -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -11,11 +11,15 @@ body {
     overflow: hidden;
 }
 
-#game-container {
-    display: grid;
+#game-canvas { /* UPDATED: Changed from #game-container */
     border: 2px solid #555;
     background-color: #222;
     cursor: pointer;
+}
+
+#game-canvas.build-mode {
+    cursor: crosshair;
+    border: 2px solid #3498db;
 }
 
 .grid-cell {
