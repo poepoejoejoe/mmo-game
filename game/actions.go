@@ -10,7 +10,7 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// ProcessMove handles a player's move request. It uses the TileDefs to check for collision and movement penalties.
+// ProcessMove is unchanged in this step.
 func ProcessMove(playerID string, direction string) *models.StateCorrectionMessage {
 	playerData, err := rdb.HGetAll(ctx, playerID).Result()
 	if err != nil {
@@ -42,9 +42,8 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	}
 	var tile models.WorldTile
 	json.Unmarshal([]byte(tileJSON), &tile)
-	props := TileDefs[tile.Type] // Get properties for the target tile
+	props := TileDefs[tile.Type]
 
-	// Check the IsCollidable property from our definitions.
 	if props.IsCollidable {
 		return nil
 	}
@@ -56,7 +55,6 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	}
 
 	cooldown := BaseActionCooldown
-	// Check the MovementPenalty property from our definitions.
 	if props.MovementPenalty {
 		cooldown = WaterMovePenalty
 	}
@@ -81,7 +79,7 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	return nil
 }
 
-// ProcessInteract handles gathering and destroying objects. It uses the TileDefs to check if an object is gatherable or destructible.
+// ProcessInteract is unchanged in this step.
 func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
 	var interactData models.InteractPayload
 	if err := json.Unmarshal(payload, &interactData); err != nil {
@@ -116,7 +114,6 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	props := TileDefs[tile.Type]
 	originalTileType := tile.Type
 
-	// Check the behavioral properties from our definitions.
 	if !props.IsGatherable && !props.IsDestructible {
 		return nil, nil
 	}
@@ -129,7 +126,6 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	PublishUpdate(damageMsg)
 
 	var inventoryUpdateMsg *models.InventoryUpdateMessage
-	// Check the IsGatherable property to determine if we should give resources.
 	if props.IsGatherable {
 		newAmount, _ := rdb.HIncrBy(ctx, "player:inventory:"+playerID, props.GatherResource, 1).Result()
 		inventoryUpdateMsg = &models.InventoryUpdateMessage{
@@ -156,7 +152,7 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	return nil, inventoryUpdateMsg
 }
 
-// ProcessPlaceItem handles building objects. It uses the TileDefs to check if a tile is buildable on.
+// ProcessPlaceItem is unchanged in this step.
 func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
 	var placeData models.PlaceItemPayload
 	if err := json.Unmarshal(payload, &placeData); err != nil {
@@ -194,18 +190,14 @@ func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCo
 		var tile models.WorldTile
 		json.Unmarshal([]byte(tileJSON), &tile)
 		props := TileDefs[tile.Type]
-
-		// Check the IsBuildableOn property from our definitions.
 		if !props.IsBuildableOn {
 			return nil, nil
 		}
-
 		targetTileLockKey := "lock:tile:" + targetCoordKey
 		wasSet, err := rdb.SetNX(ctx, targetTileLockKey, "world_object", 0).Result()
 		if err != nil || !wasSet {
 			return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
 		}
-
 		wallProps := TileDefs["wooden_wall"]
 		newWallTile := models.WorldTile{Type: "wooden_wall", Health: wallProps.MaxHealth}
 		newTileJSON, _ := json.Marshal(newWallTile)
@@ -226,12 +218,15 @@ func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCo
 	return nil, nil
 }
 
-// ProcessCraft handles crafting recipes. It is independent of tile definitions.
+// --- THIS FUNCTION IS COMPLETELY REWRITTEN ---
+// ProcessCraft handles a player's request to craft an item. It is now generic.
 func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.InventoryUpdateMessage, *models.StateCorrectionMessage) {
 	var craftData models.CraftPayload
 	if err := json.Unmarshal(payload, &craftData); err != nil {
 		return nil, nil
 	}
+
+	// Check for action cooldown
 	playerData, err := rdb.HGetAll(ctx, playerID).Result()
 	if err != nil {
 		return nil, nil
@@ -240,37 +235,64 @@ func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.Inventory
 	if time.Now().UnixMilli() < nextActionAt {
 		return nil, nil
 	}
-	var updates []*models.InventoryUpdateMessage
+
+	// 1. Look up the recipe from our definitions
+	recipe, ok := RecipeDefs[craftData.Item]
+	if !ok {
+		log.Printf("Player %s tried to craft unknown item: %s", playerID, craftData.Item)
+		return nil, nil // Recipe doesn't exist
+	}
+
 	inventoryKey := "player:inventory:" + playerID
-	if craftData.Item == "wooden_wall" {
-		currentWoodStr, err := rdb.HGet(ctx, inventoryKey, "wood").Result()
+	var updates []*models.InventoryUpdateMessage
+
+	// 2. Check if the player has all required ingredients
+	for ingredient, requiredAmount := range recipe.Ingredients {
+		currentAmountStr, err := rdb.HGet(ctx, inventoryKey, ingredient).Result()
 		if err != nil {
-			currentWoodStr = "0"
+			currentAmountStr = "0"
 		}
-		currentWood, _ := strconv.Atoi(currentWoodStr)
-		if currentWood < WoodPerWall {
-			log.Printf("Player %s failed to craft wall: not enough wood.", playerID)
-			return nil, nil
+		currentAmount, _ := strconv.Atoi(currentAmountStr)
+
+		if currentAmount < requiredAmount {
+			log.Printf("Player %s failed to craft %s: not enough %s.", playerID, craftData.Item, ingredient)
+			return nil, nil // Not enough of this ingredient
 		}
-		pipe := rdb.Pipeline()
-		newWood := pipe.HIncrBy(ctx, inventoryKey, "wood", -WoodPerWall)
-		newWalls := pipe.HIncrBy(ctx, inventoryKey, "wooden_wall", 1)
-		_, err = pipe.Exec(ctx)
-		if err != nil {
-			log.Printf("Redis error during crafting for player %s: %v", playerID, err)
-			return nil, nil
-		}
-		updates = append(updates, &models.InventoryUpdateMessage{
-			Type: "inventory_update", Resource: "wood", Amount: int(newWood.Val()),
-		})
-		updates = append(updates, &models.InventoryUpdateMessage{
-			Type: "inventory_update", Resource: "wooden_wall", Amount: int(newWalls.Val()),
-		})
-		log.Printf("Player %s crafted a wooden wall.", playerID)
 	}
-	if len(updates) > 0 {
-		rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+
+	// 3. Atomically update inventory
+	pipe := rdb.Pipeline()
+	// Subtract all ingredients
+	for ingredient, requiredAmount := range recipe.Ingredients {
+		newAmount := pipe.HIncrBy(ctx, inventoryKey, ingredient, int64(-requiredAmount))
+		// We need to capture the result in a closure to build the update message later
+		updates = append(updates, &models.InventoryUpdateMessage{
+			Type: "inventory_update", Resource: ingredient, Amount: int(newAmount.Val()),
+		})
 	}
+	// Add the crafted item(s)
+	newCraftedAmount := pipe.HIncrBy(ctx, inventoryKey, craftData.Item, int64(recipe.Yield))
+	updates = append(updates, &models.InventoryUpdateMessage{
+		Type: "inventory_update", Resource: craftData.Item, Amount: int(newCraftedAmount.Val()),
+	})
+
+	// Execute the transaction
+	cmders, err := pipe.Exec(ctx)
+	if err != nil {
+		log.Printf("Redis error during crafting for player %s: %v", playerID, err)
+		return nil, nil
+	}
+
+	// 4. Populate the update messages with the actual final values from Redis
+	// This is a bit complex, but ensures the client gets the right final amount
+	for i, cmder := range cmders {
+		if intCmd, ok := cmder.(*redis.IntCmd); ok {
+			updates[i].Amount = int(intCmd.Val())
+		}
+	}
+
+	log.Printf("Player %s successfully crafted %d %s.", playerID, recipe.Yield, craftData.Item)
+	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 	return updates, nil
 }
 

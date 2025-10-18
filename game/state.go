@@ -10,8 +10,7 @@ const (
 	BaseActionCooldown = 100 * time.Millisecond
 	WaterMovePenalty   = 500 * time.Millisecond
 	WorldSize          = 50
-	WoodPerWall        = 10
-	// REMOVED: HealthTree, HealthRock, HealthWall are now in definitions.go
+	// REMOVED: WoodPerWall is now defined in the new recipe data structure.
 )
 
 var releaseLockScript = redis.NewScript(`
