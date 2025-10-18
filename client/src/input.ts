@@ -12,7 +12,7 @@ let isBuildMode = false;
 // State for continuous interaction
 let interactionInterval: number | null = null;
 let moveInterval: number | null = null;
-const pressedKeys = new Set<string>();
+const pressedKeys: string[] = [];
 
 /**
  * A reusable function that performs a single interaction check and network send.
@@ -75,14 +75,19 @@ function sendMoveCommand(dx: number, dy: number) {
 }
 
 
-function handleKeyDown(e: KeyboardEvent) {
-    if (pressedKeys.has(e.key)) return;
-    pressedKeys.add(e.key);
+function updateMovement() {
+    if (moveInterval) {
+        clearInterval(moveInterval);
+        moveInterval = null;
+    }
+
+    const lastKey = pressedKeys[pressedKeys.length - 1];
+    if (!lastKey) return;
 
     let dx = 0;
     let dy = 0;
 
-    switch (e.key) {
+    switch (lastKey) {
         case 'w':
         case 'ArrowUp':
             dy = -1;
@@ -99,27 +104,38 @@ function handleKeyDown(e: KeyboardEvent) {
         case 'ArrowRight':
             dx = 1;
             break;
-        case 'b': // Build mode toggle
-            isBuildMode = !isBuildMode;
-            setBuildModeActive(isBuildMode);
-            return; // Don't perform a move action
         default:
-            return; // Ignore other keys
+            return; // Not a movement key
     }
+    
+    if (dx === 0 && dy === 0) return;
 
     sendMoveCommand(dx, dy); // Send first command immediately
-
-    if (moveInterval) clearInterval(moveInterval);
     moveInterval = setInterval(() => sendMoveCommand(dx, dy), ACTION_COOLDOWN + 50);
 }
 
-function handleKeyUp(e: KeyboardEvent) {
-    pressedKeys.delete(e.key);
+function handleKeyDown(e: KeyboardEvent) {
+    // Toggle build mode
+    if (e.key === 'b') {
+        isBuildMode = !isBuildMode;
+        setBuildModeActive(isBuildMode);
+        return;
+    }
+
+    // Handle movement keys
     if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        if (moveInterval) {
-            clearInterval(moveInterval);
-            moveInterval = null;
+        if (!pressedKeys.includes(e.key)) {
+            pressedKeys.push(e.key);
+            updateMovement();
         }
+    }
+}
+
+function handleKeyUp(e: KeyboardEvent) {
+    const index = pressedKeys.indexOf(e.key);
+    if (index > -1) {
+        pressedKeys.splice(index, 1);
+        updateMovement();
     }
 }
 
@@ -187,3 +203,4 @@ export function initializeInput() {
         network.send({ type: 'craft', payload: { item: 'wooden_wall' } });
     });
 }
+
