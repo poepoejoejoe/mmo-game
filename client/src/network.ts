@@ -48,7 +48,7 @@ function handleMessage(event: MessageEvent) {
             const joinMsg = msg as EntityJoinedMessage;
             // --- UPDATED ---
             // Pass the new 'type' field to our state function
-            state.addEntity(joinMsg.entityId, joinMsg.x, joinMsg.y, joinMsg.type);
+            state.addEntity(joinMsg.entityId, joinMsg.x, joinMsg.y, joinMsg.entityType);
             break;
         }
         case 'entity_left': {

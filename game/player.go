@@ -108,10 +108,11 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 
 	// Announce the new player's arrival to everyone else
 	joinMsg := map[string]interface{}{
-		"entityId": playerID,
-		"x":        spawnX,
-		"y":        spawnY,
-		"type":     string(EntityTypePlayer), // <-- NEW: Send the type
+		"type":       string(ServerEventEntityJoined),
+		"entityId":   playerID,
+		"x":          spawnX,
+		"y":          spawnY,
+		"entityType": string(EntityTypePlayer), // <-- NEW: Send the type
 	}
 	PublishUpdate(joinMsg)
 

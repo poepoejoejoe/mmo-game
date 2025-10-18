@@ -59,10 +59,11 @@ func spawnSlime(id int) {
 
 	// Announce the new entity's arrival
 	joinMsg := map[string]interface{}{
-		"entityId": entityID,
-		"x":        spawnX,
-		"y":        spawnY,
-		"type":     "slime", // <-- NEW: Send the specific type
+		"type":       string(ServerEventEntityJoined),
+		"entityId":   entityID,
+		"x":          spawnX,
+		"y":          spawnY,
+		"entityType": "slime", // <-- NEW: Send the specific type
 	}
 	PublishUpdate(joinMsg)
 }
