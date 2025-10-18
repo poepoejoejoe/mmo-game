@@ -1,6 +1,5 @@
 import * as state from './state';
 import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, TILE_SIZE } from './constants';
-import { WorldTile } from './types';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
