@@ -11,6 +11,8 @@ let isBuildMode = false;
 
 // State for continuous interaction
 let interactionInterval: number | null = null;
+let moveInterval: number | null = null;
+const pressedKeys = new Set<string>();
 
 /**
  * A reusable function that performs a single interaction check and network send.
@@ -49,8 +51,33 @@ function performInteraction(tileX: number, tileY: number) {
 }
 
 
+function sendMoveCommand(dx: number, dy: number) {
+    if (dx === 0 && dy === 0) return;
+    if (!canPerformAction || !state.getMyEntity()) return;
+    
+    const me = state.getMyEntity()!;
+    const targetTile = state.getTileData(me.x + dx, me.y + dy);
+    const targetProps = getTileProperties(targetTile.type);
+
+    if (targetProps.isCollidable) return;
+
+    const cooldown = targetProps.movementPenalty ? WATER_PENALTY : ACTION_COOLDOWN;
+    startActionCooldown(cooldown);
+
+    const directionMap: { [key: string]: string } = {
+        '-1,0': 'left',
+        '1,0': 'right',
+        '0,-1': 'up',
+        '0,1': 'down',
+    };
+    const dirKey = `${dx},${dy}`;
+    network.send({ type: 'move', payload: { direction: directionMap[dirKey] } });
+}
+
+
 function handleKeyDown(e: KeyboardEvent) {
-    if (!canPerformAction || !state.getMyEntity()) return; // <-- UPDATED
+    if (pressedKeys.has(e.key)) return;
+    pressedKeys.add(e.key);
 
     let dx = 0;
     let dy = 0;
@@ -80,25 +107,20 @@ function handleKeyDown(e: KeyboardEvent) {
             return; // Ignore other keys
     }
 
-    if (dx === 0 && dy === 0) return;
-    
-    const me = state.getMyEntity()!; // <-- UPDATED
-    const targetTile = state.getTileData(me.x + dx, me.y + dy);
-    const targetProps = getTileProperties(targetTile.type);
+    sendMoveCommand(dx, dy); // Send first command immediately
 
-    if (targetProps.isCollidable) return; // Don't send move if it's a wall
+    if (moveInterval) clearInterval(moveInterval);
+    moveInterval = setInterval(() => sendMoveCommand(dx, dy), ACTION_COOLDOWN + 50);
+}
 
-    const cooldown = targetProps.movementPenalty ? WATER_PENALTY : ACTION_COOLDOWN;
-    startActionCooldown(cooldown);
-
-    const directionMap: { [key: string]: string } = {
-        '-1,0': 'left',
-        '1,0': 'right',
-        '0,-1': 'up',
-        '0,1': 'down',
-    };
-    const dirKey = `${dx},${dy}`;
-    network.send({ type: 'move', payload: { direction: directionMap[dirKey] } });
+function handleKeyUp(e: KeyboardEvent) {
+    pressedKeys.delete(e.key);
+    if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        if (moveInterval) {
+            clearInterval(moveInterval);
+            moveInterval = null;
+        }
+    }
 }
 
 function handleMouseDown(e: MouseEvent) {
@@ -151,6 +173,7 @@ function startActionCooldown(duration: number) {
  */
 export function initializeInput() {
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
 
     // Replace the single 'click' listener with more detailed mouse events for click-and-hold
     gameCanvas.addEventListener('mousedown', handleMouseDown);

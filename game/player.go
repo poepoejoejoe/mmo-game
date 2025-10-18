@@ -50,6 +50,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"y", spawnY,
 		"nextActionAt", time.Now().UnixMilli(),
 		"entityType", string(EntityTypePlayer), // This is the internal type
+		"moveCooldown", 100, // 100ms move cooldown for players
 	)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
 	pipe.HSet(ctx, inventoryKey, string(ItemWood), 100, string(ItemWoodenWall), 10)

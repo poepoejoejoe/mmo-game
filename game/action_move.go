@@ -54,11 +54,20 @@ func ProcessMove(entityID string, direction string) *models.StateCorrectionMessa
 		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}
 	}
 
-	cooldown := BaseActionCooldown
+	// --- UPDATED COOLDOWN LOGIC ---
+	var cooldown int64 = 1000 // Default cooldown
 	if props.MovementPenalty {
-		cooldown = WaterMovePenalty
+		cooldown = 1500 // Water move penalty
+	} else {
+		// Check for a specific move cooldown on the entity
+		if moveCooldownStr, ok := entityData["moveCooldown"]; ok {
+			if mc, err := strconv.ParseInt(moveCooldownStr, 10, 64); err == nil {
+				cooldown = mc
+			}
+		}
 	}
-	nextActionTime := time.Now().Add(cooldown).UnixMilli()
+	nextActionTime := time.Now().Add(time.Duration(cooldown) * time.Millisecond).UnixMilli()
+	// --- END UPDATED COOLDOWN LOGIC ---
 
 	pipe := rdb.Pipeline()
 	// Update the entity's hash

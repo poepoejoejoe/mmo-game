@@ -75,6 +75,7 @@ const (
 	RedisKeyZone0Positions  RedisKey = "zone:0:positions"
 	RedisKeyLockWorldObject RedisKey = "world_object"
 	NPCSlimePrefix          RedisKey = "npc:slime:" // <-- NEW
+	NPCRatPrefix            RedisKey = "npc:rat:"   // <-- NEW
 )
 
 // --- END NEW CONSTANTS ---

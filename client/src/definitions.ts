@@ -93,6 +93,9 @@ export const entityDefs: Record<string, EntityProperties> = {
     'slime': {
         color: '#b3db45ff', // Green
     },
+    'rat': {
+        color: '#800080', // Purple
+    },
     'default': {
         color: '#e74c3c', // Red (for other players/unknown)
     }

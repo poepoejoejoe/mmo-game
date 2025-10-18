@@ -13,6 +13,7 @@ func InitializeNPCs() {
 	log.Println("Spawning NPCs...")
 	// For now, just spawn one slime
 	spawnSlime(1)
+	spawnRat(1) // Spawn one rat
 }
 
 // spawnSlime creates a new slime entity in the world.
@@ -41,6 +42,7 @@ func spawnSlime(id int) {
 		"npcType", "slime", // Specific type
 		"health", 3,
 		"nextActionAt", time.Now().UnixMilli(),
+		"moveCooldown", 750, // 750ms move cooldown
 	)
 	// Add it to the geospatial index
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
@@ -64,6 +66,60 @@ func spawnSlime(id int) {
 		"x":          spawnX,
 		"y":          spawnY,
 		"entityType": "slime", // <-- NEW: Send the specific type
+	}
+	PublishUpdate(joinMsg)
+}
+
+// spawnRat creates a new rat entity in the world.
+func spawnRat(id int) {
+	entityID := string(NPCRatPrefix) + strconv.Itoa(id)
+
+	// Check if this NPC already exists
+	exists, err := rdb.Exists(ctx, entityID).Result()
+	if err != nil {
+		log.Printf("Error checking existence of NPC %s: %v", entityID, err)
+		return
+	}
+	if exists > 0 {
+		log.Printf("NPC %s already exists. Skipping spawn.", entityID)
+		return
+	}
+
+	spawnX, spawnY := FindOpenSpawnPoint(entityID)
+
+	pipe := rdb.Pipeline()
+	// Set the NPC's core data
+	pipe.HSet(ctx, entityID,
+		"x", spawnX,
+		"y", spawnY,
+		"entityType", string(EntityTypeNPC), // Internal type
+		"npcType", "rat", // Specific type
+		"health", 2,
+		"nextActionAt", time.Now().UnixMilli(),
+		"moveCooldown", 750, // 750ms move cooldown
+	)
+	// Add it to the geospatial index
+	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
+		Name:      entityID,
+		Longitude: float64(spawnX),
+		Latitude:  float64(spawnY),
+	})
+
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		log.Printf("Failed to spawn rat %s: %v", entityID, err)
+		return
+	}
+
+	log.Printf("Spawned rat %s at (%d, %d)", entityID, spawnX, spawnY)
+
+	// Announce the new entity's arrival
+	joinMsg := map[string]interface{}{
+		"type":       string(ServerEventEntityJoined),
+		"entityId":   entityID,
+		"x":          spawnX,
+		"y":          spawnY,
+		"entityType": "rat", // <-- NEW: Send the specific type
 	}
 	PublishUpdate(joinMsg)
 }

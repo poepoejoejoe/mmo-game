@@ -36,6 +36,8 @@ func runNPCActions() {
 		// We only care about slime NPCs
 		if strings.HasPrefix(entityID, string(NPCSlimePrefix)) {
 			processSlimeAI(entityID)
+		} else if strings.HasPrefix(entityID, string(NPCRatPrefix)) {
+			processRatAI(entityID)
 		}
 	}
 }
@@ -66,4 +68,21 @@ func getRandomDirection() string {
 		string(MoveDirectionRight),
 	}
 	return directions[rand.Intn(len(directions))]
+}
+
+// processRatAI defines the simple AI for a single rat.
+func processRatAI(ratID string) {
+	// Check if the rat can act
+	canAct, _ := CanEntityAct(ratID)
+	if !canAct {
+		return // Rat is on cooldown, do nothing
+	}
+
+	// Rat AI: 50% chance to move in a random direction
+	if rand.Intn(100) < 50 {
+		dir := getRandomDirection()
+		// Use the generic ProcessMove function.
+		// It will handle cooldowns and collisions automatically.
+		ProcessMove(ratID, dir)
+	}
 }
