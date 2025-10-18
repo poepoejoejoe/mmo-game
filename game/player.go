@@ -10,7 +10,6 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// FindOpenSpawnPoint starts at (0,0) and spirals outwards to find an empty, walkable tile.
 func FindOpenSpawnPoint(playerID string) (int, int) {
 	x, y, dx, dy := 0, 0, 0, -1
 	for i := 0; i < (WorldSize * 2); i++ {
@@ -25,8 +24,9 @@ func FindOpenSpawnPoint(playerID string) (int, int) {
 				var tile models.WorldTile
 				json.Unmarshal([]byte(tileJSON), &tile)
 
-				// UPDATED: Also check for wooden_wall
-				if tile.Type != "rock" && tile.Type != "tree" && tile.Type != "wooden_wall" {
+				// UPDATED: Check the behavioral property
+				props := TileDefs[tile.Type]
+				if !props.IsCollidable {
 					log.Printf("Found open spawn for %s at (%d, %d)", playerID, x, y)
 					return x, y
 				}
