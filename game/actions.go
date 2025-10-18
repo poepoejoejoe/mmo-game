@@ -10,8 +10,7 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// ProcessMove handles a player's move request with collision detection and cooldowns.
-// It returns a state correction message if the move is invalid, otherwise nil.
+// ProcessMove handles a player's move request. It uses the TileDefs to check for collision and movement penalties.
 func ProcessMove(playerID string, direction string) *models.StateCorrectionMessage {
 	playerData, err := rdb.HGetAll(ctx, playerID).Result()
 	if err != nil {
@@ -39,26 +38,26 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
 	tileJSON, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
 	if err != nil {
-		return nil // Target tile doesn't exist (out of bounds)
+		return nil
 	}
 	var tile models.WorldTile
 	json.Unmarshal([]byte(tileJSON), &tile)
+	props := TileDefs[tile.Type] // Get properties for the target tile
 
-	// Check for terrain collision
-	if tile.Type == "rock" || tile.Type == "tree" || tile.Type == "wooden_wall" {
+	// Check the IsCollidable property from our definitions.
+	if props.IsCollidable {
 		return nil
 	}
 
 	targetTileKey := "lock:tile:" + targetCoordKey
 	wasSet, err := rdb.SetNX(ctx, targetTileKey, playerID, 0).Result()
-
 	if err != nil || !wasSet {
-		// Tile is locked by another player, send correction
 		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}
 	}
 
 	cooldown := BaseActionCooldown
-	if tile.Type == "water" {
+	// Check the MovementPenalty property from our definitions.
+	if props.MovementPenalty {
 		cooldown = WaterMovePenalty
 	}
 	nextActionTime := time.Now().Add(cooldown).UnixMilli()
@@ -82,8 +81,7 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	return nil
 }
 
-// ProcessInteract handles a player's request to gather a resource.
-// It returns a correction message on failure or an inventory update on success.
+// ProcessInteract handles gathering and destroying objects. It uses the TileDefs to check if an object is gatherable or destructible.
 func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
 	var interactData models.InteractPayload
 	if err := json.Unmarshal(payload, &interactData); err != nil {
@@ -95,7 +93,6 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 		return nil, nil
 	}
 
-	// 1. Check Action Cooldown
 	nextActionAt, _ := strconv.ParseInt(playerData["nextActionAt"], 10, 64)
 	if time.Now().UnixMilli() < nextActionAt {
 		return nil, nil
@@ -104,13 +101,11 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	currentX, _ := strconv.Atoi(playerData["x"])
 	currentY, _ := strconv.Atoi(playerData["y"])
 
-	// 2. Check Adjacency
 	targetX, targetY := interactData.X, interactData.Y
 	if ((currentX-targetX)*(currentX-targetX) + (currentY-targetY)*(currentY-targetY)) != 1 {
 		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
 	}
 
-	// 3. Get Tile Data and check if it's interactable
 	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
 	tileJSON, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
 	if err != nil {
@@ -118,17 +113,14 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	}
 	var tile models.WorldTile
 	json.Unmarshal([]byte(tileJSON), &tile)
-
-	// --- THIS IS THE FIX ---
-	// Store the original type before we modify it.
+	props := TileDefs[tile.Type]
 	originalTileType := tile.Type
-	// --- END OF FIX ---
 
-	if originalTileType != "tree" && originalTileType != "rock" && originalTileType != "wooden_wall" {
+	// Check the behavioral properties from our definitions.
+	if !props.IsGatherable && !props.IsDestructible {
 		return nil, nil
 	}
 
-	// 4. Process the interaction
 	tile.Health--
 
 	damageMsg := models.ResourceDamagedMessage{
@@ -137,58 +129,39 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	PublishUpdate(damageMsg)
 
 	var inventoryUpdateMsg *models.InventoryUpdateMessage
-
-	// 5. Handle resource gain for gathering actions
-	if originalTileType == "tree" || originalTileType == "rock" {
-		var resourceGained string
-		if originalTileType == "tree" {
-			resourceGained = "wood"
-		}
-		if originalTileType == "rock" {
-			resourceGained = "rock"
-		}
-
-		newAmount, _ := rdb.HIncrBy(ctx, "player:inventory:"+playerID, resourceGained, 1).Result()
+	// Check the IsGatherable property to determine if we should give resources.
+	if props.IsGatherable {
+		newAmount, _ := rdb.HIncrBy(ctx, "player:inventory:"+playerID, props.GatherResource, 1).Result()
 		inventoryUpdateMsg = &models.InventoryUpdateMessage{
-			Type: "inventory_update", Resource: resourceGained, Amount: int(newAmount),
+			Type: "inventory_update", Resource: props.GatherResource, Amount: int(newAmount),
 		}
 	}
 
-	// 6. Check if the object is depleted/destroyed
 	if tile.Health <= 0 {
 		tile.Type = "ground"
 		groundTile := models.WorldTile{Type: "ground", Health: 0}
 		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: groundTile}
 		PublishUpdate(worldUpdateMsg)
 
-		// --- THIS IS THE FIX ---
-		// Now we check the *original* type. If it was a wall, we remove the lock.
 		if originalTileType == "wooden_wall" {
 			log.Printf("Wall at %s destroyed, removing lock.", targetCoordKey)
 			rdb.Del(ctx, "lock:tile:"+targetCoordKey)
 		}
-		// --- END OF FIX ---
 	}
 
-	// 7. Update the world state in Redis
 	newTileJSON, _ := json.Marshal(tile)
 	rdb.HSet(ctx, "world:zone:0", targetCoordKey, string(newTileJSON))
-
-	// 8. Set Action Cooldown
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 
 	return nil, inventoryUpdateMsg
 }
 
-// --- NEW FUNCTION ---
-// ProcessCraft handles a player's request to craft an item from resources.
-func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.InventoryUpdateMessage, *models.StateCorrectionMessage) {
-	var craftData models.CraftPayload
-	if err := json.Unmarshal(payload, &craftData); err != nil {
-		return nil, nil // Invalid payload
+// ProcessPlaceItem handles building objects. It uses the TileDefs to check if a tile is buildable on.
+func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
+	var placeData models.PlaceItemPayload
+	if err := json.Unmarshal(payload, &placeData); err != nil {
+		return nil, nil
 	}
-
-	// Check for action cooldown
 	playerData, err := rdb.HGetAll(ctx, playerID).Result()
 	if err != nil {
 		return nil, nil
@@ -197,25 +170,88 @@ func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.Inventory
 	if time.Now().UnixMilli() < nextActionAt {
 		return nil, nil
 	}
+	currentX, _ := strconv.Atoi(playerData["x"])
+	currentY, _ := strconv.Atoi(playerData["y"])
+	targetX, targetY := placeData.X, placeData.Y
+	if ((currentX-targetX)*(currentX-targetX) + (currentY-targetY)*(currentY-targetY)) != 1 {
+		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+	}
+	inventoryKey := "player:inventory:" + playerID
+	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
+	if placeData.Item == "wooden_wall" {
+		wallCountStr, err := rdb.HGet(ctx, inventoryKey, "wooden_wall").Result()
+		if err != nil {
+			return nil, nil
+		}
+		wallCount, _ := strconv.Atoi(wallCountStr)
+		if wallCount < 1 {
+			return nil, nil
+		}
+		tileJSON, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
+		if err != nil {
+			return nil, nil
+		}
+		var tile models.WorldTile
+		json.Unmarshal([]byte(tileJSON), &tile)
+		props := TileDefs[tile.Type]
 
+		// Check the IsBuildableOn property from our definitions.
+		if !props.IsBuildableOn {
+			return nil, nil
+		}
+
+		targetTileLockKey := "lock:tile:" + targetCoordKey
+		wasSet, err := rdb.SetNX(ctx, targetTileLockKey, "world_object", 0).Result()
+		if err != nil || !wasSet {
+			return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+		}
+
+		wallProps := TileDefs["wooden_wall"]
+		newWallTile := models.WorldTile{Type: "wooden_wall", Health: wallProps.MaxHealth}
+		newTileJSON, _ := json.Marshal(newWallTile)
+		pipe := rdb.Pipeline()
+		newAmount := pipe.HIncrBy(ctx, inventoryKey, "wooden_wall", -1)
+		pipe.HSet(ctx, "world:zone:0", targetCoordKey, string(newTileJSON))
+		_, err = pipe.Exec(ctx)
+		if err != nil {
+			rdb.Del(ctx, targetTileLockKey)
+			return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+		}
+		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: newWallTile}
+		PublishUpdate(worldUpdateMsg)
+		inventoryUpdateMsg := &models.InventoryUpdateMessage{Type: "inventory_update", Resource: "wooden_wall", Amount: int(newAmount.Val())}
+		rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+		return nil, inventoryUpdateMsg
+	}
+	return nil, nil
+}
+
+// ProcessCraft handles crafting recipes. It is independent of tile definitions.
+func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.InventoryUpdateMessage, *models.StateCorrectionMessage) {
+	var craftData models.CraftPayload
+	if err := json.Unmarshal(payload, &craftData); err != nil {
+		return nil, nil
+	}
+	playerData, err := rdb.HGetAll(ctx, playerID).Result()
+	if err != nil {
+		return nil, nil
+	}
+	nextActionAt, _ := strconv.ParseInt(playerData["nextActionAt"], 10, 64)
+	if time.Now().UnixMilli() < nextActionAt {
+		return nil, nil
+	}
 	var updates []*models.InventoryUpdateMessage
 	inventoryKey := "player:inventory:" + playerID
-
-	// --- Crafting Logic for Wooden Wall ---
 	if craftData.Item == "wooden_wall" {
-		// 1. Check if player has enough wood
 		currentWoodStr, err := rdb.HGet(ctx, inventoryKey, "wood").Result()
 		if err != nil {
 			currentWoodStr = "0"
-		} // If no wood, treat as 0
+		}
 		currentWood, _ := strconv.Atoi(currentWoodStr)
-
 		if currentWood < WoodPerWall {
 			log.Printf("Player %s failed to craft wall: not enough wood.", playerID)
-			return nil, nil // Not enough resources
+			return nil, nil
 		}
-
-		// 2. Atomically update inventory
 		pipe := rdb.Pipeline()
 		newWood := pipe.HIncrBy(ctx, inventoryKey, "wood", -WoodPerWall)
 		newWalls := pipe.HIncrBy(ctx, inventoryKey, "wooden_wall", 1)
@@ -224,118 +260,18 @@ func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.Inventory
 			log.Printf("Redis error during crafting for player %s: %v", playerID, err)
 			return nil, nil
 		}
-
-		// 3. Create inventory update messages to send back to the client
 		updates = append(updates, &models.InventoryUpdateMessage{
 			Type: "inventory_update", Resource: "wood", Amount: int(newWood.Val()),
 		})
 		updates = append(updates, &models.InventoryUpdateMessage{
 			Type: "inventory_update", Resource: "wooden_wall", Amount: int(newWalls.Val()),
 		})
-
 		log.Printf("Player %s crafted a wooden wall.", playerID)
 	}
-
-	// Set action cooldown after a successful craft
 	if len(updates) > 0 {
 		rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 	}
-
 	return updates, nil
-}
-
-// --- NEW FUNCTION ---
-// ProcessPlaceItem handles a player's request to build an item in the world.
-func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
-	var placeData models.PlaceItemPayload
-	if err := json.Unmarshal(payload, &placeData); err != nil {
-		return nil, nil
-	}
-
-	playerData, err := rdb.HGetAll(ctx, playerID).Result()
-	if err != nil {
-		return nil, nil
-	}
-
-	// 1. Check Action Cooldown
-	nextActionAt, _ := strconv.ParseInt(playerData["nextActionAt"], 10, 64)
-	if time.Now().UnixMilli() < nextActionAt {
-		return nil, nil
-	}
-
-	currentX, _ := strconv.Atoi(playerData["x"])
-	currentY, _ := strconv.Atoi(playerData["y"])
-
-	// 2. Check Adjacency (must be 1 tile away)
-	targetX, targetY := placeData.X, placeData.Y
-	distX := (currentX - targetX) * (currentX - targetX)
-	distY := (currentY - targetY) * (currentY - targetY)
-	if (distX + distY) != 1 {
-		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
-	}
-
-	inventoryKey := "player:inventory:" + playerID
-	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
-
-	// --- Logic for Wooden Wall ---
-	if placeData.Item == "wooden_wall" {
-		// 3. Check Inventory
-		wallCountStr, err := rdb.HGet(ctx, inventoryKey, "wooden_wall").Result()
-		if err != nil {
-			return nil, nil
-		} // Player has no walls
-		wallCount, _ := strconv.Atoi(wallCountStr)
-		if wallCount < 1 {
-			return nil, nil // Not enough walls
-		}
-
-		// 4. Check Target Tile
-		tileJSON, err := rdb.HGet(ctx, "world:zone:0", targetCoordKey).Result()
-		if err != nil {
-			return nil, nil
-		} // Tile doesn't exist
-		var tile models.WorldTile
-		json.Unmarshal([]byte(tileJSON), &tile)
-
-		if tile.Type != "ground" {
-			return nil, nil // Can only build on empty ground
-		}
-
-		// 5. Try to lock the target tile to ensure it's not occupied
-		targetTileLockKey := "lock:tile:" + targetCoordKey
-		wasSet, err := rdb.SetNX(ctx, targetTileLockKey, "world_object", 0).Result()
-		if err != nil || !wasSet {
-			// Failed to lock, tile is occupied by a player.
-			return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
-		}
-
-		// 6. All checks passed. Execute the build.
-		newWallTile := models.WorldTile{Type: "wooden_wall", Health: HealthWall}
-		newTileJSON, _ := json.Marshal(newWallTile)
-
-		pipe := rdb.Pipeline()
-		// Decrement wall from inventory
-		newAmount := pipe.HIncrBy(ctx, inventoryKey, "wooden_wall", -1)
-		// Update the world tile
-		pipe.HSet(ctx, "world:zone:0", targetCoordKey, string(newTileJSON))
-		_, err = pipe.Exec(ctx)
-		if err != nil {
-			// Rollback the lock if something went wrong
-			rdb.Del(ctx, targetTileLockKey)
-			return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
-		}
-
-		// 7. Broadcast and send inventory update
-		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: newWallTile}
-		PublishUpdate(worldUpdateMsg)
-
-		inventoryUpdateMsg := &models.InventoryUpdateMessage{Type: "inventory_update", Resource: "wooden_wall", Amount: int(newAmount.Val())}
-
-		rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
-		return nil, inventoryUpdateMsg
-	}
-
-	return nil, nil
 }
 
 // PublishUpdate sends a message to the Redis world_updates channel for broadcasting.

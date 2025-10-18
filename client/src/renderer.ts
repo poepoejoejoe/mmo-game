@@ -1,5 +1,6 @@
 import * as state from './state';
 import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, TILE_SIZE } from './constants';
+import { getTileProperties } from './definitions';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -8,11 +9,10 @@ let ctx: CanvasRenderingContext2D;
 const crackImages: HTMLImageElement[] = [];
 let assetsLoaded = false;
 
+// Pre-loads all the crack SVG images into memory for fast rendering.
 function loadAssets() {
     const crackSVGs = [
-        // Stage 0 is a tiny dot
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L7.5 7.5' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-        // Stages 1-9 are the aggressive cracks
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 M8 8 L10 9' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M8 8 L10 9 L12 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M8 8 L10 9 L12 11 M8 8 L7 10 L5 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
@@ -39,15 +39,6 @@ function loadAssets() {
     });
 }
 
-const tileColors: Record<string, string> = {
-    void: '#000',
-    ground: '#4a4a4a',
-    rock: '#888',
-    tree: '#27ae60',
-    water: '#2980b9',
-    wooden_wall: '#8a6d3b',
-};
-
 // --- Drawing Functions ---
 
 function drawWorld(startX: number, startY: number) {
@@ -56,19 +47,16 @@ function drawWorld(startX: number, startY: number) {
             const worldX = startX + i;
             const worldY = startY + j;
             const tileData = state.getTileData(worldX, worldY);
+            const props = getTileProperties(tileData.type);
 
-            ctx.fillStyle = tileColors[tileData.type] || '#ff00ff'; // Default to magenta on error
+            // Draw the base tile color
+            ctx.fillStyle = props.color;
             ctx.fillRect(i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE);
 
-            // Draw crack overlays
-            if (assetsLoaded && (tileData.type === 'tree' || tileData.type === 'rock' || tileData.type === 'wooden_wall')) {
-                let maxHealth = 1;
-                if (tileData.type === 'tree') maxHealth = 2;
-                if (tileData.type === 'rock') maxHealth = 4;
-                if (tileData.type === 'wooden_wall') maxHealth = 10;
-                
-                if (tileData.health < maxHealth) {
-                    const damagePercent = 1 - (tileData.health / maxHealth);
+            // Draw crack overlays on top if the tile is damaged
+            if (assetsLoaded && (props.isGatherable || props.isDestructible)) {
+                if (tileData.health < props.maxHealth) {
+                    const damagePercent = 1 - (tileData.health / props.maxHealth);
                     const crackStage = Math.min(9, Math.floor(damagePercent * 10));
                     ctx.drawImage(crackImages[crackStage], i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
@@ -95,23 +83,25 @@ function render() {
     const me = state.getMyPlayer();
     if (!me || !ctx) return;
 
-    // Clear the canvas
+    // Clear the entire canvas for the new frame
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Calculate viewport corners
+    // Calculate the top-left corner of the viewport based on the player's position
     const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
     const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
 
+    // Draw layers in order: world first, then players on top
     drawWorld(startX, startY);
     drawPlayers(startX, startY);
 
-    // Update coordinate display
+    // Update the coordinate display in the UI panel
     document.getElementById('player-coords')!.textContent = `Your Position: (${me.x}, ${me.y})`;
 }
 
+// The main game loop function, which calls itself continuously
 function gameLoop() {
     render();
-    requestAnimationFrame(gameLoop); // This creates the continuous loop
+    requestAnimationFrame(gameLoop);
 }
 
 export function initializeRenderer() {
@@ -122,13 +112,15 @@ export function initializeRenderer() {
     }
     ctx = canvas.getContext('2d')!;
 
-    // Set canvas dimensions
+    // Set the canvas dimensions based on our constants
     canvas.width = VIEWPORT_WIDTH * TILE_SIZE;
     canvas.height = VIEWPORT_HEIGHT * TILE_SIZE;
 
+    // Begin loading visual assets
     loadAssets();
 }
 
 export function startRenderLoop() {
+    // Kick off the continuous rendering loop
     gameLoop();
 }
