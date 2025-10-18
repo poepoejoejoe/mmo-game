@@ -10,7 +10,8 @@ import {
     WorldUpdateMessage 
 } from './types';
 import * as state from './state';
-import { renderViewport, updateInventoryUI, showHitEffect, updateTile, updateCraftingUI } from './ui'; // Import updateTile
+import { updateInventoryUI, updatePlayerIdDisplay } from './ui';
+
 const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
 /**
@@ -31,7 +32,7 @@ function handleMessage(event: MessageEvent) {
             const stateMsg = msg as InitialStateMessage;
             state.setInitialState(stateMsg.playerId, stateMsg.players, stateMsg.world, stateMsg.inventory);
             updateInventoryUI();
-            updateCraftingUI();
+            updatePlayerIdDisplay(); // Update the player ID display
             break;
         }
         case 'state_correction': {
@@ -42,8 +43,6 @@ function handleMessage(event: MessageEvent) {
         case 'resource_damaged': {
             const damageMsg = msg as ResourceDamagedMessage;
             state.setResourceHealth(damageMsg.x, damageMsg.y, damageMsg.newHealth);
-            showHitEffect(damageMsg.x, damageMsg.y);
-            updateTile(damageMsg.x, damageMsg.y);
             // We don't need to re-render here, the hit effect is enough visual feedback
             break;
         }
@@ -75,8 +74,6 @@ function handleMessage(event: MessageEvent) {
             break;
         }
     }
-    // Re-render the game view after any state change.
-    renderViewport();
 }
 
 export function initializeNetwork() {
