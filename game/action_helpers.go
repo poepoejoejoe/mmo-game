@@ -54,7 +54,7 @@ func GetWorldTile(x, y int) (*models.WorldTile, *TileProperties, error) {
 		return nil, nil, err
 	}
 
-	props, ok := TileDefs[tile.Type]
+	props, ok := TileDefs[TileType(tile.Type)]
 	if !ok {
 		log.Printf("Unknown tile type %s at %s", tile.Type, coordKey)
 		// Fallback to ground properties to be safe

@@ -17,14 +17,16 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 
 	currentX, currentY := GetPlayerPosition(playerData)
 	targetX, targetY := currentX, currentY
-	switch direction {
-	case "up":
+
+	// Use MoveDirection constants
+	switch MoveDirection(direction) {
+	case MoveDirectionUp:
 		targetY--
-	case "down":
+	case MoveDirectionDown:
 		targetY++
-	case "left":
+	case MoveDirectionLeft:
 		targetX--
-	case "right":
+	case MoveDirectionRight:
 		targetX++
 	}
 
@@ -38,11 +40,13 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 	}
 
 	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
-	targetTileKey := "lock:tile:" + targetCoordKey
+	// Use RedisKey constant
+	targetTileKey := string(RedisKeyLockTile) + targetCoordKey
 	wasSet, err := rdb.SetNX(ctx, targetTileKey, playerID, 0).Result()
 	if err != nil || !wasSet {
 		// Tile is locked, send state correction
-		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}
+		// Use ServerEventType constant
+		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}
 	}
 
 	cooldown := BaseActionCooldown
@@ -53,18 +57,22 @@ func ProcessMove(playerID string, direction string) *models.StateCorrectionMessa
 
 	pipe := rdb.Pipeline()
 	pipe.HSet(ctx, playerID, "x", targetX, "y", targetY, "nextActionAt", nextActionTime)
-	pipe.GeoAdd(ctx, "zone:0:positions", &redis.GeoLocation{Name: playerID, Longitude: float64(targetX), Latitude: float64(targetY)})
+	// Use RedisKey constant
+	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(targetX), Latitude: float64(targetY)})
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Error updating player state, rolling back lock for tile %s", targetCoordKey)
 		releaseLockScript.Run(ctx, rdb, []string{targetTileKey}, playerID)
-		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}
+		// Use ServerEventType constant
+		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}
 	}
 
-	currentTileKey := "lock:tile:" + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
+	// Use RedisKey constant
+	currentTileKey := string(RedisKeyLockTile) + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
 	releaseLockScript.Run(ctx, rdb, []string{currentTileKey}, playerID)
 
-	updateMsg := map[string]interface{}{"type": "player_moved", "playerId": playerID, "x": targetX, "y": targetY}
+	// Use ServerEventType constant
+	updateMsg := map[string]interface{}{"type": string(ServerEventPlayerMoved), "playerId": playerID, "x": targetX, "y": targetY}
 	PublishUpdate(updateMsg)
 
 	return nil

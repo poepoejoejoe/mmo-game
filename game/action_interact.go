@@ -23,7 +23,8 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	targetX, targetY := interactData.X, interactData.Y
 
 	if !IsAdjacent(currentX, currentY, targetX, targetY) {
-		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+		// Use ServerEventType constant
+		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
 	}
 
 	tile, props, err := GetWorldTile(targetX, targetY)
@@ -40,33 +41,47 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 
 	tile.Health--
 	damageMsg := models.ResourceDamagedMessage{
-		Type: "resource_damaged", X: targetX, Y: targetY, NewHealth: tile.Health,
+		Type:      string(ServerEventResourceDamaged), // Use ServerEventType constant
+		X:         targetX,
+		Y:         targetY,
+		NewHealth: tile.Health,
 	}
 	PublishUpdate(damageMsg)
 
 	var inventoryUpdateMsg *models.InventoryUpdateMessage
 	if props.IsGatherable {
-		newAmount, _ := rdb.HIncrBy(ctx, "player:inventory:"+playerID, props.GatherResource, 1).Result()
+		// Use RedisKey and ItemType constants
+		newAmount, _ := rdb.HIncrBy(ctx, string(RedisKeyPlayerInventory)+playerID, string(props.GatherResource), 1).Result()
 		inventoryUpdateMsg = &models.InventoryUpdateMessage{
-			Type: "inventory_update", Resource: props.GatherResource, Amount: int(newAmount),
+			Type:     string(ServerEventInventoryUpdate), // Use ServerEventType constant
+			Resource: string(props.GatherResource),       // Cast ItemType to string
+			Amount:   int(newAmount),
 		}
 	}
 
 	if tile.Health <= 0 {
-		tile.Type = "ground"
-		groundTile := models.WorldTile{Type: "ground", Health: 0}
-		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: groundTile}
+		// Use TileType constant
+		tile.Type = string(TileTypeGround)
+		groundTile := models.WorldTile{Type: string(TileTypeGround), Health: 0}
+		worldUpdateMsg := models.WorldUpdateMessage{
+			Type: string(ServerEventWorldUpdate), // Use ServerEventType constant
+			X:    targetX,
+			Y:    targetY,
+			Tile: groundTile,
+		}
 		PublishUpdate(worldUpdateMsg)
 
-		if originalTileType == "wooden_wall" {
+		// Use TileType constant
+		if TileType(originalTileType) == TileTypeWoodenWall {
 			log.Printf("Wall at %s destroyed, removing lock.", targetCoordKey)
-			// Now this line will work correctly
-			rdb.Del(ctx, "lock:tile:"+targetCoordKey)
+			// Use RedisKey constant
+			rdb.Del(ctx, string(RedisKeyLockTile)+targetCoordKey)
 		}
 	}
 
 	newTileJSON, _ := json.Marshal(tile)
-	rdb.HSet(ctx, "world:zone:0", targetCoordKey, string(newTileJSON))
+	// Use RedisKey constant
+	rdb.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 
 	return nil, inventoryUpdateMsg
@@ -87,14 +102,18 @@ func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCo
 	targetX, targetY := placeData.X, placeData.Y
 
 	if !IsAdjacent(currentX, currentY, targetX, targetY) {
-		return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+		// Use ServerEventType constant
+		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
 	}
 
-	inventoryKey := "player:inventory:" + playerID
+	// Use RedisKey constant
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
 	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
 
-	if placeData.Item == "wooden_wall" {
-		wallCountStr, err := rdb.HGet(ctx, inventoryKey, "wooden_wall").Result()
+	// Use ItemType constant
+	if ItemType(placeData.Item) == ItemWoodenWall {
+		// Use ItemType constant
+		wallCountStr, err := rdb.HGet(ctx, inventoryKey, string(ItemWoodenWall)).Result()
 		if err != nil {
 			return nil, nil
 		}
@@ -111,28 +130,44 @@ func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCo
 			return nil, nil
 		}
 
-		targetTileLockKey := "lock:tile:" + targetCoordKey
-		wasSet, err := rdb.SetNX(ctx, targetTileLockKey, "world_object", 0).Result()
+		// Use RedisKey constants
+		targetTileLockKey := string(RedisKeyLockTile) + targetCoordKey
+		wasSet, err := rdb.SetNX(ctx, targetTileLockKey, string(RedisKeyLockWorldObject), 0).Result()
 		if err != nil || !wasSet {
-			return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+			// Use ServerEventType constant
+			return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
 		}
 
-		wallProps := TileDefs["wooden_wall"]
-		newWallTile := models.WorldTile{Type: "wooden_wall", Health: wallProps.MaxHealth}
+		// Use TileType constant
+		wallProps := TileDefs[TileTypeWoodenWall]
+		newWallTile := models.WorldTile{Type: string(TileTypeWoodenWall), Health: wallProps.MaxHealth}
 		newTileJSON, _ := json.Marshal(newWallTile)
 
 		pipe := rdb.Pipeline()
-		newAmount := pipe.HIncrBy(ctx, inventoryKey, "wooden_wall", -1)
-		pipe.HSet(ctx, "world:zone:0", targetCoordKey, string(newTileJSON))
+		// Use ItemType and RedisKey constants
+		newAmount := pipe.HIncrBy(ctx, inventoryKey, string(ItemWoodenWall), -1)
+		pipe.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
 		_, err = pipe.Exec(ctx)
 		if err != nil {
 			rdb.Del(ctx, targetTileLockKey)
-			return &models.StateCorrectionMessage{Type: "state_correction", X: currentX, Y: currentY}, nil
+			// Use ServerEventType constant
+			return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
 		}
 
-		worldUpdateMsg := models.WorldUpdateMessage{Type: "world_update", X: targetX, Y: targetY, Tile: newWallTile}
+		worldUpdateMsg := models.WorldUpdateMessage{
+			Type: string(ServerEventWorldUpdate), // Use ServerEventType constant
+			X:    targetX,
+			Y:    targetY,
+			Tile: newWallTile,
+		}
 		PublishUpdate(worldUpdateMsg)
-		inventoryUpdateMsg := &models.InventoryUpdateMessage{Type: "inventory_update", Resource: "wooden_wall", Amount: int(newAmount.Val())}
+
+		// Use ServerEventType and ItemType constants
+		inventoryUpdateMsg := &models.InventoryUpdateMessage{
+			Type:     string(ServerEventInventoryUpdate),
+			Resource: string(ItemWoodenWall),
+			Amount:   int(newAmount.Val()),
+		}
 		rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 		return nil, inventoryUpdateMsg
 	}

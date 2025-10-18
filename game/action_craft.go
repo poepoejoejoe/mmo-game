@@ -21,25 +21,29 @@ func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.Inventory
 		return nil, nil
 	}
 
-	recipe, ok := RecipeDefs[craftData.Item]
+	// Use the ItemType constant for the map lookup
+	recipe, ok := RecipeDefs[ItemType(craftData.Item)]
 	if !ok {
 		log.Printf("Player %s tried to craft unknown item: %s", playerID, craftData.Item)
 		return nil, nil
 	}
 
-	inventoryKey := "player:inventory:" + playerID
+	// Use the RedisKey constant for the inventory key
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
 	var updates []*models.InventoryUpdateMessage
 
 	// Check if the player has all required ingredients
 	for ingredient, requiredAmount := range recipe.Ingredients {
-		currentAmountStr, err := rdb.HGet(ctx, inventoryKey, ingredient).Result()
+		// Cast the ItemType 'ingredient' to a string for the Redis HGet
+		currentAmountStr, err := rdb.HGet(ctx, inventoryKey, string(ingredient)).Result()
 		if err != nil {
 			currentAmountStr = "0"
 		}
 		currentAmount, _ := strconv.Atoi(currentAmountStr)
 
 		if currentAmount < requiredAmount {
-			log.Printf("Player %s failed to craft %s: not enough %s.", playerID, craftData.Item, ingredient)
+			// Cast the ItemType 'ingredient' to a string for logging
+			log.Printf("Player %s failed to craft %s: not enough %s.", playerID, craftData.Item, string(ingredient))
 			return nil, nil
 		}
 	}
@@ -48,15 +52,20 @@ func ProcessCraft(playerID string, payload json.RawMessage) ([]*models.Inventory
 	pipe := rdb.Pipeline()
 	// Subtract all ingredients
 	for ingredient, requiredAmount := range recipe.Ingredients {
-		newAmount := pipe.HIncrBy(ctx, inventoryKey, ingredient, int64(-requiredAmount))
+		// Cast the ItemType 'ingredient' to a string for the Redis HIncrBy
+		newAmount := pipe.HIncrBy(ctx, inventoryKey, string(ingredient), int64(-requiredAmount))
 		updates = append(updates, &models.InventoryUpdateMessage{
-			Type: "inventory_update", Resource: ingredient, Amount: int(newAmount.Val()),
+			Type:     string(ServerEventInventoryUpdate), // Use ServerEventType constant
+			Resource: string(ingredient),                 // Cast ItemType to string
+			Amount:   int(newAmount.Val()),
 		})
 	}
 	// Add the crafted item(s)
 	newCraftedAmount := pipe.HIncrBy(ctx, inventoryKey, craftData.Item, int64(recipe.Yield))
 	updates = append(updates, &models.InventoryUpdateMessage{
-		Type: "inventory_update", Resource: craftData.Item, Amount: int(newCraftedAmount.Val()),
+		Type:     string(ServerEventInventoryUpdate), // Use ServerEventType constant
+		Resource: craftData.Item,
+		Amount:   int(newCraftedAmount.Val()),
 	})
 
 	cmders, err := pipe.Exec(ctx)

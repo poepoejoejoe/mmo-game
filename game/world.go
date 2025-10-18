@@ -10,7 +10,8 @@ import (
 
 func GenerateWorld() {
 	log.Println("Generating world terrain and health...")
-	worldKey := "world:zone:0"
+	// Use RedisKey constant
+	worldKey := string(RedisKeyWorldZone0)
 
 	if rdb.Exists(ctx, worldKey).Val() > 0 {
 		log.Println("World already exists. Skipping generation.")
@@ -22,26 +23,28 @@ func GenerateWorld() {
 		for y := -WorldSize; y <= WorldSize; y++ {
 			coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
 			noise := rand.Float64()
-			tileType := "ground"
+			// Use TileType constants
+			tileType := TileTypeGround
 
 			if noise > 0.95 {
-				tileType = "rock"
+				tileType = TileTypeRock
 			} else if noise > 0.90 {
-				tileType = "tree"
+				tileType = TileTypeTree
 			} else if noise > 0.88 {
-				tileType = "water"
+				tileType = TileTypeWater
 			}
 
-			// Get properties from our new definition map
+			// Get properties from our new definition map by casting
 			props := TileDefs[tileType]
-			tile := models.WorldTile{Type: tileType, Health: props.MaxHealth}
+			tile := models.WorldTile{Type: string(tileType), Health: props.MaxHealth}
 
 			tileJSON, _ := json.Marshal(tile)
 			pipe.HSet(ctx, worldKey, coordKey, string(tileJSON))
 		}
 	}
 
-	spawnTileJSON, _ := json.Marshal(models.WorldTile{Type: "ground", Health: 0})
+	// Use TileType constant
+	spawnTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeGround), Health: 0})
 	pipe.HSet(ctx, worldKey, "0,0", spawnTileJSON)
 
 	_, err := pipe.Exec(ctx)

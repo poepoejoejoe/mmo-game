@@ -39,7 +39,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	playerID := "player:" + uuid.New().String()
+	playerID := string(game.RedisKeyPlayerPrefix) + uuid.New().String()
 	client := &Client{hub: hub, id: playerID, conn: conn, send: make(chan []byte, 256)}
 	client.hub.register <- client
 
@@ -84,8 +84,8 @@ func (c *Client) readPump() {
 		}
 
 		// Route the message to the appropriate game logic based on its type.
-		switch msg.Type {
-		case "move":
+		switch game.ClientEventType(msg.Type) {
+		case game.ClientEventMove:
 			var moveData models.MovePayload
 			if err := json.Unmarshal(msg.Payload, &moveData); err != nil {
 				continue
@@ -98,7 +98,7 @@ func (c *Client) readPump() {
 				c.send <- correctionJSON
 			}
 
-		case "interact":
+		case game.ClientEventInteract:
 			// Call the game logic to process the interaction.
 			correctionMsg, inventoryMsg := game.ProcessInteract(c.id, msg.Payload)
 			if correctionMsg != nil {
@@ -111,7 +111,7 @@ func (c *Client) readPump() {
 				inventoryJSON, _ := json.Marshal(inventoryMsg)
 				c.send <- inventoryJSON
 			}
-		case "craft":
+		case game.ClientEventCraft:
 			inventoryUpdates, correctionMsg := game.ProcessCraft(c.id, msg.Payload)
 			if correctionMsg != nil {
 				correctionJSON, _ := json.Marshal(correctionMsg)
@@ -122,7 +122,7 @@ func (c *Client) readPump() {
 				inventoryJSON, _ := json.Marshal(invUpdate)
 				c.send <- inventoryJSON
 			}
-		case "place_item":
+		case game.ClientEventPlaceItem:
 			correctionMsg, inventoryMsg := game.ProcessPlaceItem(c.id, msg.Payload)
 			if correctionMsg != nil {
 				correctionJSON, _ := json.Marshal(correctionMsg)

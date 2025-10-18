@@ -14,18 +14,20 @@ func FindOpenSpawnPoint(playerID string) (int, int) {
 	x, y, dx, dy := 0, 0, 0, -1
 	for i := 0; i < (WorldSize * 2); i++ {
 		for j := 0; j < (i/2 + 1); j++ {
-			tileKey := "lock:tile:" + strconv.Itoa(x) + "," + strconv.Itoa(y)
+			// Use RedisKey constant
+			tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
 			wasSet, _ := rdb.SetNX(ctx, tileKey, playerID, 0).Result()
 			if wasSet {
-				tileJSON, err := rdb.HGet(ctx, "world:zone:0", strconv.Itoa(x)+","+strconv.Itoa(y)).Result()
+				// Use RedisKey constant
+				tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), strconv.Itoa(x)+","+strconv.Itoa(y)).Result()
 				if err != nil {
 					continue
 				}
 				var tile models.WorldTile
 				json.Unmarshal([]byte(tileJSON), &tile)
 
-				// UPDATED: Check the behavioral property
-				props := TileDefs[tile.Type]
+				// Use TileType constant
+				props := TileDefs[TileType(tile.Type)]
 				if !props.IsCollidable {
 					log.Printf("Found open spawn for %s at (%d, %d)", playerID, x, y)
 					return x, y
@@ -43,18 +45,21 @@ func FindOpenSpawnPoint(playerID string) (int, int) {
 func InitializePlayer(playerID string) *models.InitialStateMessage {
 	log.Printf("Initializing player %s.", playerID)
 	spawnX, spawnY := FindOpenSpawnPoint(playerID)
-	inventoryKey := "player:inventory:" + playerID
+	// Use RedisKey constant
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
 
 	pipe := rdb.Pipeline()
 	// Set the player's position and initial action cooldown.
 	pipe.HSet(ctx, playerID, "x", spawnX, "y", spawnY, "nextActionAt", time.Now().UnixMilli())
 	// Add the player to the geospatial index for proximity queries.
-	pipe.GeoAdd(ctx, "zone:0:positions", &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
+	// Use RedisKey constant
+	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
 
 	// --- THIS IS THE CHANGE ---
 	// For testing purposes, give every new player a starting inventory.
 	// HSet can take multiple field-value pairs at once.
-	pipe.HSet(ctx, inventoryKey, "wood", 100, "wooden_wall", 10)
+	// Use ItemType constants
+	pipe.HSet(ctx, inventoryKey, string(ItemWood), 100, string(ItemWoodenWall), 10)
 	// --- END OF CHANGE ---
 
 	_, err := pipe.Exec(ctx)
@@ -64,13 +69,15 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	}
 
 	// Gather all data needed for the initial state message.
-	locations, _ := rdb.GeoRadius(ctx, "zone:0:positions", 0, 0, &redis.GeoRadiusQuery{Radius: 99999, Unit: "km", WithCoord: true}).Result()
+	// Use RedisKey constant
+	locations, _ := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), 0, 0, &redis.GeoRadiusQuery{Radius: 99999, Unit: "km", WithCoord: true}).Result()
 	allPlayersState := make(map[string]models.PlayerState)
 	for _, loc := range locations {
 		allPlayersState[loc.Name] = models.PlayerState{X: int(loc.Longitude), Y: int(loc.Latitude)}
 	}
 
-	worldDataRaw, _ := rdb.HGetAll(ctx, "world:zone:0").Result()
+	// Use RedisKey constant
+	worldDataRaw, _ := rdb.HGetAll(ctx, string(RedisKeyWorldZone0)).Result()
 	worldDataTyped := make(map[string]models.WorldTile)
 	for coord, tileJSON := range worldDataRaw {
 		var tile models.WorldTile
@@ -81,8 +88,9 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	inventoryData, _ := rdb.HGetAll(ctx, inventoryKey).Result()
 
 	// Construct the welcome message.
+	// Use ServerEventType constant
 	initialState := &models.InitialStateMessage{
-		Type:      "initial_state",
+		Type:      string(ServerEventInitialState),
 		PlayerId:  playerID,
 		Players:   allPlayersState,
 		World:     worldDataTyped,
@@ -90,7 +98,8 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	}
 
 	// Announce the new player's arrival to everyone else.
-	joinMsg := map[string]interface{}{"type": "player_joined", "playerId": playerID, "x": spawnX, "y": spawnY}
+	// Use ServerEventType constant
+	joinMsg := map[string]interface{}{"type": string(ServerEventPlayerJoined), "playerId": playerID, "x": spawnX, "y": spawnY}
 	PublishUpdate(joinMsg)
 
 	return initialState
@@ -103,17 +112,21 @@ func CleanupPlayer(playerID string) {
 	if err == nil {
 		currentX, _ := strconv.Atoi(playerData["x"])
 		currentY, _ := strconv.Atoi(playerData["y"])
-		currentTileKey := "lock:tile:" + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
+		// Use RedisKey constant
+		currentTileKey := string(RedisKeyLockTile) + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
 		releaseLockScript.Run(ctx, rdb, []string{currentTileKey}, playerID)
 	}
 
 	pipe := rdb.Pipeline()
 	pipe.Del(ctx, playerID)
-	pipe.ZRem(ctx, "zone:0:positions", playerID)
+	// Use RedisKey constant
+	pipe.ZRem(ctx, string(RedisKeyZone0Positions), playerID)
 	// Also delete the player's inventory on cleanup
-	pipe.Del(ctx, "player:inventory:"+playerID)
+	// Use RedisKey constant
+	pipe.Del(ctx, string(RedisKeyPlayerInventory)+playerID)
 	pipe.Exec(ctx)
 
-	leftMsg := map[string]interface{}{"type": "player_left", "playerId": playerID}
+	// Use ServerEventType constant
+	leftMsg := map[string]interface{}{"type": string(ServerEventPlayerLeft), "playerId": playerID}
 	PublishUpdate(leftMsg)
 }
