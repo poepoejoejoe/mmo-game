@@ -175,8 +175,8 @@ function handleMouseDown(e: MouseEvent) {
 
         if (targetEntityId) {
             const targetEntity = entities[targetEntityId];
-            const me = state.getMyEntity();
-            const targetEntityProps = getEntityProperties(targetEntity.type, targetEntityId, me ? me.id : null);
+            const myPlayerId = state.getState().playerId;
+            const targetEntityProps = getEntityProperties(targetEntity.type, targetEntityId, myPlayerId);
 
             if (targetEntityProps.isAttackable) {
                 if (!canPerformAction) return;

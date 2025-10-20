@@ -91,7 +91,7 @@ func (c *Client) readPump() {
 				continue
 			}
 			// Call the game logic to process the move.
-			correctionMsg := game.ProcessMove(c.id, moveData.Direction)
+			correctionMsg := game.ProcessMove(c.id, game.MoveDirection(moveData.Direction))
 			if correctionMsg != nil {
 				// If the move was invalid, send a correction back to this client.
 				correctionJSON, _ := json.Marshal(correctionMsg)

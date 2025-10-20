@@ -86,3 +86,9 @@ type EntityDamagedMessage struct {
 	EntityID string `json:"entityId"`
 	Damage   int    `json:"damage"`
 }
+
+type PlayerStatsUpdateMessage struct {
+	Type      string `json:"type"`
+	Health    int    `json:"health"`
+	MaxHealth int    `json:"maxHealth"`
+}

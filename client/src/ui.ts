@@ -1,13 +1,28 @@
 import * as state from './state';
 
-const playerIdEl = document.getElementById('player-id')!;
-const cooldownBar = document.getElementById('cooldown-bar') as HTMLDivElement;
-const cooldownText = document.getElementById('cooldown-text')!;
-const invWood = document.getElementById('inv-wood')!;
-const invRock = document.getElementById('inv-rock')!;
-const invWoodenWall = document.getElementById('inv-wooden_wall')!;
-const craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
-const gameCanvas = document.getElementById('game-canvas')!;
+let playerIdEl: HTMLElement;
+let cooldownBar: HTMLDivElement;
+let cooldownText: HTMLElement;
+let invWood: HTMLElement;
+let invRock: HTMLElement;
+let invWoodenWall: HTMLElement;
+let craftWallBtn: HTMLButtonElement;
+let gameCanvas: HTMLElement;
+let healthBar: HTMLDivElement;
+let healthText: HTMLElement;
+
+export function initializeUI() {
+    playerIdEl = document.getElementById('player-id')!;
+    cooldownBar = document.getElementById('cooldown-bar') as HTMLDivElement;
+    cooldownText = document.getElementById('cooldown-text')!;
+    invWood = document.getElementById('inv-wood')!;
+    invRock = document.getElementById('inv-rock')!;
+    invWoodenWall = document.getElementById('inv-wooden_wall')!;
+    craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
+    gameCanvas = document.getElementById('game-canvas')!;
+    healthBar = document.getElementById('health-bar') as HTMLDivElement;
+    healthText = document.getElementById('health-text')!;
+}
 
 export function startCooldown(duration: number): void {
     cooldownText.textContent = "Working...";
@@ -47,4 +62,10 @@ export function updatePlayerIdDisplay() {
     if (playerId) {
         playerIdEl.textContent = `Your ID: ${playerId}`;
     }
+}
+
+export function updatePlayerHealth(health: number, maxHealth: number) {
+    healthText.textContent = `HP: ${health} / ${maxHealth}`;
+    const healthPercentage = (health / maxHealth) * 100;
+    healthBar.style.width = `${healthPercentage}%`;
 }

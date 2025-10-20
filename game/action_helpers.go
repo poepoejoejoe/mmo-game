@@ -80,3 +80,9 @@ func PublishUpdate(message interface{}) {
 	// Use Redis topic constant (if you add one, e.g., "world_updates")
 	rdb.Publish(ctx, "world_updates", string(jsonMsg))
 }
+
+// TilesToKilometers converts a distance in game tiles to the approximate
+// kilometer equivalent for use in Redis Geo queries.
+func TilesToKilometers(tiles int) float64 {
+	return float64(tiles) * KILOMETERS_PER_DEGREE
+}

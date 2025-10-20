@@ -48,6 +48,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	pipe.HSet(ctx, playerID,
 		"x", spawnX,
 		"y", spawnY,
+		"health", PlayerDefs.MaxHealth,
 		"nextActionAt", time.Now().UnixMilli(),
 		"entityType", string(EntityTypePlayer), // This is the internal type
 		"moveCooldown", 100, // 100ms move cooldown for players
@@ -62,7 +63,12 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	}
 
 	// --- UPDATED: Gather all entity types for initial state ---
-	locations, _ := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), 0, 0, &redis.GeoRadiusQuery{Radius: 99999, Unit: "km", WithCoord: true}).Result()
+	// Use a large radius to find all entities in the zone.
+	locations, _ := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), 0, 0, &redis.GeoRadiusQuery{
+		Radius:    TilesToKilometers(WorldSize), // Search the entire world
+		Unit:      "km",
+		WithCoord: true,
+	}).Result()
 	allEntitiesState := make(map[string]models.EntityState)
 
 	// This is an N+1 query. We can optimize this later with Lua or by
@@ -108,14 +114,30 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	}
 
 	// Announce the new player's arrival to everyone else
-	joinMsg := map[string]interface{}{
+	updateMsg := map[string]interface{}{
 		"type":       string(ServerEventEntityJoined),
 		"entityId":   playerID,
 		"x":          spawnX,
 		"y":          spawnY,
 		"entityType": string(EntityTypePlayer), // <-- NEW: Send the type
 	}
-	PublishUpdate(joinMsg)
+	PublishUpdate(updateMsg)
+
+	// --- NEW: Send initial stats to the player ---
+	statsUpdateMsg := models.PlayerStatsUpdateMessage{
+		Type:      string(ServerEventPlayerStatsUpdate),
+		Health:    PlayerDefs.MaxHealth,
+		MaxHealth: PlayerDefs.MaxHealth,
+	}
+	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
+	// We need to do this after the initial state is sent, so we'll
+	// just wait a moment before sending. This is a bit of a hack.
+	time.AfterFunc(100*time.Millisecond, func() {
+		if sendDirectMessage != nil {
+			sendDirectMessage(playerID, statsUpdateJSON)
+		}
+	})
+	// --- END NEW ---
 
 	return initialState
 }

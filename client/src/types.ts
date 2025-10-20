@@ -91,3 +91,9 @@ export interface EntityDamagedMessage extends ServerMessage {
     entityId: string;
     damage: number;
 }
+
+export interface PlayerStatsUpdateMessage extends ServerMessage {
+    type: 'player_stats_update';
+    health: number;
+    maxHealth: number;
+}

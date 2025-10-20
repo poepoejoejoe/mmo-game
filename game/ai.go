@@ -3,15 +3,21 @@ package game
 import (
 	"log"
 	"math/rand"
+	"mmo-game/models"
+	"strconv"
 	"strings"
 	"time"
+
+	"encoding/json"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // StartAILoop begins the main game loop for processing NPC actions.
 func StartAILoop() {
 	log.Println("Starting AI loop...")
-	// Run the AI logic on a ticker (e.g., every 2 seconds)
-	ticker := time.NewTicker(2 * time.Second)
+	// Run the AI logic on a ticker (e.g., every 750ms)
+	ticker := time.NewTicker(750 * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -23,9 +29,7 @@ func StartAILoop() {
 
 // runNPCActions fetches all NPCs and processes their next action.
 func runNPCActions() {
-	// Get all entities currently in the world
-	// Note: For a larger game, we'd scan by entityType,
-	// but this is fine for now.
+	// Get all entity IDs from the geospatial index
 	entityIDs, err := rdb.ZRange(ctx, string(RedisKeyZone0Positions), 0, -1).Result()
 	if err != nil {
 		log.Printf("Error fetching entities for AI loop: %v", err)
@@ -33,56 +37,162 @@ func runNPCActions() {
 	}
 
 	for _, entityID := range entityIDs {
-		// We only care about slime NPCs
-		if strings.HasPrefix(entityID, string(NPCSlimePrefix)) {
-			processSlimeAI(entityID)
-		} else if strings.HasPrefix(entityID, string(NPCRatPrefix)) {
-			processRatAI(entityID)
+		// Check if the entity is an NPC
+		if strings.HasPrefix(entityID, "npc:") {
+			go processNPCAction(entityID)
 		}
 	}
 }
 
-// processSlimeAI defines the simple AI for a single slime.
-func processSlimeAI(slimeID string) {
-	// Check if the slime can act
-	canAct, _ := CanEntityAct(slimeID)
+// processNPCAction contains the core logic for an individual NPC's turn.
+func processNPCAction(npcID string) {
+	canAct, npcData := CanEntityAct(npcID)
 	if !canAct {
-		return // Slime is on cooldown, do nothing
+		// log.Printf("[AI Debug] NPC %s is on cooldown. Skipping.", npcID)
+		return // NPC is on cooldown
 	}
 
-	// Slime AI: 30% chance to move in a random direction
-	if rand.Intn(100) < 30 {
+	npcX, npcY := GetEntityPosition(npcData)
+
+	// --- REVERTED: Use GeoRadius with explicit coordinates for reliability ---
+	locations, err := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), float64(npcX), float64(npcY), &redis.GeoRadiusQuery{
+		Radius:    TilesToKilometers(5), // Use helper for 5-tile aggro range
+		Unit:      "km",
+		WithCoord: true, // Ask Redis to return coordinates for debugging
+	}).Result()
+	if err != nil {
+		log.Printf("[AI Error] Could not perform GeoRadius for %s: %v", npcID, err)
+		return
+	}
+
+	log.Printf("[AI Debug] locations: %v", locations)
+
+	// This log will now print the coordinates of each found entity
+	if len(locations) > 1 {
+		log.Printf("[AI Debug] For NPC %s at (%d, %d), found locations: %v", npcID, npcX, npcY, locations)
+	}
+
+	var targetID string
+	var targetX, targetY int
+	var targetFound bool
+
+	// Find the first entity that is a player
+	for _, loc := range locations {
+		if loc.Name == npcID {
+			continue // Skip self
+		}
+
+		// NEW: Added for debugging
+		log.Printf("[AI Debug] NPC %s checking entity: %s", npcID, loc.Name)
+
+		entityType, err := rdb.HGet(ctx, loc.Name, "entityType").Result()
+		if err != nil {
+			log.Printf("[AI Error] Could not get entityType for %s: %v. Skipping.", loc.Name, err)
+			continue
+		}
+
+		if entityType == string(EntityTypePlayer) {
+			targetID = loc.Name
+			targetData, err := rdb.HGetAll(ctx, targetID).Result()
+			if err != nil {
+				log.Printf("[AI Error] Could not get target data for %s: %v. Skipping.", targetID, err)
+				continue
+			}
+
+			// Check if target has health, might be in a weird state
+			if _, ok := targetData["health"]; !ok {
+				log.Printf("[AI Debug] Target %s has no health field. Skipping.", targetID)
+				continue
+			}
+			targetX, targetY = GetEntityPosition(targetData)
+			targetFound = true
+			break // First player found is the closest
+		}
+	}
+
+	// 2. If a player is found, decide whether to attack or move towards them
+	if targetFound {
+		log.Printf("target found. %s is attacking player %s", npcID, targetID)
+		// If adjacent, attack
+		if IsAdjacent(npcX, npcY, targetX, targetY) {
+			log.Printf("NPC %s is attacking player %s", npcID, targetID)
+			damage := 1 // TODO: Make this data-driven
+			newHealth, err := rdb.HIncrBy(ctx, targetID, "health", int64(-damage)).Result()
+			if err != nil {
+				log.Printf("Error damaging player %s: %v", targetID, err)
+				return
+			}
+
+			// Broadcast damage message
+			damageMsg := models.EntityDamagedMessage{Type: string(ServerEventEntityDamaged), EntityID: targetID, Damage: damage}
+			PublishUpdate(damageMsg)
+
+			if newHealth <= 0 {
+				HandlePlayerDeath(targetID)
+			} else {
+				// Also send a stats update to the player who was damaged
+				statsUpdateMsg := models.PlayerStatsUpdateMessage{
+					Type:      string(ServerEventPlayerStatsUpdate),
+					Health:    int(newHealth),
+					MaxHealth: PlayerDefs.MaxHealth,
+				}
+				statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
+				if sendDirectMessage != nil {
+					sendDirectMessage(targetID, statsUpdateJSON)
+				}
+			}
+		} else {
+			// Not adjacent, move towards the player (simple pathfinding)
+			dx := targetX - npcX
+			dy := targetY - npcY
+			var moveDir MoveDirection
+
+			// Move along the axis with the greater distance
+			if abs(dx) > abs(dy) {
+				if dx > 0 {
+					moveDir = MoveDirectionRight
+				} else {
+					moveDir = MoveDirectionLeft
+				}
+			} else {
+				if dy > 0 {
+					moveDir = MoveDirectionDown
+				} else {
+					moveDir = MoveDirectionUp
+				}
+			}
+			ProcessMove(npcID, moveDir)
+		}
+
+		// Set NPC's action cooldown and end turn
+		cooldown, _ := strconv.ParseInt(npcData["moveCooldown"], 10, 64)
+		nextActionTime := time.Now().UnixMilli() + cooldown
+		rdb.HSet(ctx, npcID, "nextActionAt", nextActionTime)
+		return
+	}
+
+	// 3. If no player is found, wander randomly
+	if rand.Intn(100) < 40 {
 		dir := getRandomDirection()
-		// Use the generic ProcessMove function.
-		// It will handle cooldowns and collisions automatically.
-		ProcessMove(slimeID, dir)
+		ProcessMove(npcID, dir)
 	}
 }
 
 // getRandomDirection selects a random cardinal direction.
-func getRandomDirection() string {
-	directions := []string{
-		string(MoveDirectionUp),
-		string(MoveDirectionDown),
-		string(MoveDirectionLeft),
-		string(MoveDirectionRight),
+func getRandomDirection() MoveDirection {
+	directions := []MoveDirection{
+		MoveDirectionUp,
+		MoveDirectionDown,
+		MoveDirectionLeft,
+		MoveDirectionRight,
 	}
 	return directions[rand.Intn(len(directions))]
 }
 
-// processRatAI defines the simple AI for a single rat.
-func processRatAI(ratID string) {
-	// Check if the rat can act
-	canAct, _ := CanEntityAct(ratID)
-	if !canAct {
-		return // Rat is on cooldown, do nothing
+// abs is a simple helper function to get the absolute value of an integer.
+func abs(x int) int {
+	if x < 0 {
+		return -x
 	}
-
-	// Rat AI: 50% chance to move in a random direction
-	if rand.Intn(100) < 50 {
-		dir := getRandomDirection()
-		// Use the generic ProcessMove function.
-		// It will handle cooldowns and collisions automatically.
-		ProcessMove(ratID, dir)
-	}
+	return x
 }

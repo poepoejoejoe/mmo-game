@@ -11,7 +11,7 @@ import (
 
 // --- UPDATED ---
 // ProcessMove now handles any entity, not just players.
-func ProcessMove(entityID string, direction string) *models.StateCorrectionMessage {
+func ProcessMove(entityID string, direction MoveDirection) *models.StateCorrectionMessage {
 	// Use new generic helper
 	canAct, entityData := CanEntityAct(entityID)
 	if !canAct {
@@ -23,7 +23,7 @@ func ProcessMove(entityID string, direction string) *models.StateCorrectionMessa
 	targetX, targetY := currentX, currentY
 
 	// Use MoveDirection constants
-	switch MoveDirection(direction) {
+	switch direction {
 	case MoveDirectionUp:
 		targetY--
 	case MoveDirectionDown:
@@ -72,8 +72,17 @@ func ProcessMove(entityID string, direction string) *models.StateCorrectionMessa
 	pipe := rdb.Pipeline()
 	// Update the entity's hash
 	pipe.HSet(ctx, entityID, "x", targetX, "y", targetY, "nextActionAt", nextActionTime)
-	// Use RedisKey constant and update the entity's GeoSet position
-	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: entityID, Longitude: float64(targetX), Latitude: float64(targetY)})
+
+	// --- BUG FIX REVERT: Use a single GeoAdd to correctly update the GeoSet position ---
+	// GeoAdd correctly adds a new member or updates the position of an existing one.
+	// The previous ZAdd call was incorrect and corrupted the location data.
+	log.Printf("[Move Debug] Updating geo position for %s to (%d, %d)", entityID, targetX, targetY)
+	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
+		Name:      entityID,
+		Longitude: float64(targetX),
+		Latitude:  float64(targetY),
+	})
+
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Error updating entity state, rolling back lock for tile %s", targetCoordKey)

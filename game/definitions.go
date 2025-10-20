@@ -2,6 +2,13 @@ package game
 
 // --- NEW CONSTANTS ---
 
+// KILOMETERS_PER_DEGREE is the approximate number of kilometers in one degree of
+// latitude/longitude on Earth. Since we are mapping our 2D grid to Redis's
+// spherical geo commands, we use this as a conversion factor for distance.
+const (
+	KILOMETERS_PER_DEGREE = 111.32
+)
+
 // EntityType defines the type of an entity.
 type EntityType string
 
@@ -45,15 +52,16 @@ const (
 type ServerEventType string
 
 const (
-	ServerEventInitialState    ServerEventType = "initial_state"
-	ServerEventStateCorrection ServerEventType = "state_correction"
-	ServerEventWorldUpdate     ServerEventType = "world_update"
-	ServerEventInventoryUpdate ServerEventType = "inventory_update"
-	ServerEventResourceDamaged ServerEventType = "resource_damaged"
-	ServerEventEntityJoined    ServerEventType = "entity_joined" // <-- RENAMED
-	ServerEventEntityLeft      ServerEventType = "entity_left"   // <-- RENAMED
-	ServerEventEntityMoved     ServerEventType = "entity_moved"
-	ServerEventEntityDamaged   ServerEventType = "entity_damaged"
+	ServerEventInitialState      ServerEventType = "initial_state"
+	ServerEventStateCorrection   ServerEventType = "state_correction"
+	ServerEventWorldUpdate       ServerEventType = "world_update"
+	ServerEventInventoryUpdate   ServerEventType = "inventory_update"
+	ServerEventResourceDamaged   ServerEventType = "resource_damaged"
+	ServerEventEntityJoined      ServerEventType = "entity_joined" // <-- RENAMED
+	ServerEventEntityLeft        ServerEventType = "entity_left"   // <-- RENAMED
+	ServerEventEntityMoved       ServerEventType = "entity_moved"
+	ServerEventEntityDamaged     ServerEventType = "entity_damaged"
+	ServerEventPlayerStatsUpdate ServerEventType = "player_stats_update"
 )
 
 // MoveDirection defines the valid move directions.
@@ -113,6 +121,11 @@ type NPCProperties struct {
 	Health int
 }
 
+// PlayerProperties defines the constant attributes of a player.
+type PlayerProperties struct {
+	MaxHealth int
+}
+
 // --- END NEW ---
 
 // TileDefs is our master map of all tile definitions.
@@ -121,6 +134,9 @@ var TileDefs map[TileType]TileProperties // Use new type
 // --- NEW ---
 // NPCDefs is our master map of all NPC definitions.
 var NPCDefs map[NPCType]NPCProperties
+
+// --- NEW ---
+var PlayerDefs PlayerProperties
 
 // --- END NEW ---
 
@@ -131,6 +147,12 @@ func init() {
 	TileDefs = make(map[TileType]TileProperties)
 	RecipeDefs = make(map[ItemType]Recipe)
 	NPCDefs = make(map[NPCType]NPCProperties) // --- NEW ---
+
+	// --- Player Definitions ---
+	PlayerDefs = PlayerProperties{
+		MaxHealth: 10,
+	}
+	// --- END NEW ---
 
 	// --- NPC Definitions ---
 	NPCDefs[NPCTypeSlime] = NPCProperties{

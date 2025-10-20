@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -14,7 +15,7 @@ type Client struct {
 }
 
 type Hub struct {
-	clients    map[*Client]bool
+	clients    map[string]*Client // Map playerID to Client
 	broadcast  chan []byte
 	register   chan *Client
 	unregister chan *Client
@@ -25,7 +26,7 @@ func newHub() *Hub {
 		broadcast:  make(chan []byte),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
+		clients:    make(map[string]*Client),
 	}
 }
 
@@ -35,19 +36,19 @@ func (h *Hub) run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.clients[client] = true
+			h.clients[client.id] = client
 		case client := <-h.unregister:
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
+			if _, ok := h.clients[client.id]; ok {
+				delete(h.clients, client.id)
 				close(client.send)
 			}
 		case message := <-h.broadcast:
-			for client := range h.clients {
+			for _, client := range h.clients {
 				select {
 				case client.send <- message:
 				default:
 					close(client.send)
-					delete(h.clients, client)
+					delete(h.clients, client.id)
 				}
 			}
 		}

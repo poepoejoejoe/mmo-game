@@ -5,20 +5,20 @@ import {
     EntityJoinedMessage,
     EntityLeftMessage,
     EntityMovedMessage,
+    PlayerStatsUpdateMessage,
     ResourceDamagedMessage, 
     ServerMessage, 
     StateCorrectionMessage, 
     WorldUpdateMessage 
 } from './types';
 import * as state from './state';
-import { updateInventoryUI, updatePlayerIdDisplay } from './ui';
+import { updateInventoryUI, updatePlayerHealth, updatePlayerIdDisplay } from './ui';
 import { showDamageIndicator } from './renderer';
 
-// (ws and send function remain the same)
-const ws = new WebSocket(`ws://${window.location.host}/ws`);
+let ws: WebSocket;
 
 export function send(message: object) {
-    if (ws.readyState === WebSocket.OPEN) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(message));
     }
 }
@@ -84,11 +84,17 @@ function handleMessage(event: MessageEvent) {
             }
             break;
         }
+        case 'player_stats_update': {
+            const statsMsg = msg as PlayerStatsUpdateMessage;
+            updatePlayerHealth(statsMsg.health, statsMsg.maxHealth);
+            break;
+        }
     }
 }
 
 // (initializeNetwork remains the same)
 export function initializeNetwork() {
+    ws = new WebSocket(`ws://${window.location.host}/ws`);
     ws.onmessage = handleMessage;
 
     ws.onopen = () => {

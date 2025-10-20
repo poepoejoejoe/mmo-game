@@ -16,6 +16,9 @@ import (
 
 var rdb *redis.Client
 
+// HubInst is a global instance of the Hub.
+var HubInst *Hub
+
 // cleanupServerState now uses the non-blocking SCAN command to find all locks.
 func cleanupServerState() {
 	log.Println("Cleaning up ALL player data and tile locks from Redis...")
@@ -95,18 +98,18 @@ func main() {
 	}
 	log.Println("Successfully connected to Redis.")
 
-	game.Init(rdb)
+	game.Init(rdb, SendDirectMessage)
 
 	rand.Seed(time.Now().UnixNano())
 	game.GenerateWorld()
 	game.InitializeNPCs() // <-- NEW: Spawn NPCs
 	go game.StartAILoop() // <-- NEW: Start the NPC AI loop
 
-	hub := newHub()
-	go hub.run()
+	HubInst = newHub()
+	go HubInst.run()
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		serveWs(HubInst, w, r)
 	})
 	http.Handle("/", http.FileServer(http.Dir("./")))
 
@@ -124,4 +127,10 @@ func main() {
 	log.Println("Shutdown signal received, cleaning up...")
 	cleanupServerState()
 	log.Println("Server gracefully stopped.")
+}
+
+func SendDirectMessage(playerID string, message []byte) {
+	if client, ok := HubInst.clients[playerID]; ok {
+		client.send <- message
+	}
 }
