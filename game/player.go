@@ -54,7 +54,25 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"moveCooldown", 100, // 100ms move cooldown for players
 	)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
-	pipe.HSet(ctx, inventoryKey, string(ItemWood), 100, string(ItemWoodenWall), 10)
+
+	// --- NEW: Initialize a 10-slot inventory ---
+	inventory := make(map[string]interface{})
+	// Slot 0: 100 Wood
+	item0, _ := json.Marshal(models.Item{ID: string(ItemWood), Quantity: 100})
+	inventory["slot_0"] = string(item0)
+	// Slot 1: 50 Stone
+	item1, _ := json.Marshal(models.Item{ID: string(ItemStone), Quantity: 50})
+	inventory["slot_1"] = string(item1)
+	// Slot 2: 10 Wooden Walls
+	item2, _ := json.Marshal(models.Item{ID: string(ItemWoodenWall), Quantity: 10})
+	inventory["slot_2"] = string(item2)
+
+	// Initialize remaining slots as empty
+	for i := 3; i < 10; i++ {
+		inventory["slot_"+strconv.Itoa(i)] = "" // Empty string signifies an empty slot
+	}
+	pipe.HSet(ctx, inventoryKey, inventory)
+	// --- END NEW ---
 
 	_, err := pipe.Exec(ctx)
 	if err != nil {
@@ -103,14 +121,23 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		worldDataTyped[coord] = tile
 	}
 
-	inventoryData, _ := rdb.HGetAll(ctx, inventoryKey).Result()
+	inventoryDataRaw, _ := rdb.HGetAll(ctx, inventoryKey).Result()
+	inventoryDataTyped := make(map[string]models.Item)
+	for slot, itemJSON := range inventoryDataRaw {
+		if itemJSON == "" {
+			continue // Skip empty slots
+		}
+		var item models.Item
+		json.Unmarshal([]byte(itemJSON), &item)
+		inventoryDataTyped[slot] = item
+	}
 
 	initialState := &models.InitialStateMessage{
 		Type:      string(ServerEventInitialState),
 		PlayerId:  playerID,
 		Entities:  allEntitiesState, // This map now includes the 'type'
 		World:     worldDataTyped,
-		Inventory: inventoryData,
+		Inventory: inventoryDataTyped,
 	}
 
 	// Announce the new player's arrival to everyone else

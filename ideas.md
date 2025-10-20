@@ -81,3 +81,15 @@ Implement Scalable Zoning:
 Action: This is the key to your architecture. Refine your Go backend so that you can run multiple Go server instances, with each instance responsible for one or more zones (e.g., Server 1 handles Zone 0, Server 2 handles Zone 1). When a player walks from Zone 0 to Zone 1, their WebSocket connection is seamlessly handed off from Server 1 to Server 2.
 
 Why: This is how you horizontally scale to an "insane" number of players. Your Redis database acts as the single source of truth, and you can just spin up more Go instances as your population grows.
+
+
+Loot Drop Ideas
+Slimes:
+- Common: Slime Gel (crafting), Water Crystal (magic)
+- Uncommon: Colored Slime Gel (potions), Slime Core (magic)
+- Rare: Solidified Slime (rubbery gear), Tiny Living Slime (pet)
+
+Rats:
+- Common: Rat Pelt (crafting), Rat Meat (cooking), Bone (crafting)
+- Uncommon: Rat Tail (quest item), Diseased Claw (poison crafting)
+- Rare: Rat Skull (crafting/decoration), Simple Treasure Map (treasure hunt)

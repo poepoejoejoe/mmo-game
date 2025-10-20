@@ -28,14 +28,20 @@ const (
 	TileTypeWoodenWall TileType = "wooden_wall"
 )
 
-// ItemType defines the string literals for items and resources.
-type ItemType string
+// ItemID defines the unique identifier for an item.
+type ItemID string
 
 const (
-	ItemWood       ItemType = "wood"
-	ItemRock       ItemType = "rock"
-	ItemWoodenWall ItemType = "wooden_wall"
+	ItemWood       ItemID = "wood"
+	ItemStone      ItemID = "stone" // Renamed from ItemRock for consistency
+	ItemWoodenWall ItemID = "wooden_wall"
 )
+
+// ItemProperties defines the static properties of an item type.
+type ItemProperties struct {
+	Stackable bool
+	MaxStack  int
+}
 
 // ClientEventType defines incoming WebSocket message types.
 type ClientEventType string
@@ -92,7 +98,7 @@ const (
 
 // Recipe defines the ingredients required to craft an item.
 type Recipe struct {
-	Ingredients map[ItemType]int // Use new type
+	Ingredients map[ItemID]int // Use new type
 	Yield       int
 }
 
@@ -103,7 +109,7 @@ type TileProperties struct {
 	IsDestructible  bool
 	IsBuildableOn   bool
 	MovementPenalty bool
-	GatherResource  ItemType // Use new type
+	GatherResource  ItemID // Use new type
 	MaxHealth       int
 }
 
@@ -140,13 +146,17 @@ var PlayerDefs PlayerProperties
 
 // --- END NEW ---
 
+// ItemDefs is our master map of all item definitions.
+var ItemDefs map[ItemID]ItemProperties
+
 // RecipeDefs is our master map of all crafting recipes.
-var RecipeDefs map[ItemType]Recipe // Use new type
+var RecipeDefs map[ItemID]Recipe // Use new type
 
 func init() {
 	TileDefs = make(map[TileType]TileProperties)
-	RecipeDefs = make(map[ItemType]Recipe)
+	RecipeDefs = make(map[ItemID]Recipe)
 	NPCDefs = make(map[NPCType]NPCProperties) // --- NEW ---
+	ItemDefs = make(map[ItemID]ItemProperties)
 
 	// --- Player Definitions ---
 	PlayerDefs = PlayerProperties{
@@ -162,6 +172,20 @@ func init() {
 		Health: 2,
 	}
 	// --- END NEW ---
+
+	// --- Item Definitions ---
+	ItemDefs[ItemWood] = ItemProperties{
+		Stackable: true,
+		MaxStack:  200, // Example max stack
+	}
+	ItemDefs[ItemStone] = ItemProperties{
+		Stackable: true,
+		MaxStack:  100, // Example max stack
+	}
+	ItemDefs[ItemWoodenWall] = ItemProperties{
+		Stackable: true,
+		MaxStack:  50,
+	}
 
 	// --- Tile Definitions (USING CONSTANTS) ---
 	TileDefs[TileTypeGround] = TileProperties{
@@ -181,7 +205,7 @@ func init() {
 	TileDefs[TileTypeRock] = TileProperties{
 		IsCollidable:   true,
 		IsGatherable:   true,
-		GatherResource: ItemRock,
+		GatherResource: ItemStone, // Changed from ItemRock
 		MaxHealth:      4,
 	}
 	TileDefs[TileTypeWoodenWall] = TileProperties{
@@ -192,7 +216,7 @@ func init() {
 
 	// --- Recipe Definitions (USING CONSTANTS) ---
 	RecipeDefs[ItemWoodenWall] = Recipe{
-		Ingredients: map[ItemType]int{ItemWood: 10},
+		Ingredients: map[ItemID]int{ItemWood: 10},
 		Yield:       1,
 	}
 }

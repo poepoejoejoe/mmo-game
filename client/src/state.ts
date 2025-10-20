@@ -1,4 +1,4 @@
-import { ClientState, WorldTile, EntityState } from './types';
+import { ClientState, WorldTile, EntityState, InventoryItem } from './types';
 
 // The global client state object. It is private to this module.
 const clientState: ClientState = {
@@ -30,14 +30,12 @@ export function setInitialState(
     playerId: string, 
     entities: Record<string, EntityState>, // This map now includes 'type'
     world: Record<string, WorldTile>, 
-    inventory: Record<string, string>
+    inventory: Record<string, InventoryItem>
 ) {
     clientState.playerId = playerId;
     clientState.entities = entities; // Directly assign the map
     clientState.world = world;
-    for (const resource in inventory) {
-        clientState.inventory[resource] = parseInt(inventory[resource], 10);
-    }
+    clientState.inventory = inventory;
 }
 
 export function setEntityPosition(entityId: string, x: number, y: number) {
@@ -74,6 +72,6 @@ export function setResourceHealth(x: number, y: number, health: number) {
     }
 }
 
-export function setInventoryItem(resource: string, amount: number) {
-    clientState.inventory[resource] = amount;
+export function setInventory(inventory: Record<string, InventoryItem>) {
+    clientState.inventory = inventory;
 }

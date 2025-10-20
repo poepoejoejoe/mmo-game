@@ -10,7 +10,7 @@ type CraftPayload struct {
 
 type WorldTile struct {
 	Type   string `json:"type"`
-	Health int    `json:"health"`
+	Health int    `json:"health,omitempty"`
 }
 
 type ResourceDamagedMessage struct {
@@ -46,9 +46,9 @@ type EntityState struct {
 type InitialStateMessage struct {
 	Type      string                 `json:"type"`
 	PlayerId  string                 `json:"playerId"`
-	Entities  map[string]EntityState `json:"entities"` // This map now includes 'type'
+	Entities  map[string]EntityState `json:"entities"`
 	World     map[string]WorldTile   `json:"world"`
-	Inventory map[string]string      `json:"inventory"`
+	Inventory map[string]Item        `json:"inventory"`
 }
 
 // (Other models remain the same)
@@ -65,10 +65,11 @@ type WorldUpdateMessage struct {
 	Tile WorldTile `json:"tile"`
 }
 
+// InventoryUpdateMessage is sent when a player's inventory changes.
+// It sends the entire new inventory state.
 type InventoryUpdateMessage struct {
-	Type     string `json:"type"`
-	Resource string `json:"resource"`
-	Amount   int    `json:"amount"`
+	Type      string          `json:"type"`
+	Inventory map[string]Item `json:"inventory"`
 }
 
 type PlaceItemPayload struct {
@@ -91,4 +92,11 @@ type PlayerStatsUpdateMessage struct {
 	Type      string `json:"type"`
 	Health    int    `json:"health"`
 	MaxHealth int    `json:"maxHealth"`
+}
+
+// Item defines a single item instance in a player's inventory.
+// This is being moved from the 'game' package to here.
+type Item struct {
+	ID       string `json:"id"`
+	Quantity int    `json:"quantity"`
 }

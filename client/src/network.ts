@@ -66,8 +66,9 @@ function handleMessage(event: MessageEvent) {
             break;
         }
         case 'inventory_update': {
+            console.log("Received inventory update:", msg); // Add this line for debugging
             const invMsg = msg as InventoryUpdateMessage;
-            state.setInventoryItem(invMsg.resource, invMsg.amount);
+            state.setInventory(invMsg.inventory);
             updateInventoryUI();
             break;
         }

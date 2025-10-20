@@ -28,10 +28,104 @@ func CanEntityAct(entityID string) (bool, map[string]string) {
 
 // --- RENAMED ---
 // GetEntityPosition parses X and Y coordinates from entity data.
-func GetEntityPosition(entityData map[string]string) (int, int) {
-	x, _ := strconv.Atoi(entityData["x"])
-	y, _ := strconv.Atoi(entityData["y"])
+func GetEntityPosition(playerData map[string]string) (int, int) {
+	x, _ := strconv.Atoi(playerData["x"])
+	y, _ := strconv.Atoi(playerData["y"])
 	return x, y
+}
+
+func AddItemToInventory(playerID string, itemID ItemID, quantity int) (map[string]models.Item, error) {
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
+	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	inventory := make(map[string]models.Item)
+	slots := make([]*models.Item, 10) // Array of pointers to items for easy modification
+
+	// Deserialize inventory
+	for i := 0; i < 10; i++ {
+		slotKey := "slot_" + strconv.Itoa(i)
+		if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
+			var item models.Item
+			json.Unmarshal([]byte(itemJSON), &item)
+			inventory[slotKey] = item
+			slots[i] = &item
+		}
+	}
+
+	itemProps := ItemDefs[itemID]
+	remainingQuantity := quantity
+
+	// First pass: stack with existing items
+	if itemProps.Stackable {
+		for _, item := range slots {
+			if item != nil && item.ID == string(itemID) && item.Quantity < itemProps.MaxStack {
+				addAmount := min(remainingQuantity, itemProps.MaxStack-item.Quantity)
+				item.Quantity += addAmount
+				remainingQuantity -= addAmount
+				if remainingQuantity == 0 {
+					break
+				}
+			}
+		}
+	}
+
+	// Second pass: add to empty slots
+	if remainingQuantity > 0 {
+		// Second pass: add to empty slots
+		addedItem := false
+		if remainingQuantity > 0 {
+			for i, item := range slots {
+				if item == nil {
+					if itemProps.Stackable {
+						addAmount := min(remainingQuantity, itemProps.MaxStack)
+						slots[i] = &models.Item{ID: string(itemID), Quantity: addAmount}
+						remainingQuantity -= addAmount
+					} else {
+						slots[i] = &models.Item{ID: string(itemID), Quantity: 1}
+						remainingQuantity--
+					}
+					addedItem = true
+					if remainingQuantity == 0 {
+						break
+					}
+				}
+			}
+		}
+		if !addedItem {
+			// If no items were added (e.g., inventory full), we still need to
+			// return the current state of the inventory, not nil.
+			currentInventory := make(map[string]models.Item)
+			for i, item := range slots {
+				if item != nil {
+					currentInventory["slot_"+strconv.Itoa(i)] = *item
+				}
+			}
+			return currentInventory, nil
+		}
+	}
+
+	// Update Redis and the final map
+	pipe := rdb.Pipeline()
+	finalInventory := make(map[string]models.Item)
+	for i, item := range slots {
+		slotKey := "slot_" + strconv.Itoa(i)
+		if item != nil {
+			itemJSON, _ := json.Marshal(*item)
+			pipe.HSet(ctx, inventoryKey, slotKey, string(itemJSON))
+			finalInventory[slotKey] = *item
+		} else {
+			pipe.HSet(ctx, inventoryKey, slotKey, "")
+		}
+	}
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return finalInventory, nil
 }
 
 // IsAdjacent checks if (x1, y1) is cardinally adjacent to (x2, y2).
@@ -85,4 +179,11 @@ func PublishUpdate(message interface{}) {
 // kilometer equivalent for use in Redis Geo queries.
 func TilesToKilometers(tiles int) float64 {
 	return float64(tiles) * KILOMETERS_PER_DEGREE
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

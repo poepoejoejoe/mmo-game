@@ -12,16 +12,16 @@ export interface WorldTile {
     health: number;
 }
 
+export interface InventoryItem {
+    id: string;
+    quantity: number;
+}
+
 export interface ClientState {
     playerId: string | null;
     entities: Record<string, EntityState>; // Already renamed
     world: Record<string, WorldTile>;
-    inventory: {
-        wood?: number;
-        rock?: number;
-        wooden_wall?: number;
-        [key: string]: number | undefined;
-    };
+    inventory: Record<string, InventoryItem>; // e.g. "slot_0": { id: "wood", quantity: 50 }
 }
 
 // --- WebSocket Message Types ---
@@ -36,7 +36,7 @@ export interface InitialStateMessage extends ServerMessage {
     playerId: string;
     entities: Record<string, EntityState>; // Already renamed
     world: Record<string, WorldTile>;
-    inventory: Record<string, string>;
+    inventory: Record<string, InventoryItem>;
 }
 
 export interface EntityMovedMessage extends ServerMessage {
@@ -76,8 +76,7 @@ export interface WorldUpdateMessage extends ServerMessage {
 
 export interface InventoryUpdateMessage extends ServerMessage {
     type: 'inventory_update';
-    resource: string;
-    amount: number;
+    inventory: Record<string, InventoryItem>;
 }
 
 export interface StateCorrectionMessage extends ServerMessage {

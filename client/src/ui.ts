@@ -3,9 +3,7 @@ import * as state from './state';
 let playerIdEl: HTMLElement;
 let cooldownBar: HTMLDivElement;
 let cooldownText: HTMLElement;
-let invWood: HTMLElement;
-let invRock: HTMLElement;
-let invWoodenWall: HTMLElement;
+let inventorySlotsEl: HTMLElement;
 let craftWallBtn: HTMLButtonElement;
 let gameCanvas: HTMLElement;
 let healthBar: HTMLDivElement;
@@ -15,9 +13,7 @@ export function initializeUI() {
     playerIdEl = document.getElementById('player-id')!;
     cooldownBar = document.getElementById('cooldown-bar') as HTMLDivElement;
     cooldownText = document.getElementById('cooldown-text')!;
-    invWood = document.getElementById('inv-wood')!;
-    invRock = document.getElementById('inv-rock')!;
-    invWoodenWall = document.getElementById('inv-wooden_wall')!;
+    inventorySlotsEl = document.getElementById('inventory-slots')!;
     craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
     gameCanvas = document.getElementById('game-canvas')!;
     healthBar = document.getElementById('health-bar') as HTMLDivElement;
@@ -37,15 +33,35 @@ export function startCooldown(duration: number): void {
 }
 
 export function updateCraftingUI(): void {
-    const woodCount = state.getState().inventory.wood || 0;
+    const inventory = state.getState().inventory;
+    let woodCount = 0;
+    for (const slot in inventory) {
+        if (inventory[slot] && inventory[slot].id === 'wood') {
+            woodCount += inventory[slot].quantity;
+        }
+    }
     craftWallBtn.disabled = woodCount < 10;
 }
 
 export function updateInventoryUI(): void {
     const inventory = state.getState().inventory;
-    invWood.textContent = String(inventory.wood || 0);
-    invRock.textContent = String(inventory.rock || 0);
-    invWoodenWall.textContent = String(inventory.wooden_wall || 0);
+    inventorySlotsEl.innerHTML = ''; // Clear existing slots
+
+    for (let i = 0; i < 10; i++) {
+        const slotKey = `slot_${i}`;
+        const item = inventory[slotKey];
+
+        const slotEl = document.createElement('div');
+        slotEl.classList.add('inventory-slot');
+
+        if (item) {
+            slotEl.textContent = `${item.id}: ${item.quantity}`;
+        } else {
+            slotEl.textContent = '-'; // Empty slot
+        }
+        inventorySlotsEl.appendChild(slotEl);
+    }
+
     updateCraftingUI();
 }
 
