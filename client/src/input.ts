@@ -2,7 +2,7 @@ import * as state from './state';
 import * as network from './network';
 import { setBuildModeActive, startCooldown } from './ui';
 import { ACTION_COOLDOWN, TILE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, WATER_PENALTY } from './constants';
-import { getTileProperties } from './definitions';
+import { getEntityProperties, getTileProperties } from './definitions';
 
 const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
@@ -140,10 +140,10 @@ function handleKeyUp(e: KeyboardEvent) {
 }
 
 function handleMouseDown(e: MouseEvent) {
-    if (e.button !== 0) return; // Only respond to left-click
+    if (e.button !== 0 && e.button !== 2) return; // Only respond to left or right-click
 
     const tryInteraction = () => {
-        const me = state.getMyEntity(); // <-- UPDATED
+        const me = state.getMyEntity();
         if (!me) return;
 
         const rect = gameCanvas.getBoundingClientRect();
@@ -162,12 +162,50 @@ function handleMouseDown(e: MouseEvent) {
         const tileX = tileGridX + startX;
         const tileY = tileGridY + startY;
 
-        performInteraction(tileX, tileY);
+        // --- NEW: Combat Logic ---
+        const entities = state.getState().entities;
+        let targetEntityId: string | undefined;
+        for (const id in entities) {
+            const entity = entities[id];
+            if (entity.x === tileX && entity.y === tileY) {
+                targetEntityId = id;
+                break;
+            }
+        }
+
+        if (targetEntityId) {
+            const targetEntity = entities[targetEntityId];
+            const me = state.getMyEntity();
+            const targetEntityProps = getEntityProperties(targetEntity.type, targetEntityId, me ? me.id : null);
+
+            if (targetEntityProps.isAttackable) {
+                if (!canPerformAction) return;
+
+                // Check adjacency for attack
+                if (Math.abs(me.x - targetEntity.x) + Math.abs(me.y - targetEntity.y) !== 1) {
+                    // Maybe pathfind towards it later, for now just do nothing if not adjacent
+                    return;
+                }
+
+                startActionCooldown(ACTION_COOLDOWN);
+                network.send({ type: 'attack', payload: { entityId: targetEntityId } });
+                return; // Stop further processing
+            }
+        }
+        
+        // Fallback to tile interaction only for left-click
+        if (e.button === 0) {
+            performInteraction(tileX, tileY);
+        }
     };
 
     tryInteraction(); // Fire once immediately on click
-    // Then set an interval to repeat the action while the mouse is held down
-    interactionInterval = setInterval(tryInteraction, ACTION_COOLDOWN + 50);
+    
+    // Only set up interval for left-click
+    if (e.button === 0) {
+        // Then set an interval to repeat the action while the mouse is held down
+        interactionInterval = setInterval(tryInteraction, ACTION_COOLDOWN + 50);
+    }
 }
 
 function handleMouseUpOrLeave() {

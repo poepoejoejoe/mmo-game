@@ -19,6 +19,7 @@ func InitializeNPCs() {
 // spawnSlime creates a new slime entity in the world.
 func spawnSlime(id int) {
 	entityID := string(NPCSlimePrefix) + strconv.Itoa(id)
+	npcType := NPCTypeSlime
 
 	// Check if this NPC already exists
 	exists, err := rdb.Exists(ctx, entityID).Result()
@@ -32,6 +33,7 @@ func spawnSlime(id int) {
 	}
 
 	spawnX, spawnY := FindOpenSpawnPoint(entityID)
+	props := NPCDefs[npcType]
 
 	pipe := rdb.Pipeline()
 	// Set the NPC's core data
@@ -39,8 +41,8 @@ func spawnSlime(id int) {
 		"x", spawnX,
 		"y", spawnY,
 		"entityType", string(EntityTypeNPC), // Internal type
-		"npcType", "slime", // Specific type
-		"health", 3,
+		"npcType", string(npcType), // Specific type
+		"health", props.Health,
 		"nextActionAt", time.Now().UnixMilli(),
 		"moveCooldown", 750, // 750ms move cooldown
 	)
@@ -65,7 +67,7 @@ func spawnSlime(id int) {
 		"entityId":   entityID,
 		"x":          spawnX,
 		"y":          spawnY,
-		"entityType": "slime", // <-- NEW: Send the specific type
+		"entityType": string(npcType), // <-- NEW: Send the specific type
 	}
 	PublishUpdate(joinMsg)
 }
@@ -73,6 +75,7 @@ func spawnSlime(id int) {
 // spawnRat creates a new rat entity in the world.
 func spawnRat(id int) {
 	entityID := string(NPCRatPrefix) + strconv.Itoa(id)
+	npcType := NPCTypeRat
 
 	// Check if this NPC already exists
 	exists, err := rdb.Exists(ctx, entityID).Result()
@@ -86,6 +89,7 @@ func spawnRat(id int) {
 	}
 
 	spawnX, spawnY := FindOpenSpawnPoint(entityID)
+	props := NPCDefs[npcType]
 
 	pipe := rdb.Pipeline()
 	// Set the NPC's core data
@@ -93,8 +97,8 @@ func spawnRat(id int) {
 		"x", spawnX,
 		"y", spawnY,
 		"entityType", string(EntityTypeNPC), // Internal type
-		"npcType", "rat", // Specific type
-		"health", 2,
+		"npcType", string(npcType), // Specific type
+		"health", props.Health,
 		"nextActionAt", time.Now().UnixMilli(),
 		"moveCooldown", 750, // 750ms move cooldown
 	)
@@ -119,7 +123,7 @@ func spawnRat(id int) {
 		"entityId":   entityID,
 		"x":          spawnX,
 		"y":          spawnY,
-		"entityType": "rat", // <-- NEW: Send the specific type
+		"entityType": string(npcType), // <-- NEW: Send the specific type
 	}
 	PublishUpdate(joinMsg)
 }

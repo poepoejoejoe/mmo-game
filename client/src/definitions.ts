@@ -83,6 +83,7 @@ export function getTileProperties(type: string): TileProperties {
 
 export interface EntityProperties {
     color: string;
+    isAttackable?: boolean;
 }
 
 // The master definition map for all entity types.
@@ -92,9 +93,11 @@ export const entityDefs: Record<string, EntityProperties> = {
     },
     'slime': {
         color: '#b3db45ff', // Green
+        isAttackable: true,
     },
     'rat': {
         color: '#800080', // Purple
+        isAttackable: true,
     },
     'default': {
         color: '#e74c3c', // Red (for other players/unknown)

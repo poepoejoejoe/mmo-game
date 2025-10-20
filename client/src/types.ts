@@ -85,3 +85,9 @@ export interface StateCorrectionMessage extends ServerMessage {
     x: number;
     y: number;
 }
+
+export interface EntityDamagedMessage extends ServerMessage {
+    type: 'entity_damaged';
+    entityId: string;
+    damage: number;
+}

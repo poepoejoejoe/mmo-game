@@ -132,6 +132,12 @@ func (c *Client) readPump() {
 				inventoryJSON, _ := json.Marshal(inventoryMsg)
 				c.send <- inventoryJSON
 			}
+		case game.ClientEventAttack:
+			var attackData models.AttackPayload
+			if err := json.Unmarshal(msg.Payload, &attackData); err != nil {
+				continue
+			}
+			game.ProcessAttack(c.id, attackData.EntityID)
 		}
 	}
 }

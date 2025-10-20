@@ -1,4 +1,5 @@
 import { 
+    EntityDamagedMessage,
     InitialStateMessage, 
     InventoryUpdateMessage, 
     EntityJoinedMessage,
@@ -11,6 +12,7 @@ import {
 } from './types';
 import * as state from './state';
 import { updateInventoryUI, updatePlayerIdDisplay } from './ui';
+import { showDamageIndicator } from './renderer';
 
 // (ws and send function remain the same)
 const ws = new WebSocket(`ws://${window.location.host}/ws`);
@@ -72,6 +74,14 @@ function handleMessage(event: MessageEvent) {
         case 'resource_damaged': {
             const damageMsg = msg as ResourceDamagedMessage;
             state.setResourceHealth(damageMsg.x, damageMsg.y, damageMsg.newHealth);
+            break;
+        }
+        case 'entity_damaged': {
+            const damageMsg = msg as EntityDamagedMessage;
+            const targetEntity = state.getState().entities[damageMsg.entityId];
+            if (targetEntity) {
+                showDamageIndicator(targetEntity.x, targetEntity.y, damageMsg.damage);
+            }
             break;
         }
     }

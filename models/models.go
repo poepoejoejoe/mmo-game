@@ -76,3 +76,13 @@ type PlaceItemPayload struct {
 	X    int    `json:"x"`
 	Y    int    `json:"y"`
 }
+
+type AttackPayload struct {
+	EntityID string `json:"entityId"`
+}
+
+type EntityDamagedMessage struct {
+	Type     string `json:"type"`
+	EntityID string `json:"entityId"`
+	Damage   int    `json:"damage"`
+}

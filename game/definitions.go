@@ -38,6 +38,7 @@ const (
 	ClientEventInteract  ClientEventType = "interact"
 	ClientEventCraft     ClientEventType = "craft"
 	ClientEventPlaceItem ClientEventType = "place_item"
+	ClientEventAttack    ClientEventType = "attack"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -52,6 +53,7 @@ const (
 	ServerEventEntityJoined    ServerEventType = "entity_joined" // <-- RENAMED
 	ServerEventEntityLeft      ServerEventType = "entity_left"   // <-- RENAMED
 	ServerEventEntityMoved     ServerEventType = "entity_moved"
+	ServerEventEntityDamaged   ServerEventType = "entity_damaged"
 )
 
 // MoveDirection defines the valid move directions.
@@ -97,8 +99,30 @@ type TileProperties struct {
 	MaxHealth       int
 }
 
+// --- NEW ---
+// NPCType defines the string literals for NPC types.
+type NPCType string
+
+const (
+	NPCTypeSlime NPCType = "slime"
+	NPCTypeRat   NPCType = "rat"
+)
+
+// NPCProperties defines the behavioral attributes of an NPC.
+type NPCProperties struct {
+	Health int
+}
+
+// --- END NEW ---
+
 // TileDefs is our master map of all tile definitions.
 var TileDefs map[TileType]TileProperties // Use new type
+
+// --- NEW ---
+// NPCDefs is our master map of all NPC definitions.
+var NPCDefs map[NPCType]NPCProperties
+
+// --- END NEW ---
 
 // RecipeDefs is our master map of all crafting recipes.
 var RecipeDefs map[ItemType]Recipe // Use new type
@@ -106,6 +130,16 @@ var RecipeDefs map[ItemType]Recipe // Use new type
 func init() {
 	TileDefs = make(map[TileType]TileProperties)
 	RecipeDefs = make(map[ItemType]Recipe)
+	NPCDefs = make(map[NPCType]NPCProperties) // --- NEW ---
+
+	// --- NPC Definitions ---
+	NPCDefs[NPCTypeSlime] = NPCProperties{
+		Health: 3,
+	}
+	NPCDefs[NPCTypeRat] = NPCProperties{
+		Health: 2,
+	}
+	// --- END NEW ---
 
 	// --- Tile Definitions (USING CONSTANTS) ---
 	TileDefs[TileTypeGround] = TileProperties{

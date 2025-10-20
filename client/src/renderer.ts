@@ -6,6 +6,25 @@ import { getTileProperties, getEntityProperties } from './definitions';
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 
+// --- NEW: Damage Indicator Management ---
+interface DamageIndicator {
+    text: string;
+    x: number;
+    y: number;
+    life: number; // Time in ms until it disappears
+}
+const damageIndicators: DamageIndicator[] = [];
+const DAMAGE_INDICATOR_LIFETIME = 1000; // 1 second
+
+export function showDamageIndicator(x: number, y: number, damage: number) {
+    damageIndicators.push({
+        text: `-${damage}`,
+        x: x * TILE_SIZE + TILE_SIZE / 2, // Center on the tile
+        y: y * TILE_SIZE,
+        life: Date.now() + DAMAGE_INDICATOR_LIFETIME,
+    });
+}
+
 // (Asset loading functions remain the same...)
 const crackImages: HTMLImageElement[] = [];
 let assetsLoaded = false;
@@ -64,6 +83,31 @@ function drawWorld(startX: number, startY: number) {
     }
 }
 
+function drawDamageIndicators(startX: number, startY: number) {
+    const now = Date.now();
+    ctx.font = "bold 16px 'Roboto', sans-serif";
+    ctx.textAlign = 'center';
+
+    for (let i = damageIndicators.length - 1; i >= 0; i--) {
+        const indicator = damageIndicators[i];
+
+        if (now > indicator.life) {
+            damageIndicators.splice(i, 1);
+            continue;
+        }
+
+        const remainingLife = indicator.life - now;
+        const fadeAlpha = Math.min(1, remainingLife / DAMAGE_INDICATOR_LIFETIME);
+        const yOffset = (1 - (remainingLife / DAMAGE_INDICATOR_LIFETIME)) * TILE_SIZE;
+
+        const screenX = (indicator.x - startX * TILE_SIZE);
+        const screenY = (indicator.y - startY * TILE_SIZE) - yOffset;
+
+        ctx.fillStyle = `rgba(231, 76, 60, ${fadeAlpha})`;
+        ctx.fillText(indicator.text, screenX, screenY);
+    }
+}
+
 
 function drawEntities(startX: number, startY: number) {
     if (!ctx) return;
@@ -97,6 +141,7 @@ function render() {
     const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
     drawWorld(startX, startY);
     drawEntities(startX, startY);
+    drawDamageIndicators(startX, startY);
     document.getElementById('player-coords')!.textContent = `Your Position: (${me.x}, ${me.y})`;
 }
 
