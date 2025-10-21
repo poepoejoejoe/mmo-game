@@ -149,168 +149,129 @@ func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCo
 		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
 	}
 
-	inventoryKey := string(RedisKeyPlayerInventory) + playerID
-	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
-
-	if ItemID(placeData.Item) == ItemWoodenWall {
-		inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
-		if err != nil {
-			return nil, nil
-		}
-
-		var wallSlot string
-		var wallItem models.Item
-		for i := 0; i < 10; i++ {
-			slotKey := "slot_" + strconv.Itoa(i)
-			if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
-				var item models.Item
-				json.Unmarshal([]byte(itemJSON), &item)
-				if item.ID == string(ItemWoodenWall) {
-					wallSlot = slotKey
-					wallItem = item
-					break
-				}
-			}
-		}
-
-		if wallSlot == "" || wallItem.Quantity < 1 {
-			return nil, nil
-		}
-
-		_, props, err := GetWorldTile(targetX, targetY)
-		if err != nil {
-			return nil, nil
-		}
-		if !props.IsBuildableOn {
-			return nil, nil
-		}
-
-		targetTileLockKey := string(RedisKeyLockTile) + targetCoordKey
-		wasSet, err := rdb.SetNX(ctx, targetTileLockKey, string(RedisKeyLockWorldObject), 0).Result()
-		if err != nil || !wasSet {
-			return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
-		}
-
-		wallProps := TileDefs[TileTypeWoodenWall]
-		newWallTile := models.WorldTile{Type: string(TileTypeWoodenWall), Health: wallProps.MaxHealth}
-		newTileJSON, _ := json.Marshal(newWallTile)
-
-		pipe := rdb.Pipeline()
-
-		wallItem.Quantity--
-		if wallItem.Quantity > 0 {
-			newItemJSON, _ := json.Marshal(wallItem)
-			pipe.HSet(ctx, inventoryKey, wallSlot, string(newItemJSON))
-		} else {
-			pipe.HSet(ctx, inventoryKey, wallSlot, "") // Clear the slot
-		}
-
-		pipe.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
-		_, err = pipe.Exec(ctx)
-		if err != nil {
-			rdb.Del(ctx, targetTileLockKey)
-			return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
-		}
-
-		worldUpdateMsg := models.WorldUpdateMessage{
-			Type: string(ServerEventWorldUpdate),
-			X:    targetX,
-			Y:    targetY,
-			Tile: newWallTile,
-		}
-		PublishUpdate(worldUpdateMsg)
-
-		// Refetch the entire inventory to send the update
-		newInventoryDataRaw, _ := rdb.HGetAll(ctx, inventoryKey).Result()
-		newInventory := make(map[string]models.Item)
-		for slot, itemJSON := range newInventoryDataRaw {
-			if itemJSON != "" {
-				var item models.Item
-				json.Unmarshal([]byte(itemJSON), &item)
-				newInventory[slot] = item
-			}
-		}
-
-		inventoryUpdateMsg := &models.InventoryUpdateMessage{
-			Type:      string(ServerEventInventoryUpdate),
-			Inventory: newInventory,
-		}
-		rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
-
-		scheduleFireExpiration(targetX, targetY)
-
-		return nil, inventoryUpdateMsg
-	}
-
-	if ItemID(placeData.Item) == ItemFire {
-		currentTile, props, err := GetWorldTile(targetX, targetY)
-		if err != nil || !props.IsBuildableOn {
-			return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
-		}
-
-		inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
-		if err != nil {
-			return nil, nil
-		}
-
-		newInventory := make(map[string]models.Item)
-		slotKeyToRemove := ""
-		for i := 0; i < 10; i++ {
-			slotKey := "slot_" + strconv.Itoa(i)
-			if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
-				var item models.Item
-				json.Unmarshal([]byte(itemJSON), &item)
-				if ItemID(item.ID) == ItemFire && slotKeyToRemove == "" {
-					slotKeyToRemove = slotKey
-					item.Quantity--
-					if item.Quantity > 0 {
-						newInventory[slotKey] = item
-					}
-				} else {
-					newInventory[slotKey] = item
-				}
-			}
-		}
-
-		if slotKeyToRemove == "" {
-			return nil, nil
-		}
-
-		pipe := rdb.Pipeline()
-		if item, ok := newInventory[slotKeyToRemove]; ok {
-			itemJSON, _ := json.Marshal(item)
-			pipe.HSet(ctx, inventoryKey, slotKeyToRemove, string(itemJSON))
-		} else {
-			pipe.HSet(ctx, inventoryKey, slotKeyToRemove, "")
-		}
-
-		currentTile.Type = string(TileTypeFire)
-		newTileJSON, _ := json.Marshal(currentTile)
-		pipe.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
-		_, err = pipe.Exec(ctx)
-		if err != nil {
-			return nil, nil
-		}
-
-		worldUpdate := models.WorldUpdateMessage{
-			Type: string(ServerEventWorldUpdate),
-			X:    targetX,
-			Y:    targetY,
-			Tile: *currentTile,
-		}
-		PublishUpdate(worldUpdate)
-
-		inventoryUpdateMsg := &models.InventoryUpdateMessage{
-			Type:      string(ServerEventInventoryUpdate),
-			Inventory: newInventory,
-		}
-
-		rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
-		return nil, inventoryUpdateMsg
+	switch ItemID(placeData.Item) {
+	case ItemWoodenWall:
+		return handlePlaceWoodenWall(playerID, currentX, currentY, targetX, targetY)
+	case ItemFire:
+		return handlePlaceFire(playerID, currentX, currentY, targetX, targetY)
 	}
 
 	// Default case if item is not placeable or recognized
 	return nil, nil
+}
+
+func handlePlaceWoodenWall(playerID string, currentX, currentY, targetX, targetY int) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
+	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
+
+	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
+	if err != nil {
+		return nil, nil
+	}
+
+	wallSlot, wallItem, found := findItemInInventory(inventoryDataRaw, ItemWoodenWall)
+	if !found || wallItem.Quantity < 1 {
+		return nil, nil
+	}
+
+	_, props, err := GetWorldTile(targetX, targetY)
+	if err != nil {
+		return nil, nil
+	}
+	if !props.IsBuildableOn {
+		return nil, nil
+	}
+
+	targetTileLockKey := string(RedisKeyLockTile) + targetCoordKey
+	wasSet, err := rdb.SetNX(ctx, targetTileLockKey, string(RedisKeyLockWorldObject), 0).Result()
+	if err != nil || !wasSet {
+		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
+	}
+
+	wallProps := TileDefs[TileTypeWoodenWall]
+	newWallTile := models.WorldTile{Type: string(TileTypeWoodenWall), Health: wallProps.MaxHealth}
+	newTileJSON, _ := json.Marshal(newWallTile)
+
+	pipe := rdb.Pipeline()
+
+	wallItem.Quantity--
+	if wallItem.Quantity > 0 {
+		newItemJSON, _ := json.Marshal(wallItem)
+		pipe.HSet(ctx, inventoryKey, wallSlot, string(newItemJSON))
+	} else {
+		pipe.HSet(ctx, inventoryKey, wallSlot, "") // Clear the slot
+	}
+
+	pipe.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		rdb.Del(ctx, targetTileLockKey)
+		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
+	}
+
+	worldUpdateMsg := models.WorldUpdateMessage{
+		Type: string(ServerEventWorldUpdate),
+		X:    targetX,
+		Y:    targetY,
+		Tile: newWallTile,
+	}
+	PublishUpdate(worldUpdateMsg)
+
+	inventoryUpdateMsg := getInventoryUpdateMessage(inventoryKey)
+	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+
+	return nil, inventoryUpdateMsg
+}
+
+func handlePlaceFire(playerID string, currentX, currentY, targetX, targetY int) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
+	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
+
+	currentTile, props, err := GetWorldTile(targetX, targetY)
+	if err != nil || !props.IsBuildableOn {
+		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
+	}
+
+	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
+	if err != nil {
+		return nil, nil
+	}
+
+	fireSlot, fireItem, found := findItemInInventory(inventoryDataRaw, ItemFire)
+	if !found {
+		return nil, nil
+	}
+
+	pipe := rdb.Pipeline()
+	fireItem.Quantity--
+	if fireItem.Quantity > 0 {
+		itemJSON, _ := json.Marshal(fireItem)
+		pipe.HSet(ctx, inventoryKey, fireSlot, string(itemJSON))
+	} else {
+		pipe.HSet(ctx, inventoryKey, fireSlot, "")
+	}
+
+	currentTile.Type = string(TileTypeFire)
+	newTileJSON, _ := json.Marshal(currentTile)
+	pipe.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return nil, nil
+	}
+
+	worldUpdate := models.WorldUpdateMessage{
+		Type: string(ServerEventWorldUpdate),
+		X:    targetX,
+		Y:    targetY,
+		Tile: *currentTile,
+	}
+	PublishUpdate(worldUpdate)
+
+	inventoryUpdateMsg := getInventoryUpdateMessage(inventoryKey)
+
+	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+	scheduleFireExpiration(targetX, targetY)
+	return nil, inventoryUpdateMsg
 }
 
 func scheduleFireExpiration(x, y int) {
@@ -345,5 +306,37 @@ func expireFire(x, y int) {
 			Tile: tile,
 		}
 		PublishUpdate(worldUpdate)
+	}
+}
+
+func findItemInInventory(inventoryDataRaw map[string]string, itemID ItemID) (string, models.Item, bool) {
+	for i := 0; i < 10; i++ {
+		slotKey := "slot_" + strconv.Itoa(i)
+		if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
+			var item models.Item
+			if err := json.Unmarshal([]byte(itemJSON), &item); err == nil {
+				if item.ID == string(itemID) {
+					return slotKey, item, true
+				}
+			}
+		}
+	}
+	return "", models.Item{}, false
+}
+
+func getInventoryUpdateMessage(inventoryKey string) *models.InventoryUpdateMessage {
+	newInventoryDataRaw, _ := rdb.HGetAll(ctx, inventoryKey).Result()
+	newInventory := make(map[string]models.Item)
+	for slot, itemJSON := range newInventoryDataRaw {
+		if itemJSON != "" {
+			var item models.Item
+			json.Unmarshal([]byte(itemJSON), &item)
+			newInventory[slot] = item
+		}
+	}
+
+	return &models.InventoryUpdateMessage{
+		Type:      string(ServerEventInventoryUpdate),
+		Inventory: newInventory,
 	}
 }
