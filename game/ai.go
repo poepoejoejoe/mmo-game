@@ -114,7 +114,13 @@ func processNPCAction(npcID string) {
 			}
 
 			// Broadcast damage message
-			damageMsg := models.EntityDamagedMessage{Type: string(ServerEventEntityDamaged), EntityID: targetID, Damage: damage}
+			damageMsg := models.EntityDamagedMessage{
+				Type:     string(ServerEventEntityDamaged),
+				EntityID: targetID,
+				Damage:   damage,
+				X:        targetX,
+				Y:        targetY,
+			}
 			PublishUpdate(damageMsg)
 
 			if newHealth <= 0 {

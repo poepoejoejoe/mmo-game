@@ -53,6 +53,7 @@ type InitialStateMessage struct {
 	Entities  map[string]EntityState `json:"entities"`
 	World     map[string]WorldTile   `json:"world"`
 	Inventory map[string]Item        `json:"inventory"`
+	Gear      map[string]Item        `json:"gear"`
 }
 
 // (Other models remain the same)
@@ -76,6 +77,12 @@ type InventoryUpdateMessage struct {
 	Inventory map[string]Item `json:"inventory"`
 }
 
+// GearUpdateMessage is sent when a player's gear changes.
+type GearUpdateMessage struct {
+	Type string          `json:"type"`
+	Gear map[string]Item `json:"gear"`
+}
+
 type PlaceItemPayload struct {
 	Item string `json:"item"`
 	X    int    `json:"x"`
@@ -90,10 +97,20 @@ type EatPayload struct {
 	Item string `json:"item"`
 }
 
+type EquipPayload struct {
+	InventorySlot string `json:"inventorySlot"`
+}
+
+type UnequipPayload struct {
+	GearSlot string `json:"gearSlot"`
+}
+
 type EntityDamagedMessage struct {
 	Type     string `json:"type"`
 	EntityID string `json:"entityId"`
 	Damage   int    `json:"damage"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
 }
 
 type PlayerStatsUpdateMessage struct {

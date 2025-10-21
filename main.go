@@ -19,6 +19,13 @@ var rdb *redis.Client
 // HubInst is a global instance of the Hub.
 var HubInst *Hub
 
+func nukeServerState() {
+	log.Println("Nuking ALL player data and tile locks from Redis...")
+	ctx := context.Background()
+	rdb.FlushAll(ctx)
+	log.Println("Redis flushed.")
+}
+
 // cleanupServerState now uses the non-blocking SCAN command to find all locks.
 func cleanupServerState() {
 	log.Println("Cleaning up ALL player data and tile locks from Redis...")
@@ -103,6 +110,8 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	game.GenerateWorld()
 	game.InitializeNPCs() // <-- NEW: Spawn NPCs
+	game.SpawnNPC(1, 2, game.NPCTypeSlime)
+	game.SpawnNPC(-2, -3, game.NPCTypeRat)
 	go game.StartAILoop() // <-- NEW: Start the NPC AI loop
 	go game.StartSpawnerLoop()
 	go game.StartDamageSystem()
@@ -127,7 +136,12 @@ func main() {
 	<-quit
 
 	log.Println("Shutdown signal received, cleaning up...")
-	cleanupServerState()
+	// clean up server state but persist
+	// cleanupServerState()
+
+	// used to reset the server completely
+	nukeServerState()
+
 	log.Println("Server gracefully stopped.")
 }
 

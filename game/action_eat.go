@@ -107,21 +107,3 @@ func ProcessEat(playerID string, payload json.RawMessage) {
 
 	log.Printf("Player %s ate %s and healed to %d/%d.", playerID, eatData.Item, newHealth, maxHealth)
 }
-
-func GetInventory(playerID string) (map[string]models.Item, error) {
-	inventoryKey := string(RedisKeyPlayerInventory) + playerID
-	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
-	if err != nil {
-		return nil, err
-	}
-	inventoryDataTyped := make(map[string]models.Item)
-	for slot, itemJSON := range inventoryDataRaw {
-		if itemJSON == "" {
-			continue
-		}
-		var item models.Item
-		json.Unmarshal([]byte(itemJSON), &item)
-		inventoryDataTyped[slot] = item
-	}
-	return inventoryDataTyped, nil
-}

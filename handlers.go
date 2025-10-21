@@ -111,6 +111,26 @@ func (c *Client) readPump() {
 				inventoryJSON, _ := json.Marshal(inventoryMsg)
 				c.send <- inventoryJSON
 			}
+		case game.ClientEventEquip:
+			inventoryUpdate, gearUpdate := game.ProcessEquip(c.id, msg.Payload)
+			if inventoryUpdate != nil {
+				inventoryJSON, _ := json.Marshal(inventoryUpdate)
+				c.send <- inventoryJSON
+			}
+			if gearUpdate != nil {
+				gearJSON, _ := json.Marshal(gearUpdate)
+				c.send <- gearJSON
+			}
+		case game.ClientEventUnequip:
+			inventoryUpdate, gearUpdate := game.ProcessUnequip(c.id, msg.Payload)
+			if inventoryUpdate != nil {
+				inventoryJSON, _ := json.Marshal(inventoryUpdate)
+				c.send <- inventoryJSON
+			}
+			if gearUpdate != nil {
+				gearJSON, _ := json.Marshal(gearUpdate)
+				c.send <- gearJSON
+			}
 		case game.ClientEventCraft:
 			inventoryUpdate, correctionMsg := game.ProcessCraft(c.id, msg.Payload)
 			if correctionMsg != nil {
@@ -136,7 +156,11 @@ func (c *Client) readPump() {
 			if err := json.Unmarshal(msg.Payload, &attackData); err != nil {
 				continue
 			}
-			game.ProcessAttack(c.id, attackData.EntityID)
+			damageMsg := game.ProcessAttack(c.id, attackData.EntityID)
+			if damageMsg != nil {
+				damageJSON, _ := json.Marshal(damageMsg)
+				c.send <- damageJSON
+			}
 		case game.ClientEventEat:
 			game.ProcessEat(c.id, msg.Payload)
 		}

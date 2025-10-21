@@ -1,5 +1,5 @@
 import * as state from './state';
-import { edibleDefs } from './definitions';
+import { edibleDefs, itemDefinitions } from './definitions';
 
 let playerIdEl: HTMLElement;
 let cooldownBar: HTMLDivElement;
@@ -8,10 +8,12 @@ let inventorySlotsEl: HTMLElement;
 let craftWallBtn: HTMLButtonElement;
 let craftFireBtn: HTMLButtonElement;
 let craftRatMeatBtn: HTMLButtonElement;
+let craftCrudeAxeBtn: HTMLButtonElement;
 let gameCanvas: HTMLElement;
 let healthBar: HTMLDivElement;
 let healthText: HTMLElement;
 let buildModeIndicator: HTMLElement;
+let gearSlotsEl: HTMLElement;
 
 export function initializeUI() {
     playerIdEl = document.getElementById('player-id')!;
@@ -21,10 +23,12 @@ export function initializeUI() {
     craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
     craftFireBtn = document.getElementById('craft-fire-btn') as HTMLButtonElement;
     craftRatMeatBtn = document.getElementById('craft-rat-meat-btn') as HTMLButtonElement;
+    craftCrudeAxeBtn = document.getElementById('craft-crude-axe-btn') as HTMLButtonElement;
     gameCanvas = document.getElementById('game-canvas')!;
     healthBar = document.getElementById('health-bar') as HTMLDivElement;
     healthText = document.getElementById('health-text')!;
     buildModeIndicator = document.getElementById('build-mode-indicator')!;
+    gearSlotsEl = document.getElementById('gear-slots')!;
 }
 
 export function startCooldown(duration: number): void {
@@ -42,10 +46,18 @@ export function startCooldown(duration: number): void {
 export function updateCraftingUI(): void {
     const inventory = state.getState().inventory;
     let woodCount = 0;
+    let stoneCount = 0;
+    let goopCount = 0;
     let ratMeatCount = 0;
     for (const slot in inventory) {
         if (inventory[slot] && inventory[slot].id === 'wood') {
             woodCount += inventory[slot].quantity;
+        }
+        if (inventory[slot] && inventory[slot].id === 'stone') {
+            stoneCount += inventory[slot].quantity;
+        }
+        if (inventory[slot] && inventory[slot].id === 'goop') {
+            goopCount += inventory[slot].quantity;
         }
         if (inventory[slot] && inventory[slot].id === 'rat_meat') {
             ratMeatCount += inventory[slot].quantity;
@@ -54,7 +66,42 @@ export function updateCraftingUI(): void {
     craftWallBtn.disabled = woodCount < 10;
     craftFireBtn.disabled = woodCount < 10;
     craftRatMeatBtn.disabled = ratMeatCount < 1;
+    craftCrudeAxeBtn.disabled = woodCount < 10 || stoneCount < 10 || goopCount < 5;
 }
+
+export function updateGearUI(): void {
+    const gear = state.getState().gear;
+    
+    // Clear existing gear slots
+    const slots = gearSlotsEl.querySelectorAll('.gear-slot');
+    slots.forEach(slot => {
+        const display = slot.querySelector('.gear-item-display') as HTMLElement;
+        const unequipBtn = slot.querySelector('.unequip-button') as HTMLButtonElement;
+        
+        display.textContent = '-';
+        unequipBtn.style.display = 'none';
+        unequipBtn.dataset.slot = slot.id;
+    });
+
+    for (const slotId in gear) {
+        const item = gear[slotId];
+        const slotEl = document.getElementById(slotId);
+        if (slotEl) {
+            const display = slotEl.querySelector('.gear-item-display') as HTMLElement;
+            const unequipBtn = slotEl.querySelector('.unequip-button') as HTMLButtonElement;
+            if (item && item.id) {
+                const itemDef = itemDefinitions[item.id];
+                let displayText = item.id;
+                if (itemDef && itemDef.equippable && itemDef.equippable.damage) {
+                    displayText += ` (+${itemDef.equippable.damage} dmg)`;
+                }
+                display.textContent = displayText;
+                unequipBtn.style.display = 'inline-block';
+            }
+        }
+    }
+}
+
 
 export function updateInventoryUI(): void {
     const inventory = state.getState().inventory;
@@ -77,6 +124,19 @@ export function updateInventoryUI(): void {
                 eatButton.dataset.item = item.id;
                 slotEl.appendChild(eatButton);
             }
+
+            const itemDef = itemDefinitions[item.id];
+            if (itemDef && itemDef.equippable) {
+                let buttonText = 'Equip';
+                if (itemDef.equippable.damage) {
+                    buttonText += ` (+${itemDef.equippable.damage} dmg)`;
+                }
+                const equipButton = document.createElement('button');
+                equipButton.textContent = buttonText;
+                equipButton.classList.add('equip-button');
+                equipButton.dataset.slot = slotKey;
+                slotEl.appendChild(equipButton);
+            }
         } else {
             slotEl.textContent = '-'; // Empty slot
         }
@@ -84,6 +144,7 @@ export function updateInventoryUI(): void {
     }
 
     updateCraftingUI();
+    updateGearUI();
 }
 
 export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {

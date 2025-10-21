@@ -16,6 +16,55 @@ func InitializeNPCs() {
 	log.Println("Initial NPC spawning is now handled by the spawner loop.")
 }
 
+// SpawnNPC creates a new NPC of a given type at a specific location.
+func SpawnNPC(x, y int, npcType NPCType) {
+	var entityID string
+	switch npcType {
+	case NPCTypeSlime:
+		entityID = string(NPCSlimePrefix) + utils.GenerateUniqueID()
+	case NPCTypeRat:
+		entityID = string(NPCRatPrefix) + utils.GenerateUniqueID()
+	default:
+		log.Printf("Attempted to spawn unknown NPC type: %s", npcType)
+		return
+	}
+
+	props := NPCDefs[npcType]
+
+	pipe := rdb.Pipeline()
+	pipe.HSet(ctx, entityID,
+		"x", x,
+		"y", y,
+		"entityType", string(EntityTypeNPC),
+		"npcType", string(npcType),
+		"health", props.Health,
+		"nextActionAt", time.Now().UnixMilli(),
+		"moveCooldown", 750,
+	)
+	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
+		Name:      entityID,
+		Longitude: float64(x),
+		Latitude:  float64(y),
+	})
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		log.Printf("Failed to spawn %s %s: %v", npcType, entityID, err)
+		return
+	}
+
+	log.Printf("Spawned %s %s at (%d, %d)", npcType, entityID, x, y)
+
+	joinMsg := map[string]interface{}{
+		"type":       string(ServerEventEntityJoined),
+		"entityId":   entityID,
+		"x":          x,
+		"y":          y,
+		"entityType": string(npcType),
+	}
+	PublishUpdate(joinMsg)
+}
+
 // spawnSlime creates a new slime entity in the world.
 func spawnSlime() {
 	entityID := string(NPCSlimePrefix) + utils.GenerateUniqueID()

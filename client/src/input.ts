@@ -8,7 +8,9 @@ const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
 const craftFireBtn = document.getElementById('craft-fire-btn') as HTMLButtonElement;
 const craftRatMeatBtn = document.getElementById('craft-rat-meat-btn') as HTMLButtonElement;
+const craftCrudeAxeBtn = document.getElementById('craft-crude-axe-btn') as HTMLButtonElement;
 const inventorySlotsEl = document.getElementById('inventory-slots')!;
+const gearSlotsEl = document.getElementById('gear-slots')!;
 let canPerformAction = true;
 let isBuildMode = false;
 let buildItem: 'wooden_wall' | 'fire' | null = null;
@@ -325,6 +327,26 @@ export function initializeInput() {
                 network.send({ type: 'eat', payload: { item: itemToEat } });
             }
         }
+        if (target.classList.contains('equip-button')) {
+            if (!canPerformAction) return;
+            const inventorySlot = target.dataset.slot;
+            if (inventorySlot) {
+                startActionCooldown(ACTION_COOLDOWN);
+                network.send({ type: 'equip', payload: { inventorySlot } });
+            }
+        }
+    });
+
+    gearSlotsEl.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('unequip-button')) {
+            if (!canPerformAction) return;
+            const gearSlot = target.dataset.slot;
+            if (gearSlot) {
+                startActionCooldown(ACTION_COOLDOWN);
+                network.send({ type: 'unequip', payload: { gearSlot } });
+            }
+        }
     });
 
     craftWallBtn.addEventListener('click', () => {
@@ -343,6 +365,12 @@ export function initializeInput() {
         if (!canPerformAction || craftRatMeatBtn.disabled) return;
         startActionCooldown(ACTION_COOLDOWN);
         network.send({ type: 'craft', payload: { item: 'cooked_rat_meat' } });
+    });
+
+    craftCrudeAxeBtn.addEventListener('click', () => {
+        if (!canPerformAction || craftCrudeAxeBtn.disabled) return;
+        startActionCooldown(ACTION_COOLDOWN);
+        network.send({ type: 'craft', payload: { item: 'crude_axe' } });
     });
 }
 

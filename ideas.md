@@ -93,3 +93,15 @@ Rats:
 - Common: Rat Pelt (crafting), Rat Meat (cooking), Bone (crafting)
 - Uncommon: Rat Tail (quest item), Diseased Claw (poison crafting)
 - Rare: Rat Skull (crafting/decoration), Simple Treasure Map (treasure hunt)
+
+Goop Item Ideas
+- **Crafting Material:**
+    - **Alchemy:** A base ingredient for potions.
+    - **Binding Agent:** Used to combine other materials in recipes.
+    - **Goop Armor:** Craft a set of bouncy, slightly sticky armor.
+- **Consumable:**
+    - **Mysterious Goop:** Eating it has a random (and potentially hilarious) effect. Could grant a small buff, a harmless cosmetic change, or make you slip for a few seconds.
+- **Environmental:**
+    - **Slippery Trap:** Throw it on the ground to create a small slippery puddle that can make others (or you!) slide around.
+- **Weapon Enhancement:**
+    - **Goop Coating:** Apply to a weapon to temporarily add a slowing effect to your attacks.

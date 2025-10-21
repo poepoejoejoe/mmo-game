@@ -102,13 +102,21 @@ export function getTileProperties(type: string): TileProperties {
 	}
 }
 
-export const itemDefinitions: { [key: string]: { character: string, color: string } } = {
+export const itemDefinitions: { [key: string]: { character: string, color: string, equippable?: { slot: string, damage?: number } } } = {
     'wood': { character: 'W', color: '#8B4513' },
     'stone': { character: 'S', color: '#808080' },
     'goop': { character: 'G', color: '#90EE90' },
     'rat_meat': { character: 'M', color: '#DC143C' },
     'treasure_map': { character: 'M', color: '#FFD700' },
     'fire': { character: 'F', color: '#FF4500' },
+    'crude_axe': {
+        character: 'A',
+        color: '#b5a642',
+        equippable: {
+            slot: 'weapon-slot',
+            damage: 2,
+        },
+    },
     'default': { character: '?', color: '#FFFFFF' },
 };
 

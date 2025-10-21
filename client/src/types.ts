@@ -27,6 +27,7 @@ export interface ClientState {
     entities: Record<string, EntityState>; // Already renamed
     world: Record<string, WorldTile>;
     inventory: Record<string, InventoryItem>; // e.g. "slot_0": { id: "wood", quantity: 50 }
+    gear: Record<string, InventoryItem>; // e.g. "weapon-slot": { id: "crude_axe", quantity: 1 }
 }
 
 // --- WebSocket Message Types ---
@@ -42,6 +43,7 @@ export interface InitialStateMessage extends ServerMessage {
     entities: Record<string, EntityState>; // Already renamed
     world: Record<string, WorldTile>;
     inventory: Record<string, InventoryItem>;
+    gear: Record<string, InventoryItem>;
 }
 
 export interface EntityMovedMessage extends ServerMessage {
@@ -89,6 +91,11 @@ export interface InventoryUpdateMessage extends ServerMessage {
     inventory: Record<string, InventoryItem>;
 }
 
+export interface GearUpdateMessage extends ServerMessage {
+    type: 'gear_update';
+    gear: Record<string, InventoryItem>;
+}
+
 export interface StateCorrectionMessage extends ServerMessage {
     type: 'state_correction';
     x: number;
@@ -99,6 +106,8 @@ export interface EntityDamagedMessage extends ServerMessage {
     type: 'entity_damaged';
     entityId: string;
     damage: number;
+    x: number;
+    y: number;
 }
 
 export interface PlayerStatsUpdateMessage extends ServerMessage {

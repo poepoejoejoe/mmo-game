@@ -212,6 +212,42 @@ func TilesToKilometers(tiles int) float64 {
 	return float64(tiles) * KILOMETERS_PER_DEGREE
 }
 
+func GetInventory(playerID string) (map[string]models.Item, error) {
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
+	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
+	if err != nil {
+		return nil, err
+	}
+	inventoryDataTyped := make(map[string]models.Item)
+	for slot, itemJSON := range inventoryDataRaw {
+		if itemJSON == "" {
+			continue
+		}
+		var item models.Item
+		json.Unmarshal([]byte(itemJSON), &item)
+		inventoryDataTyped[slot] = item
+	}
+	return inventoryDataTyped, nil
+}
+
+func GetGear(playerID string) (map[string]models.Item, error) {
+	gearKey := string(RedisKeyPlayerGear) + playerID
+	gearDataRaw, err := rdb.HGetAll(ctx, gearKey).Result()
+	if err != nil {
+		return nil, err
+	}
+	gearDataTyped := make(map[string]models.Item)
+	for slot, itemJSON := range gearDataRaw {
+		if itemJSON == "" {
+			continue
+		}
+		var item models.Item
+		json.Unmarshal([]byte(itemJSON), &item)
+		gearDataTyped[slot] = item
+	}
+	return gearDataTyped, nil
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a

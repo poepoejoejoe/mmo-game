@@ -19,8 +19,8 @@ const DAMAGE_INDICATOR_LIFETIME = 1000; // 1 second
 export function showDamageIndicator(x: number, y: number, damage: number) {
     damageIndicators.push({
         text: `-${damage}`,
-        x: x * TILE_SIZE + TILE_SIZE / 2, // Center on the tile
-        y: y * TILE_SIZE,
+        x: x,
+        y: y,
         life: Date.now() + DAMAGE_INDICATOR_LIFETIME,
     });
 }
@@ -109,8 +109,8 @@ function drawDamageIndicators(startX: number, startY: number) {
         const fadeAlpha = Math.min(1, remainingLife / DAMAGE_INDICATOR_LIFETIME);
         const yOffset = (1 - (remainingLife / DAMAGE_INDICATOR_LIFETIME)) * TILE_SIZE;
 
-        const screenX = (indicator.x - startX * TILE_SIZE);
-        const screenY = (indicator.y - startY * TILE_SIZE) - yOffset;
+        const screenX = (indicator.x - startX) * TILE_SIZE + TILE_SIZE / 2;
+        const screenY = (indicator.y - startY) * TILE_SIZE - yOffset;
 
         ctx.fillStyle = `rgba(231, 76, 60, ${fadeAlpha})`;
         ctx.fillText(indicator.text, screenX, screenY);

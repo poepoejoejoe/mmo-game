@@ -1,5 +1,6 @@
 import { 
     EntityDamagedMessage,
+    GearUpdateMessage,
     InitialStateMessage, 
     InventoryUpdateMessage, 
     EntityJoinedMessage,
@@ -31,7 +32,7 @@ function handleMessage(event: MessageEvent) {
         case 'initial_state': {
             const stateMsg = msg as InitialStateMessage;
             // state.setInitialState now receives the full entity map
-            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory);
+            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory, stateMsg.gear);
             updateInventoryUI();
             updatePlayerIdDisplay();
             break;
@@ -78,6 +79,13 @@ function handleMessage(event: MessageEvent) {
             updateInventoryUI();
             break;
         }
+        case 'gear_update': {
+            const gearMsg = msg as GearUpdateMessage;
+            state.setGear(gearMsg.gear);
+            // We need to update both UI sections as equipping/unequipping affects both.
+            updateInventoryUI(); 
+            break;
+        }
         case 'resource_damaged': {
             const damageMsg = msg as ResourceDamagedMessage;
             state.setResourceHealth(damageMsg.x, damageMsg.y, damageMsg.newHealth);
@@ -85,10 +93,7 @@ function handleMessage(event: MessageEvent) {
         }
         case 'entity_damaged': {
             const damageMsg = msg as EntityDamagedMessage;
-            const targetEntity = state.getState().entities[damageMsg.entityId];
-            if (targetEntity) {
-                showDamageIndicator(targetEntity.x, targetEntity.y, damageMsg.damage);
-            }
+            showDamageIndicator(damageMsg.x, damageMsg.y, damageMsg.damage);
             break;
         }
         case 'player_stats_update': {

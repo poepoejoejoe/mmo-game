@@ -43,12 +43,20 @@ const (
 	ItemSliceOfPizza  ItemID = "slice_of_pizza"
 	ItemTreasureMap   ItemID = "treasure_map"
 	ItemFire          ItemID = "fire"
+	ItemCrudeAxe      ItemID = "crude_axe"
 )
 
 // ItemProperties defines the static properties of an item type.
 type ItemProperties struct {
-	Stackable bool
-	MaxStack  int
+	Stackable  bool
+	MaxStack   int
+	Equippable *EquippableProperties
+}
+
+// EquippableProperties defines properties for items that can be equipped.
+type EquippableProperties struct {
+	Slot   string // e.g., "weapon", "shield", "head"
+	Damage int    // Bonus damage
 }
 
 // ClientEventType defines incoming WebSocket message types.
@@ -61,6 +69,8 @@ const (
 	ClientEventPlaceItem ClientEventType = "place_item"
 	ClientEventAttack    ClientEventType = "attack"
 	ClientEventEat       ClientEventType = "eat"
+	ClientEventEquip     ClientEventType = "equip"
+	ClientEventUnequip   ClientEventType = "unequip"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -78,6 +88,7 @@ const (
 	ServerEventEntityDamaged     ServerEventType = "entity_damaged"
 	ServerEventPlayerStatsUpdate ServerEventType = "player_stats_update"
 	ServerEventItemDropped       ServerEventType = "item_dropped"
+	ServerEventGearUpdate        ServerEventType = "gear_update"
 )
 
 // MoveDirection defines the valid move directions.
@@ -96,6 +107,7 @@ type RedisKey string
 const (
 	RedisKeyPlayerPrefix    RedisKey = "player:"
 	RedisKeyPlayerInventory RedisKey = "player:inventory:"
+	RedisKeyPlayerGear      RedisKey = "player:gear:"
 	RedisKeyLockTile        RedisKey = "lock:tile:"
 	RedisKeyWorldZone0      RedisKey = "world:zone:0"
 	RedisKeyZone0Positions  RedisKey = "zone:0:positions"
@@ -255,6 +267,14 @@ func init() {
 		Stackable: true,
 		MaxStack:  10,
 	}
+	ItemDefs[ItemCrudeAxe] = ItemProperties{
+		Stackable: false,
+		MaxStack:  1,
+		Equippable: &EquippableProperties{
+			Slot:   "weapon-slot",
+			Damage: 2,
+		},
+	}
 
 	// --- Tile Definitions (USING CONSTANTS) ---
 	TileDefs[TileTypeGround] = TileProperties{
@@ -302,6 +322,14 @@ func init() {
 	RecipeDefs[ItemCookedRatMeat] = Recipe{
 		Ingredients: map[ItemID]int{ItemRatMeat: 1},
 		Yield:       1,
+	}
+	RecipeDefs[ItemCrudeAxe] = Recipe{
+		Ingredients: map[ItemID]int{
+			ItemStone: 10,
+			ItemWood:  10,
+			ItemGoop:  5,
+		},
+		Yield: 1,
 	}
 
 	// --- Edible Definitions ---

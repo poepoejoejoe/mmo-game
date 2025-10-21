@@ -55,6 +55,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	log.Printf("Initializing player %s.", playerID)
 	spawnX, spawnY := FindOpenSpawnPoint(playerID)
 	inventoryKey := string(RedisKeyPlayerInventory) + playerID
+	gearKey := string(RedisKeyPlayerGear) + playerID
 
 	pipe := rdb.Pipeline()
 	// Set the player's position, cooldown, and entityType
@@ -84,11 +85,16 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	item3, _ := json.Marshal(models.Item{ID: string(ItemRatMeat), Quantity: 1})
 	inventory["slot_3"] = string(item3)
 
+	// Slot 4: 10 Goop for testing
+	item4, _ := json.Marshal(models.Item{ID: string(ItemGoop), Quantity: 10})
+	inventory["slot_4"] = string(item4)
+
 	// Initialize remaining slots as empty
-	for i := 4; i < 10; i++ {
+	for i := 5; i < 10; i++ {
 		inventory["slot_"+strconv.Itoa(i)] = "" // Empty string signifies an empty slot
 	}
 	pipe.HSet(ctx, inventoryKey, inventory)
+	pipe.HSet(ctx, gearKey, map[string]interface{}{"weapon-slot": ""})
 	// --- END NEW ---
 
 	_, err := pipe.Exec(ctx)
@@ -169,12 +175,24 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		inventoryDataTyped[slot] = item
 	}
 
+	gearDataRaw, _ := rdb.HGetAll(ctx, gearKey).Result()
+	gearDataTyped := make(map[string]models.Item)
+	for slot, itemJSON := range gearDataRaw {
+		if itemJSON == "" {
+			continue // Skip empty slots
+		}
+		var item models.Item
+		json.Unmarshal([]byte(itemJSON), &item)
+		gearDataTyped[slot] = item
+	}
+
 	initialState := &models.InitialStateMessage{
 		Type:      string(ServerEventInitialState),
 		PlayerId:  playerID,
 		Entities:  allEntitiesState, // This map now includes the 'type'
 		World:     worldDataTyped,
 		Inventory: inventoryDataTyped,
+		Gear:      gearDataTyped,
 	}
 
 	// Announce the new player's arrival to everyone else
@@ -220,6 +238,7 @@ func CleanupPlayer(playerID string) {
 
 	pipe := rdb.Pipeline()
 	pipe.Del(ctx, string(RedisKeyPlayerInventory)+playerID)
+	pipe.Del(ctx, string(RedisKeyPlayerGear)+playerID)
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Error cleaning up player inventory for %s: %v", playerID, err)

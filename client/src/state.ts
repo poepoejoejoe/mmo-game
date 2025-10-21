@@ -5,7 +5,8 @@ const clientState: ClientState = {
     playerId: null,
     entities: {},
     world: {},
-    inventory: {}
+    inventory: {},
+    gear: {},
 };
 
 // --- State Accessors (Getters) ---
@@ -30,12 +31,14 @@ export function setInitialState(
     playerId: string, 
     entities: Record<string, EntityState>, // This map now includes 'type'
     world: Record<string, WorldTile>, 
-    inventory: Record<string, InventoryItem>
+    inventory: Record<string, InventoryItem>,
+    gear: Record<string, InventoryItem>
 ) {
     clientState.playerId = playerId;
     clientState.entities = entities; // Directly assign the map
     clientState.world = world;
     clientState.inventory = inventory;
+    clientState.gear = gear;
 }
 
 export function setEntityPosition(entityId: string, x: number, y: number) {
@@ -74,4 +77,8 @@ export function setResourceHealth(x: number, y: number, health: number) {
 
 export function setInventory(inventory: Record<string, InventoryItem>) {
     clientState.inventory = inventory;
+}
+
+export function setGear(gear: Record<string, InventoryItem>) {
+    clientState.gear = gear;
 }
