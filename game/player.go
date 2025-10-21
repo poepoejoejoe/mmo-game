@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"log"
+	"math/rand"
 	"mmo-game/models"
 	"strconv"
 	"time"
@@ -12,7 +13,10 @@ import (
 
 // (FindOpenSpawnPoint remains the same)
 func FindOpenSpawnPoint(entityID string) (int, int) {
-	x, y, dx, dy := 0, 0, 0, -1
+	startX := rand.Intn(WorldSize) - WorldSize/2
+	startY := rand.Intn(WorldSize) - WorldSize/2
+
+	x, y, dx, dy := startX, startY, 0, -1
 	for i := 0; i < (WorldSize * 2); i++ {
 		for j := 0; j < (i/2 + 1); j++ {
 			tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
@@ -34,8 +38,8 @@ func FindOpenSpawnPoint(entityID string) (int, int) {
 		}
 		dx, dy = -dy, dx
 	}
-	log.Printf("Could not find open spawn point, defaulting to (0,0) for entity %s", entityID)
-	return 0, 0
+	log.Printf("Could not find open spawn point, defaulting to (%d,%d) for entity %s", startX, startY, entityID)
+	return startX, startY
 }
 
 func InitializePlayer(playerID string) *models.InitialStateMessage {

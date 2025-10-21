@@ -104,6 +104,7 @@ func main() {
 	game.GenerateWorld()
 	game.InitializeNPCs() // <-- NEW: Spawn NPCs
 	go game.StartAILoop() // <-- NEW: Start the NPC AI loop
+	go game.StartSpawnerLoop()
 
 	HubInst = newHub()
 	go HubInst.run()

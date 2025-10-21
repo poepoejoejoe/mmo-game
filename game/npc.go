@@ -2,7 +2,7 @@ package game
 
 import (
 	"log"
-	"strconv"
+	"mmo-game/game/utils"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -10,27 +10,18 @@ import (
 
 // InitializeNPCs spawns the initial set of NPCs for the world.
 func InitializeNPCs() {
-	log.Println("Spawning NPCs...")
-	// For now, just spawn one slime
-	spawnSlime(1)
-	spawnRat(1) // Spawn one rat
+	// This is now handled by the spawner loop.
+	// We can leave this function empty or remove it.
+	// For now, let's just log that we're skipping it.
+	log.Println("Initial NPC spawning is now handled by the spawner loop.")
 }
 
 // spawnSlime creates a new slime entity in the world.
-func spawnSlime(id int) {
-	entityID := string(NPCSlimePrefix) + strconv.Itoa(id)
+func spawnSlime() {
+	entityID := string(NPCSlimePrefix) + utils.GenerateUniqueID()
 	npcType := NPCTypeSlime
 
-	// Check if this NPC already exists
-	exists, err := rdb.Exists(ctx, entityID).Result()
-	if err != nil {
-		log.Printf("Error checking existence of NPC %s: %v", entityID, err)
-		return
-	}
-	if exists > 0 {
-		log.Printf("NPC %s already exists. Skipping spawn.", entityID)
-		return
-	}
+	// No need to check for existence with unique IDs
 
 	spawnX, spawnY := FindOpenSpawnPoint(entityID)
 	props := NPCDefs[npcType]
@@ -53,7 +44,7 @@ func spawnSlime(id int) {
 		Latitude:  float64(spawnY),
 	})
 
-	_, err = pipe.Exec(ctx)
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Failed to spawn slime %s: %v", entityID, err)
 		return
@@ -73,20 +64,11 @@ func spawnSlime(id int) {
 }
 
 // spawnRat creates a new rat entity in the world.
-func spawnRat(id int) {
-	entityID := string(NPCRatPrefix) + strconv.Itoa(id)
+func spawnRat() {
+	entityID := string(NPCRatPrefix) + utils.GenerateUniqueID()
 	npcType := NPCTypeRat
 
-	// Check if this NPC already exists
-	exists, err := rdb.Exists(ctx, entityID).Result()
-	if err != nil {
-		log.Printf("Error checking existence of NPC %s: %v", entityID, err)
-		return
-	}
-	if exists > 0 {
-		log.Printf("NPC %s already exists. Skipping spawn.", entityID)
-		return
-	}
+	// No need to check for existence with unique IDs
 
 	spawnX, spawnY := FindOpenSpawnPoint(entityID)
 	props := NPCDefs[npcType]
@@ -109,7 +91,7 @@ func spawnRat(id int) {
 		Latitude:  float64(spawnY),
 	})
 
-	_, err = pipe.Exec(ctx)
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Failed to spawn rat %s: %v", entityID, err)
 		return

@@ -75,9 +75,6 @@ func processNPCAction(npcID string) {
 			continue // Skip self
 		}
 
-		// NEW: Added for debugging
-		log.Printf("[AI Debug] NPC %s checking entity: %s", npcID, loc.Name)
-
 		entityType, err := rdb.HGet(ctx, loc.Name, "entityType").Result()
 		if err != nil {
 			log.Printf("[AI Error] Could not get entityType for %s: %v. Skipping.", loc.Name, err)
