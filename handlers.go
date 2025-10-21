@@ -137,6 +137,8 @@ func (c *Client) readPump() {
 				continue
 			}
 			game.ProcessAttack(c.id, attackData.EntityID)
+		case game.ClientEventEat:
+			game.ProcessEat(c.id, msg.Payload)
 		}
 	}
 }

@@ -34,13 +34,15 @@ const (
 type ItemID string
 
 const (
-	ItemWood        ItemID = "wood"
-	ItemStone       ItemID = "stone" // Renamed from ItemRock for consistency
-	ItemWoodenWall  ItemID = "wooden_wall"
-	ItemGoop        ItemID = "goop"
-	ItemRatMeat     ItemID = "rat_meat"
-	ItemTreasureMap ItemID = "treasure_map"
-	ItemFire        ItemID = "fire"
+	ItemWood          ItemID = "wood"
+	ItemStone         ItemID = "stone" // Renamed from ItemRock for consistency
+	ItemWoodenWall    ItemID = "wooden_wall"
+	ItemGoop          ItemID = "goop"
+	ItemRatMeat       ItemID = "rat_meat"
+	ItemCookedRatMeat ItemID = "cooked_rat_meat"
+	ItemSliceOfPizza  ItemID = "slice_of_pizza"
+	ItemTreasureMap   ItemID = "treasure_map"
+	ItemFire          ItemID = "fire"
 )
 
 // ItemProperties defines the static properties of an item type.
@@ -58,6 +60,7 @@ const (
 	ClientEventCraft     ClientEventType = "craft"
 	ClientEventPlaceItem ClientEventType = "place_item"
 	ClientEventAttack    ClientEventType = "attack"
+	ClientEventEat       ClientEventType = "eat"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -147,6 +150,11 @@ type LootEntry struct {
 
 type LootTable []LootEntry
 
+// EdibleProperties defines the properties of a consumable item.
+type EdibleProperties struct {
+	HealAmount int
+}
+
 // PlayerProperties defines the constant attributes of a player.
 type PlayerProperties struct {
 	MaxHealth int
@@ -162,6 +170,9 @@ var TileDefs map[TileType]TileProperties // Use new type
 var NPCDefs map[NPCType]NPCProperties
 
 var NPCLootTables map[NPCType]LootTable
+
+// EdibleDefs is our master map of all edible item definitions.
+var EdibleDefs map[ItemID]EdibleProperties
 
 // --- NEW ---
 var PlayerDefs PlayerProperties
@@ -180,6 +191,7 @@ func init() {
 	NPCDefs = make(map[NPCType]NPCProperties) // --- NEW ---
 	ItemDefs = make(map[ItemID]ItemProperties)
 	NPCLootTables = make(map[NPCType]LootTable)
+	EdibleDefs = make(map[ItemID]EdibleProperties)
 
 	// --- Player Definitions ---
 	PlayerDefs = PlayerProperties{
@@ -202,6 +214,7 @@ func init() {
 	}
 	NPCLootTables[NPCTypeRat] = LootTable{
 		{ItemID: ItemRatMeat, Chance: 0.8, Min: 1, Max: 1},
+		{ItemID: ItemSliceOfPizza, Chance: 0.1, Min: 1, Max: 1},
 		{ItemID: ItemTreasureMap, Chance: 0.05, Min: 1, Max: 1},
 	}
 
@@ -225,6 +238,14 @@ func init() {
 	ItemDefs[ItemRatMeat] = ItemProperties{
 		Stackable: true,
 		MaxStack:  50,
+	}
+	ItemDefs[ItemCookedRatMeat] = ItemProperties{
+		Stackable: true,
+		MaxStack:  50,
+	}
+	ItemDefs[ItemSliceOfPizza] = ItemProperties{
+		Stackable: true,
+		MaxStack:  10,
 	}
 	ItemDefs[ItemTreasureMap] = ItemProperties{
 		Stackable: false,
@@ -277,5 +298,17 @@ func init() {
 	RecipeDefs[ItemFire] = Recipe{
 		Ingredients: map[ItemID]int{ItemWood: 10},
 		Yield:       1,
+	}
+	RecipeDefs[ItemCookedRatMeat] = Recipe{
+		Ingredients: map[ItemID]int{ItemRatMeat: 1},
+		Yield:       1,
+	}
+
+	// --- Edible Definitions ---
+	EdibleDefs[ItemCookedRatMeat] = EdibleProperties{
+		HealAmount: 2,
+	}
+	EdibleDefs[ItemSliceOfPizza] = EdibleProperties{
+		HealAmount: 5,
 	}
 }

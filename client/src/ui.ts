@@ -1,4 +1,5 @@
 import * as state from './state';
+import { edibleDefs } from './definitions';
 
 let playerIdEl: HTMLElement;
 let cooldownBar: HTMLDivElement;
@@ -6,6 +7,7 @@ let cooldownText: HTMLElement;
 let inventorySlotsEl: HTMLElement;
 let craftWallBtn: HTMLButtonElement;
 let craftFireBtn: HTMLButtonElement;
+let craftRatMeatBtn: HTMLButtonElement;
 let gameCanvas: HTMLElement;
 let healthBar: HTMLDivElement;
 let healthText: HTMLElement;
@@ -18,6 +20,7 @@ export function initializeUI() {
     inventorySlotsEl = document.getElementById('inventory-slots')!;
     craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
     craftFireBtn = document.getElementById('craft-fire-btn') as HTMLButtonElement;
+    craftRatMeatBtn = document.getElementById('craft-rat-meat-btn') as HTMLButtonElement;
     gameCanvas = document.getElementById('game-canvas')!;
     healthBar = document.getElementById('health-bar') as HTMLDivElement;
     healthText = document.getElementById('health-text')!;
@@ -39,13 +42,18 @@ export function startCooldown(duration: number): void {
 export function updateCraftingUI(): void {
     const inventory = state.getState().inventory;
     let woodCount = 0;
+    let ratMeatCount = 0;
     for (const slot in inventory) {
         if (inventory[slot] && inventory[slot].id === 'wood') {
             woodCount += inventory[slot].quantity;
         }
+        if (inventory[slot] && inventory[slot].id === 'rat_meat') {
+            ratMeatCount += inventory[slot].quantity;
+        }
     }
     craftWallBtn.disabled = woodCount < 10;
     craftFireBtn.disabled = woodCount < 10;
+    craftRatMeatBtn.disabled = ratMeatCount < 1;
 }
 
 export function updateInventoryUI(): void {
@@ -61,6 +69,14 @@ export function updateInventoryUI(): void {
 
         if (item) {
             slotEl.textContent = `${item.id}: ${item.quantity}`;
+            const edible = edibleDefs[item.id];
+            if (edible) {
+                const eatButton = document.createElement('button');
+                eatButton.textContent = `Eat (${edible.healAmount}hp)`;
+                eatButton.classList.add('eat-button');
+                eatButton.dataset.item = item.id;
+                slotEl.appendChild(eatButton);
+            }
         } else {
             slotEl.textContent = '-'; // Empty slot
         }

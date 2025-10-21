@@ -48,6 +48,9 @@ func GenerateWorld() {
 	spawnTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeGround), Health: 0})
 	pipe.HSet(ctx, worldKey, "0,0", spawnTileJSON)
 
+	fireTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeFire)})
+	pipe.HSet(ctx, worldKey, "0,1", fireTileJSON)
+
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Fatalf("Failed to generate world: %v", err)

@@ -80,8 +80,12 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	item2, _ := json.Marshal(models.Item{ID: string(ItemWoodenWall), Quantity: 10})
 	inventory["slot_2"] = string(item2)
 
+	// Slot 3: 1 Rat meat for testing
+	item3, _ := json.Marshal(models.Item{ID: string(ItemRatMeat), Quantity: 1})
+	inventory["slot_3"] = string(item3)
+
 	// Initialize remaining slots as empty
-	for i := 3; i < 10; i++ {
+	for i := 4; i < 10; i++ {
 		inventory["slot_"+strconv.Itoa(i)] = "" // Empty string signifies an empty slot
 	}
 	pipe.HSet(ctx, inventoryKey, inventory)

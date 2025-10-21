@@ -7,6 +7,8 @@ import { getEntityProperties, getTileProperties } from './definitions';
 const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
 const craftFireBtn = document.getElementById('craft-fire-btn') as HTMLButtonElement;
+const craftRatMeatBtn = document.getElementById('craft-rat-meat-btn') as HTMLButtonElement;
+const inventorySlotsEl = document.getElementById('inventory-slots')!;
 let canPerformAction = true;
 let isBuildMode = false;
 let buildItem: 'wooden_wall' | 'fire' | null = null;
@@ -313,6 +315,18 @@ export function initializeInput() {
     window.addEventListener('mouseup', handleMouseUpOrLeave);
     gameCanvas.addEventListener('mouseleave', handleMouseUpOrLeave);
 
+    inventorySlotsEl.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('eat-button')) {
+            if (!canPerformAction) return;
+            const itemToEat = target.dataset.item;
+            if (itemToEat) {
+                startActionCooldown(ACTION_COOLDOWN);
+                network.send({ type: 'eat', payload: { item: itemToEat } });
+            }
+        }
+    });
+
     craftWallBtn.addEventListener('click', () => {
         if (!canPerformAction || craftWallBtn.disabled) return;
         startActionCooldown(ACTION_COOLDOWN);
@@ -323,6 +337,12 @@ export function initializeInput() {
         if (!canPerformAction || craftFireBtn.disabled) return;
         startActionCooldown(ACTION_COOLDOWN);
         network.send({ type: 'craft', payload: { item: 'fire' } });
+    });
+
+    craftRatMeatBtn.addEventListener('click', () => {
+        if (!canPerformAction || craftRatMeatBtn.disabled) return;
+        startActionCooldown(ACTION_COOLDOWN);
+        network.send({ type: 'craft', payload: { item: 'cooked_rat_meat' } });
     });
 }
 

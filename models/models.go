@@ -86,6 +86,10 @@ type AttackPayload struct {
 	EntityID string `json:"entityId"`
 }
 
+type EatPayload struct {
+	Item string `json:"item"`
+}
+
 type EntityDamagedMessage struct {
 	Type     string `json:"type"`
 	EntityID string `json:"entityId"`

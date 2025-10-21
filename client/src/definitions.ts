@@ -112,6 +112,11 @@ export const itemDefinitions: { [key: string]: { character: string, color: strin
     'default': { character: '?', color: '#FFFFFF' },
 };
 
+export const edibleDefs: { [key: string]: { healAmount: number } } = {
+    'cooked_rat_meat': { healAmount: 2 },
+    'slice_of_pizza': { healAmount: 5 },
+};
+
 
 // --- NEW: Entity Definitions ---
 

@@ -14,7 +14,7 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 		return nil, nil
 	}
 
-	canAct, _ := CanEntityAct(playerID)
+	canAct, playerData := CanEntityAct(playerID)
 	if !canAct {
 		return nil, nil
 	}
@@ -24,6 +24,39 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 		log.Printf("Player %s tried to craft unknown item: %s", playerID, craftData.Item)
 		return nil, nil
 	}
+
+	// --- NEW: Special crafting conditions ---
+	if ItemID(craftData.Item) == ItemCookedRatMeat {
+		playerX, playerY := GetEntityPosition(playerData)
+		isNextToFire := false
+		for dx := -1; dx <= 1; dx++ {
+			for dy := -1; dy <= 1; dy++ {
+				if dx == 0 && dy == 0 {
+					continue // Skip the player's own tile
+				}
+				// Check adjacent tiles only
+				if dx != 0 && dy != 0 {
+					continue
+				}
+
+				checkX, checkY := playerX+dx, playerY+dy
+				tile, _, err := GetWorldTile(checkX, checkY)
+				if err == nil && tile != nil && tile.Type == string(TileTypeFire) {
+					isNextToFire = true
+					break
+				}
+			}
+			if isNextToFire {
+				break
+			}
+		}
+
+		if !isNextToFire {
+			log.Printf("Player %s failed to craft %s: not next to a fire.", playerID, craftData.Item)
+			return nil, nil // Or send a specific "requires fire" message
+		}
+	}
+	// --- END NEW ---
 
 	inventoryKey := string(RedisKeyPlayerInventory) + playerID
 	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
