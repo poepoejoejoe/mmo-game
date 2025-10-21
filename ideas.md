@@ -1,13 +1,31 @@
 Core Gameplay Loop Expansion (Months 1-2)
 Goal: Make the moment-to-moment gameplay engaging and give players short-term objectives.
 
-Flesh out PvE Combat: You've defined EntityTypeNPC and keys for NPCSlime and NPCRat. The next step is to make them a real threat and a source of progression.
+quests
+what are the rewards?
+- armor
+- xp?
+- gold?
+quest ideas:
+- collect 10 wood make a wall
+- make a fire and cook rat meat
+- craft a crude axe
 
-Action: Implement health, damage, simple AI (e.g., "wander and aggro"), and loot drops for these NPCs.
+experience?
+osrs like? wow like?
 
-Why: Combat is a primary driver of risk, reward, and resource gathering (e.g., slimes drop "goo" for new recipes).
+trading?
 
+talents?
+do talents just unlock stuff for your echo?
 
+echos?
+- allow trading echoes. setting trades for echos is like the ah system? eg. your echo can say 12 wood for 1 box or something?
+- echos are based on xp what they do? or is it on events?
+- echos could just be based on talents?
+
+pvp?
+- needs contested zones?
 
 Engineer Virality & Emergent Gameplay
 This phase is about lowering the barrier to entry and creating systems that generate "unbelievable" stories.
@@ -93,15 +111,3 @@ Rats:
 - Common: Rat Pelt (crafting), Rat Meat (cooking), Bone (crafting)
 - Uncommon: Rat Tail (quest item), Diseased Claw (poison crafting)
 - Rare: Rat Skull (crafting/decoration), Simple Treasure Map (treasure hunt)
-
-Goop Item Ideas
-- **Crafting Material:**
-    - **Alchemy:** A base ingredient for potions.
-    - **Binding Agent:** Used to combine other materials in recipes.
-    - **Goop Armor:** Craft a set of bouncy, slightly sticky armor.
-- **Consumable:**
-    - **Mysterious Goop:** Eating it has a random (and potentially hilarious) effect. Could grant a small buff, a harmless cosmetic change, or make you slip for a few seconds.
-- **Environmental:**
-    - **Slippery Trap:** Throw it on the ground to create a small slippery puddle that can make others (or you!) slide around.
-- **Weapon Enhancement:**
-    - **Goop Coating:** Apply to a weapon to temporarily add a slowing effect to your attacks.

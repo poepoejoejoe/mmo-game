@@ -151,6 +151,7 @@ const (
 // NPCProperties defines the behavioral attributes of an NPC.
 type NPCProperties struct {
 	Health int
+	Damage int
 }
 
 type LootEntry struct {
@@ -214,9 +215,11 @@ func init() {
 	// --- NPC Definitions ---
 	NPCDefs[NPCTypeSlime] = NPCProperties{
 		Health: 3,
+		Damage: 1,
 	}
 	NPCDefs[NPCTypeRat] = NPCProperties{
 		Health: 2,
+		Damage: 2,
 	}
 	// --- END NEW ---
 

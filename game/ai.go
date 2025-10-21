@@ -106,7 +106,19 @@ func processNPCAction(npcID string) {
 		// If adjacent, attack
 		if IsAdjacent(npcX, npcY, targetX, targetY) {
 			log.Printf("NPC %s is attacking player %s", npcID, targetID)
-			damage := 1 // TODO: Make this data-driven
+			npcTypeStr, ok := npcData["npcType"]
+			if !ok {
+				log.Printf("[AI Error] NPC %s has no npcType field. Skipping.", npcID)
+				return
+			}
+
+			npcType := NPCType(npcTypeStr)
+			props, ok := NPCDefs[npcType]
+			if !ok {
+				log.Printf("[AI Error] Unknown NPC type %s for NPC %s. Skipping.", npcType, npcID)
+				return
+			}
+			damage := props.Damage
 			newHealth, err := rdb.HIncrBy(ctx, targetID, "health", int64(-damage)).Result()
 			if err != nil {
 				log.Printf("Error damaging player %s: %v", targetID, err)
