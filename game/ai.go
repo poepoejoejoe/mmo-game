@@ -65,13 +65,6 @@ func processNPCAction(npcID string) {
 		return
 	}
 
-	log.Printf("[AI Debug] locations: %v", locations)
-
-	// This log will now print the coordinates of each found entity
-	if len(locations) > 1 {
-		log.Printf("[AI Debug] For NPC %s at (%d, %d), found locations: %v", npcID, npcX, npcY, locations)
-	}
-
 	var targetID string
 	var targetX, targetY int
 	var targetFound bool

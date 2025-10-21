@@ -5,6 +5,9 @@ export interface EntityState {
     x: number;
     y: number;
     type: string;
+    itemId?: string;
+    owner?: string;
+    createdAt?: number;
 }
 
 export interface WorldTile {
@@ -52,6 +55,8 @@ export interface EntityJoinedMessage extends ServerMessage {
     entityId: string;    // <-- RENAMED
     x: number;
     y: number;
+    entityType: string;
+    itemId?: string;
 }
 
 // --- RENAMED and UPDATED ---

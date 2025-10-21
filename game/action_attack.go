@@ -60,7 +60,7 @@ func ProcessAttack(playerID string, targetEntityID string) {
 	} else {
 		// Entity is defeated
 		log.Printf("Entity %s defeated.", targetEntityID)
-		CleanupEntity(targetEntityID, targetData)
+		cleanupAndDropLoot(playerID, targetEntityID, targetData)
 	}
 
 	// Set player's action cooldown
@@ -68,4 +68,36 @@ func ProcessAttack(playerID string, targetEntityID string) {
 	cooldown, _ := strconv.ParseInt(playerData["moveCooldown"], 10, 64)
 	nextActionTime := time.Now().UnixMilli() + cooldown
 	rdb.HSet(ctx, playerID, "nextActionAt", nextActionTime)
+}
+
+func cleanupAndDropLoot(playerID string, npcID string, npcData map[string]string) {
+	CleanupEntity(npcID, npcData)
+
+	npcType := NPCType(npcData["npcType"])
+	loot := generateLoot(npcType)
+
+	if len(loot) > 0 {
+		x, _ := strconv.Atoi(npcData["x"])
+		y, _ := strconv.Atoi(npcData["y"])
+		for itemID, quantity := range loot {
+			dropID, err := CreateWorldItem(x, y, itemID, quantity, playerID, time.Minute*1)
+			if err != nil {
+				log.Printf("Failed to create world item: %v", err)
+				continue
+			}
+
+			// Announce the new item's arrival to the world
+			itemUpdate := map[string]interface{}{
+				"type":       string(ServerEventEntityJoined),
+				"entityId":   dropID,
+				"entityType": string(EntityTypeItem),
+				"itemId":     itemID,
+				"x":          x,
+				"y":          y,
+			}
+			// For now, we will broadcast all drops.
+			// TODO: only send to owner if one exists.
+			PublishUpdate(itemUpdate)
+		}
+	}
 }

@@ -46,8 +46,8 @@ export function setEntityPosition(entityId: string, x: number, y: number) {
 }
 
 // --- UPDATED ---
-export function addEntity(entityId: string, x: number, y: number, type: string) {
-    clientState.entities[entityId] = { x, y, type }; // Add with type
+export function addEntity(entityId: string, x: number, y: number, type: string, itemId?: string, owner?: string, createdAt?: number) {
+    clientState.entities[entityId] = { x, y, type, itemId, owner, createdAt };
 }
 
 export function removeEntity(entityId: string) {

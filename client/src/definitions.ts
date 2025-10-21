@@ -78,6 +78,15 @@ export function getTileProperties(type: string): TileProperties {
     return tileDefs[type] || tileDefs['void'];
 }
 
+export const itemDefinitions: { [key: string]: { character: string, color: string } } = {
+    'wood': { character: 'W', color: '#8B4513' },
+    'stone': { character: 'S', color: '#808080' },
+    'goop': { character: 'G', color: '#00FF00' },
+    'rat_meat': { character: 'M', color: '#FF0000' },
+    'treasure_map': { character: 'M', color: '#FFFF00' },
+    'default': { character: '?', color: '#FFFFFF' },
+};
+
 
 // --- NEW: Entity Definitions ---
 
@@ -98,6 +107,9 @@ export const entityDefs: Record<string, EntityProperties> = {
     'rat': {
         color: '#800080', // Purple
         isAttackable: true,
+    },
+    'item': {
+        color: 'transparent', // We'll render items with text instead
     },
     'default': {
         color: '#e74c3c', // Red (for other players/unknown)

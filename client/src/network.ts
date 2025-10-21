@@ -48,9 +48,15 @@ function handleMessage(event: MessageEvent) {
         }
         case 'entity_joined': {
             const joinMsg = msg as EntityJoinedMessage;
-            // --- UPDATED ---
-            // Pass the new 'type' field to our state function
-            state.addEntity(joinMsg.entityId, joinMsg.x, joinMsg.y, joinMsg.entityType);
+            state.addEntity(
+                joinMsg.entityId,
+                joinMsg.x,
+                joinMsg.y,
+                joinMsg.entityType,
+                joinMsg.itemId,
+                joinMsg.owner,
+                joinMsg.createdAt,
+            );
             break;
         }
         case 'entity_left': {
@@ -66,7 +72,6 @@ function handleMessage(event: MessageEvent) {
             break;
         }
         case 'inventory_update': {
-            console.log("Received inventory update:", msg); // Add this line for debugging
             const invMsg = msg as InventoryUpdateMessage;
             state.setInventory(invMsg.inventory);
             updateInventoryUI();

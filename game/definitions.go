@@ -15,6 +15,7 @@ type EntityType string
 const (
 	EntityTypePlayer EntityType = "player"
 	EntityTypeNPC    EntityType = "npc" // <-- NEW
+	EntityTypeItem   EntityType = "item"
 )
 
 // TileType defines the string literals for tile types.
@@ -32,9 +33,12 @@ const (
 type ItemID string
 
 const (
-	ItemWood       ItemID = "wood"
-	ItemStone      ItemID = "stone" // Renamed from ItemRock for consistency
-	ItemWoodenWall ItemID = "wooden_wall"
+	ItemWood        ItemID = "wood"
+	ItemStone       ItemID = "stone" // Renamed from ItemRock for consistency
+	ItemWoodenWall  ItemID = "wooden_wall"
+	ItemGoop        ItemID = "goop"
+	ItemRatMeat     ItemID = "rat_meat"
+	ItemTreasureMap ItemID = "treasure_map"
 )
 
 // ItemProperties defines the static properties of an item type.
@@ -68,6 +72,7 @@ const (
 	ServerEventEntityMoved       ServerEventType = "entity_moved"
 	ServerEventEntityDamaged     ServerEventType = "entity_damaged"
 	ServerEventPlayerStatsUpdate ServerEventType = "player_stats_update"
+	ServerEventItemDropped       ServerEventType = "item_dropped"
 )
 
 // MoveDirection defines the valid move directions.
@@ -92,6 +97,7 @@ const (
 	RedisKeyLockWorldObject RedisKey = "world_object"
 	NPCSlimePrefix          RedisKey = "npc:slime:" // <-- NEW
 	NPCRatPrefix            RedisKey = "npc:rat:"   // <-- NEW
+	ItemPrefix              RedisKey = "item:"
 )
 
 // --- END NEW CONSTANTS ---
@@ -127,6 +133,15 @@ type NPCProperties struct {
 	Health int
 }
 
+type LootEntry struct {
+	ItemID ItemID
+	Chance float64 // 0.0 to 1.0
+	Min    int
+	Max    int
+}
+
+type LootTable []LootEntry
+
 // PlayerProperties defines the constant attributes of a player.
 type PlayerProperties struct {
 	MaxHealth int
@@ -140,6 +155,8 @@ var TileDefs map[TileType]TileProperties // Use new type
 // --- NEW ---
 // NPCDefs is our master map of all NPC definitions.
 var NPCDefs map[NPCType]NPCProperties
+
+var NPCLootTables map[NPCType]LootTable
 
 // --- NEW ---
 var PlayerDefs PlayerProperties
@@ -157,6 +174,7 @@ func init() {
 	RecipeDefs = make(map[ItemID]Recipe)
 	NPCDefs = make(map[NPCType]NPCProperties) // --- NEW ---
 	ItemDefs = make(map[ItemID]ItemProperties)
+	NPCLootTables = make(map[NPCType]LootTable)
 
 	// --- Player Definitions ---
 	PlayerDefs = PlayerProperties{
@@ -173,6 +191,15 @@ func init() {
 	}
 	// --- END NEW ---
 
+	NPCLootTables[NPCTypeSlime] = LootTable{
+		{ItemID: ItemGoop, Chance: 0.8, Min: 1, Max: 2},
+		{ItemID: ItemTreasureMap, Chance: 0.05, Min: 1, Max: 1},
+	}
+	NPCLootTables[NPCTypeRat] = LootTable{
+		{ItemID: ItemRatMeat, Chance: 0.8, Min: 1, Max: 1},
+		{ItemID: ItemTreasureMap, Chance: 0.05, Min: 1, Max: 1},
+	}
+
 	// --- Item Definitions ---
 	ItemDefs[ItemWood] = ItemProperties{
 		Stackable: true,
@@ -185,6 +212,18 @@ func init() {
 	ItemDefs[ItemWoodenWall] = ItemProperties{
 		Stackable: true,
 		MaxStack:  50,
+	}
+	ItemDefs[ItemGoop] = ItemProperties{
+		Stackable: true,
+		MaxStack:  50,
+	}
+	ItemDefs[ItemRatMeat] = ItemProperties{
+		Stackable: true,
+		MaxStack:  50,
+	}
+	ItemDefs[ItemTreasureMap] = ItemProperties{
+		Stackable: false,
+		MaxStack:  1,
 	}
 
 	// --- Tile Definitions (USING CONSTANTS) ---

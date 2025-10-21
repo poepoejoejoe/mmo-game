@@ -14,14 +14,55 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 		return nil, nil
 	}
 
-	// Use new generic helper
 	canAct, playerData := CanEntityAct(playerID)
 	if !canAct {
 		return nil, nil
 	}
 
-	// Use new generic helper
 	currentX, currentY := GetEntityPosition(playerData)
+
+	// --- NEW: Handle Item Pickup ---
+	if interactData.EntityID != "" {
+		targetData, err := rdb.HGetAll(ctx, interactData.EntityID).Result()
+		if err != nil || len(targetData) == 0 || targetData["entityType"] != string(EntityTypeItem) {
+			return nil, nil // Invalid target
+		}
+
+		targetX, _ := strconv.Atoi(targetData["x"])
+		targetY, _ := strconv.Atoi(targetData["y"])
+
+		if !IsAdjacent(currentX, currentY, targetX, targetY) {
+			return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
+		}
+
+		owner := targetData["owner"]
+		createdAt, _ := strconv.ParseInt(targetData["createdAt"], 10, 64)
+		isPublic := time.Now().UnixMilli()-createdAt > 60000 // 1 minute
+
+		if owner == playerID || isPublic {
+			itemID := ItemID(targetData["itemId"])
+			quantity, _ := strconv.Atoi(targetData["quantity"])
+
+			newInventory, err := AddItemToInventory(playerID, itemID, quantity)
+			if err != nil {
+				log.Printf("could not add item to inventory: %v", err)
+				return nil, nil
+			}
+
+			// Remove item from world
+			CleanupEntity(interactData.EntityID, targetData)
+
+			inventoryUpdateMsg := &models.InventoryUpdateMessage{
+				Type:      string(ServerEventInventoryUpdate),
+				Inventory: newInventory,
+			}
+			rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+			return nil, inventoryUpdateMsg
+		}
+		return nil, nil // Not allowed to pick up yet
+	}
+
+	// --- Existing Resource Interaction ---
 	targetX, targetY := interactData.X, interactData.Y
 
 	if !IsAdjacent(currentX, currentY, targetX, targetY) {

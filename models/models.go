@@ -30,8 +30,9 @@ type MovePayload struct {
 }
 
 type InteractPayload struct {
-	X int `json:"x"`
-	Y int `json:"y"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+	EntityID string `json:"entityId,omitempty"`
 }
 
 // --- UPDATED ---

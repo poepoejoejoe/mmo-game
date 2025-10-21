@@ -1,7 +1,7 @@
 import * as state from './state';
 import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, TILE_SIZE } from './constants';
 // --- UPDATED ---
-import { getTileProperties, getEntityProperties } from './definitions';
+import { getTileProperties, getEntityProperties, itemDefinitions } from './definitions';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -118,16 +118,30 @@ function drawEntities(startX: number, startY: number) {
     for (const entityId in allEntities) {
         const entity = allEntities[entityId];
         
-        // --- UPDATED ---
-        // Get color from our new definition helper
-        const props = getEntityProperties(entity.type, entityId, myPlayerId);
-        ctx.fillStyle = props.color;
-        // --- END UPDATE ---
+        // Visibility Rule:
+        if (entity.type === 'item') {
+            const now = Date.now();
+            const age = now - (entity.createdAt || 0);
+            if (entity.owner && entity.owner !== myPlayerId && age < 60000) {
+                continue; // Skip rendering if it's owned by someone else and not yet public
+            }
+        }
 
         const screenX = (entity.x - startX) * TILE_SIZE;
         const screenY = (entity.y - startY) * TILE_SIZE;
 
-        ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+        if (entity.type === 'item' && entity.itemId) {
+            const itemDef = itemDefinitions[entity.itemId] || itemDefinitions['default'];
+            ctx.fillStyle = itemDef.color;
+            ctx.font = `bold ${TILE_SIZE * 0.8}px 'Roboto', sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(itemDef.character, screenX + TILE_SIZE / 2, screenY + TILE_SIZE / 2);
+        } else {
+            const props = getEntityProperties(entity.type, entityId, myPlayerId);
+            ctx.fillStyle = props.color;
+            ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+        }
     }
 }
 

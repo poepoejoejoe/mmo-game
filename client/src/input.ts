@@ -30,7 +30,10 @@ function performInteraction(tileX: number, tileY: number) {
     // Logic for Build Mode
     if (isBuildMode) {
         const inventory = state.getState().inventory;
-        if ((inventory.wooden_wall || 0) < 1) return; // Not enough walls
+        const wallCount = Object.values(inventory)
+            .filter(item => item?.id === 'wooden_wall')
+            .reduce((sum, item) => sum + item.quantity, 0);
+        if (wallCount < 1) return; // Not enough walls
         
         const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
         if (!targetTileProps.isBuildableOn) return; // Can't build here
@@ -41,6 +44,23 @@ function performInteraction(tileX: number, tileY: number) {
     } 
     // Logic for Gather/Interact Mode
     else {
+        // --- NEW: Check for item pickup first ---
+        const entities = state.getState().entities;
+        let itemOnTileId: string | undefined;
+        for (const id in entities) {
+            const e = entities[id];
+            if (e.x === tileX && e.y === tileY && e.type === 'item') {
+                itemOnTileId = id;
+                break;
+            }
+        }
+
+        if (itemOnTileId) {
+            startActionCooldown(ACTION_COOLDOWN);
+            network.send({ type: 'interact', payload: { entityId: itemOnTileId } });
+            return;
+        }
+
         const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
         if (!targetTileProps.isGatherable && !targetTileProps.isDestructible) return; // Nothing to interact with
 
