@@ -18,6 +18,13 @@ func CanEntityAct(entityID string) (bool, map[string]string) {
 		return false, nil
 	}
 
+	if healthStr, ok := entityData["health"]; ok {
+		health, _ := strconv.Atoi(healthStr)
+		if health <= 0 {
+			return false, entityData
+		}
+	}
+
 	nextActionAt, _ := strconv.ParseInt(entityData["nextActionAt"], 10, 64)
 	if time.Now().UnixMilli() < nextActionAt {
 		return false, entityData // On cooldown

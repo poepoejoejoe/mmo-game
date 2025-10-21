@@ -63,10 +63,8 @@ func ProcessAttack(playerID string, targetEntityID string) {
 		cleanupAndDropLoot(playerID, targetEntityID, targetData)
 	}
 
-	// Set player's action cooldown
-	// We'll use the moveCooldown for now as a generic action cooldown
-	cooldown, _ := strconv.ParseInt(playerData["moveCooldown"], 10, 64)
-	nextActionTime := time.Now().UnixMilli() + cooldown
+	// We'll use a standard action cooldown.
+	nextActionTime := time.Now().Add(BaseActionCooldown).UnixMilli()
 	rdb.HSet(ctx, playerID, "nextActionAt", nextActionTime)
 }
 
