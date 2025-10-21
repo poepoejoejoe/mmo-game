@@ -14,6 +14,7 @@ let healthBar: HTMLDivElement;
 let healthText: HTMLElement;
 let buildModeIndicator: HTMLElement;
 let gearSlotsEl: HTMLElement;
+let chatMessagesEl: HTMLElement;
 
 export function initializeUI() {
     playerIdEl = document.getElementById('player-id')!;
@@ -29,6 +30,13 @@ export function initializeUI() {
     healthText = document.getElementById('health-text')!;
     buildModeIndicator = document.getElementById('build-mode-indicator')!;
     gearSlotsEl = document.getElementById('gear-slots')!;
+    chatMessagesEl = document.getElementById('chat-messages')!;
+}
+
+export function addChatMessage(playerId: string, message: string) {
+    const messageEl = document.createElement('div');
+    messageEl.innerHTML = `<strong>${playerId}:</strong> ${message}`;
+    chatMessagesEl.prepend(messageEl); // Prepend to add new messages to the top (which is visually the bottom)
 }
 
 export function startCooldown(duration: number): void {

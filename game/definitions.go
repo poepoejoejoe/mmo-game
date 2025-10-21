@@ -65,12 +65,13 @@ type ClientEventType string
 const (
 	ClientEventMove      ClientEventType = "move"
 	ClientEventInteract  ClientEventType = "interact"
+	ClientEventEquip     ClientEventType = "equip"
+	ClientEventUnequip   ClientEventType = "unequip"
 	ClientEventCraft     ClientEventType = "craft"
 	ClientEventPlaceItem ClientEventType = "place_item"
 	ClientEventAttack    ClientEventType = "attack"
 	ClientEventEat       ClientEventType = "eat"
-	ClientEventEquip     ClientEventType = "equip"
-	ClientEventUnequip   ClientEventType = "unequip"
+	ClientEventSendChat  ClientEventType = "send_chat"
 )
 
 // ServerEventType defines outgoing WebSocket message types.

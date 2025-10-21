@@ -10,6 +10,8 @@ export interface EntityState {
     owner?: string;
     createdAt?: number;
     publicAt?: number;
+    lastChatMessage?: string;
+    lastChatTimestamp?: number;
 }
 
 export interface WorldTile {
@@ -114,4 +116,15 @@ export interface PlayerStatsUpdateMessage extends ServerMessage {
     type: 'player_stats_update';
     health: number;
     maxHealth: number;
+}
+
+export interface PlayerChatMessage extends ServerMessage {
+    type: 'player_chat';
+    playerId: string;
+    message: string;
+}
+
+export interface SendChatMessage {
+    type: 'send_chat';
+    message: string;
 }

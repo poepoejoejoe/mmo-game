@@ -11,6 +11,7 @@ const craftRatMeatBtn = document.getElementById('craft-rat-meat-btn') as HTMLBut
 const craftCrudeAxeBtn = document.getElementById('craft-crude-axe-btn') as HTMLButtonElement;
 const inventorySlotsEl = document.getElementById('inventory-slots')!;
 const gearSlotsEl = document.getElementById('gear-slots')!;
+const chatInputEl = document.getElementById('chat-input') as HTMLInputElement;
 let canPerformAction = true;
 let isBuildMode = false;
 let buildItem: 'wooden_wall' | 'fire' | null = null;
@@ -151,6 +152,11 @@ function handleMouseMove(e: MouseEvent) {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
+    // If typing in chat, don't process game keybinds
+    if (document.activeElement === chatInputEl) {
+        return;
+    }
+
     // Toggle build mode
     if (e.key === 'b') {
         if (buildItem === 'wooden_wall') {
@@ -186,6 +192,10 @@ function handleKeyDown(e: KeyboardEvent) {
 }
 
 function handleKeyUp(e: KeyboardEvent) {
+    // If typing in chat, don't process game keybinds
+    if (document.activeElement === chatInputEl) {
+        return;
+    }
     const index = pressedKeys.indexOf(e.key);
     if (index > -1) {
         pressedKeys.splice(index, 1);
@@ -309,6 +319,17 @@ function startActionCooldown(duration: number) {
 export function initializeInput() {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
+
+    chatInputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const message = chatInputEl.value.trim();
+            if (message) {
+                network.send({ type: 'send_chat', payload: { message } });
+                chatInputEl.value = '';
+                chatInputEl.blur(); // Unfocus the input
+            }
+        }
+    });
 
     // Replace the single 'click' listener with more detailed mouse events for click-and-hold
     gameCanvas.addEventListener('mousedown', handleMouseDown);

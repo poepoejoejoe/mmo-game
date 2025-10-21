@@ -125,3 +125,13 @@ type Item struct {
 	ID       string `json:"id"`
 	Quantity int    `json:"quantity"`
 }
+
+type SendChatMessage struct {
+	Message string `json:"message"`
+}
+
+type PlayerChatMessage struct {
+	Type     string `json:"type"`
+	PlayerID string `json:"playerId"`
+	Message  string `json:"message"`
+}

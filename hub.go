@@ -1,21 +1,9 @@
 package main
 
-import (
-	"context"
-
-	"github.com/gorilla/websocket"
-)
-
-// Client and Hub structs are now defined here, in the main package.
-type Client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	id   string
-	send chan []byte
-}
-
+// Hub maintains the set of active clients and broadcasts messages to the
+// clients.
 type Hub struct {
-	clients    map[string]*Client // Map playerID to Client
+	clients    map[string]*Client
 	broadcast  chan []byte
 	register   chan *Client
 	unregister chan *Client
@@ -31,8 +19,6 @@ func newHub() *Hub {
 }
 
 func (h *Hub) run() {
-	go h.subscribeToWorldUpdates()
-
 	for {
 		select {
 		case client := <-h.register:
@@ -43,25 +29,14 @@ func (h *Hub) run() {
 				close(client.send)
 			}
 		case message := <-h.broadcast:
-			for _, client := range h.clients {
+			for id, client := range h.clients {
 				select {
 				case client.send <- message:
 				default:
 					close(client.send)
-					delete(h.clients, client.id)
+					delete(h.clients, id)
 				}
 			}
 		}
-	}
-}
-
-func (h *Hub) subscribeToWorldUpdates() {
-	ctx := context.Background()
-	pubsub := rdb.Subscribe(ctx, "world_updates")
-	defer pubsub.Close()
-	ch := pubsub.Channel()
-
-	for msg := range ch {
-		h.broadcast <- []byte(msg.Payload)
 	}
 }

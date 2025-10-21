@@ -149,6 +149,47 @@ function drawEntities(startX: number, startY: number) {
             ctx.fillStyle = props.color;
             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
         }
+
+        // --- NEW: Render Chat Message ---
+        if (entity.lastChatMessage && entity.lastChatTimestamp) {
+            const CHAT_MESSAGE_DURATION = 5000; // 5 seconds
+            const timeSinceChat = Date.now() - entity.lastChatTimestamp;
+
+            if (timeSinceChat < CHAT_MESSAGE_DURATION) {
+                const fadeAlpha = 1.0 - (timeSinceChat / CHAT_MESSAGE_DURATION);
+                
+                ctx.font = "12px 'Inter', sans-serif";
+                ctx.textAlign = 'center';
+                ctx.fillStyle = `rgba(255, 255, 255, ${fadeAlpha})`;
+
+                // Simple word wrapping
+                const maxWidth = 150;
+                const words = entity.lastChatMessage.split(' ');
+                let line = '';
+                let yOffset = screenY - 10;
+                const lineHeight = 14;
+                const lines = [];
+
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    const testWidth = metrics.width;
+                    if (testWidth > maxWidth && n > 0) {
+                        lines.push(line);
+                        line = words[n] + ' ';
+                    } else {
+                        line = testLine;
+                    }
+                }
+                lines.push(line);
+                
+                // Draw the text lines, starting from the bottom up
+                for (let i = lines.length - 1; i >= 0; i--) {
+                    ctx.fillText(lines[i].trim(), screenX + TILE_SIZE / 2, yOffset);
+                    yOffset -= lineHeight;
+                }
+            }
+        }
     }
 }
 

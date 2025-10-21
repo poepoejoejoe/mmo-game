@@ -82,3 +82,10 @@ export function setInventory(inventory: Record<string, InventoryItem>) {
 export function setGear(gear: Record<string, InventoryItem>) {
     clientState.gear = gear;
 }
+
+export function setEntityChat(entityId: string, message: string) {
+    if (clientState.entities[entityId]) {
+        clientState.entities[entityId].lastChatMessage = message;
+        clientState.entities[entityId].lastChatTimestamp = Date.now();
+    }
+}

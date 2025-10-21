@@ -6,6 +6,8 @@ import (
 	"mmo-game/models"
 	"strconv"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // --- RENAMED ---
@@ -167,6 +169,39 @@ func IsWithinPickupRange(x1, y1, x2, y2 int) bool {
 	return dx <= 1 && dy <= 1
 }
 
+// GetEntitiesInRange uses Redis geospatial queries to find entities of a certain type
+// within a given tile radius of a central point (x, y).
+func GetEntitiesInRange(x, y, radius int, entityType EntityType) []string {
+	// Use the geo key for the correct zone (hardcoded to zone 0 for now)
+	geoKey := string(RedisKeyZone0Positions)
+
+	// Perform the search
+	locations, err := rdb.GeoRadius(ctx, geoKey, float64(x), float64(y), &redis.GeoRadiusQuery{
+		Radius:    TilesToKilometers(radius), // Convert tile radius to km
+		Unit:      "km",
+		WithDist:  false,
+		WithCoord: false,
+		Count:     0,     // Get all matches
+		Sort:      "ASC", // Sort by distance
+	}).Result()
+
+	if err != nil {
+		log.Printf("Error performing GeoRadius search: %v", err)
+		return []string{}
+	}
+
+	// Filter the results by entity type
+	var entityIDs []string
+	for _, location := range locations {
+		// The entity type is part of the key name (e.g., "player:uuid")
+		if EntityType(location.Name[0:len(entityType)]) == entityType {
+			entityIDs = append(entityIDs, location.Name)
+		}
+	}
+
+	return entityIDs
+}
+
 // GetWorldTile fetches a tile from Redis and unmarshals it and its properties.
 func GetWorldTile(x, y int) (*models.WorldTile, *TileProperties, error) {
 	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
@@ -204,6 +239,17 @@ func PublishUpdate(message interface{}) {
 	}
 	// Use Redis topic constant (if you add one, e.g., "world_updates")
 	rdb.Publish(ctx, "world_updates", string(jsonMsg))
+}
+
+// PublishToPlayer sends a message to a single player via the main Redis pub/sub channel.
+// The hub is responsible for decoding this and routing it to the correct client.
+func PublishToPlayer(playerID string, message []byte) {
+	wrappedMessage := map[string]interface{}{
+		"__private_message": true,
+		"targetId":          playerID,
+		"payload":           json.RawMessage(message),
+	}
+	PublishUpdate(wrappedMessage)
 }
 
 // TilesToKilometers converts a distance in game tiles to the approximate

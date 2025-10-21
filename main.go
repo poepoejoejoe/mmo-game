@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"math/rand"
 	"mmo-game/game"
@@ -12,12 +13,21 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/gorilla/websocket"
 )
 
 var rdb *redis.Client
 
 // HubInst is a global instance of the Hub.
 var HubInst *Hub
+
+// Client is a middleman between the websocket connection and the hub.
+type Client struct {
+	hub  *Hub
+	conn *websocket.Conn
+	id   string
+	send chan []byte
+}
 
 func nukeServerState() {
 	log.Println("Nuking ALL player data and tile locks from Redis...")
@@ -118,6 +128,7 @@ func main() {
 
 	HubInst = newHub()
 	go HubInst.run()
+	go subscribeToWorldUpdates()
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(HubInst, w, r)
@@ -143,6 +154,33 @@ func main() {
 	nukeServerState()
 
 	log.Println("Server gracefully stopped.")
+}
+
+// subscribeToWorldUpdates listens to the Redis "world_updates" channel,
+// inspects messages, and routes them to the hub appropriately.
+func subscribeToWorldUpdates() {
+	ctx := context.Background()
+	pubsub := rdb.Subscribe(ctx, "world_updates")
+	defer pubsub.Close()
+	ch := pubsub.Channel()
+
+	for msg := range ch {
+		// Attempt to decode the message to see if it's a private message
+		var privateMsg struct {
+			IsPrivate bool            `json:"__private_message"`
+			TargetID  string          `json:"targetId"`
+			Payload   json.RawMessage `json:"payload"`
+		}
+
+		// Try to unmarshal into the private message structure
+		if err := json.Unmarshal([]byte(msg.Payload), &privateMsg); err == nil && privateMsg.IsPrivate {
+			// It's a private message, send it directly to the target client
+			SendDirectMessage(privateMsg.TargetID, []byte(privateMsg.Payload))
+		} else {
+			// It's a public broadcast message, send to all clients
+			HubInst.broadcast <- []byte(msg.Payload)
+		}
+	}
 }
 
 func SendDirectMessage(playerID string, message []byte) {

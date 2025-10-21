@@ -6,6 +6,7 @@ import {
     EntityJoinedMessage,
     EntityLeftMessage,
     EntityMovedMessage,
+    PlayerChatMessage,
     PlayerStatsUpdateMessage,
     ResourceDamagedMessage, 
     ServerMessage, 
@@ -13,7 +14,7 @@ import {
     WorldUpdateMessage 
 } from './types';
 import * as state from './state';
-import { updateInventoryUI, updatePlayerHealth, updatePlayerIdDisplay } from './ui';
+import { addChatMessage, updateInventoryUI, updatePlayerHealth, updatePlayerIdDisplay } from './ui';
 import { showDamageIndicator } from './renderer';
 
 let ws: WebSocket;
@@ -99,6 +100,12 @@ function handleMessage(event: MessageEvent) {
         case 'player_stats_update': {
             const statsMsg = msg as PlayerStatsUpdateMessage;
             updatePlayerHealth(statsMsg.health, statsMsg.maxHealth);
+            break;
+        }
+        case 'player_chat': {
+            const chatMsg = msg as PlayerChatMessage;
+            addChatMessage(chatMsg.playerId, chatMsg.message); // Update the chat box UI
+            state.setEntityChat(chatMsg.playerId, chatMsg.message); // Update the entity's state for canvas rendering
             break;
         }
     }
