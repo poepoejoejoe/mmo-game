@@ -56,6 +56,7 @@ function handleMessage(event: MessageEvent) {
                 joinMsg.itemId,
                 joinMsg.owner,
                 joinMsg.createdAt,
+                joinMsg.publicAt,
             );
             break;
         }

@@ -13,6 +13,15 @@ import (
 
 // (FindOpenSpawnPoint remains the same)
 func FindOpenSpawnPoint(entityID string) (int, int) {
+	// --- For Testing ---
+	// If no players exist, spawn the first one at 0,0 for easy testing.
+	players, _ := rdb.Keys(ctx, string(RedisKeyPlayerPrefix)+"*").Result()
+	if len(players) == 0 {
+		log.Println("First player spawning at 0,0 for testing.")
+		return 0, 0
+	}
+	// --- End For Testing ---
+
 	startX := rand.Intn(WorldSize) - WorldSize/2
 	startY := rand.Intn(WorldSize) - WorldSize/2
 

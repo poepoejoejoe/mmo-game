@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"encoding/json"
 	"mmo-game/models"
 )
 
@@ -98,42 +97,24 @@ func cleanupAndDropLoot(npcID string, npcData map[string]string) {
 		x, _ := strconv.Atoi(npcData["x"])
 		y, _ := strconv.Atoi(npcData["y"])
 		for itemID, quantity := range loot {
-			dropID, createdAt, err := CreateWorldItem(x, y, itemID, quantity, ownerID, time.Minute*1)
+			dropID, createdAt, publicAt, err := CreateWorldItem(x, y, itemID, quantity, ownerID, time.Minute*1)
 			if err != nil {
-				log.Printf("Failed to create world item: %v", err)
+				log.Printf("Failed to create world item from loot: %v", err)
 				continue
 			}
 
-			// Announce the new item's arrival to the world
 			itemUpdate := map[string]interface{}{
 				"type":       string(ServerEventEntityJoined),
 				"entityId":   dropID,
 				"entityType": string(EntityTypeItem),
-				"itemId":     itemID,
+				"itemId":     string(itemID),
 				"x":          x,
 				"y":          y,
 				"owner":      ownerID,
 				"createdAt":  createdAt,
+				"publicAt":   publicAt,
 			}
-
-			if ownerID != "" {
-				// Send a direct message to the owner
-				jsonMsg, _ := json.Marshal(itemUpdate)
-				if sendDirectMessage != nil {
-					sendDirectMessage(ownerID, jsonMsg)
-				}
-
-				// Schedule a broadcast for when the item becomes public
-				time.AfterFunc(time.Minute, func() {
-					// Check if the item still exists before broadcasting
-					if rdb.Exists(ctx, dropID).Val() > 0 {
-						PublishUpdate(itemUpdate)
-					}
-				})
-			} else {
-				// If no owner, broadcast immediately
-				PublishUpdate(itemUpdate)
-			}
+			PublishUpdate(itemUpdate)
 		}
 	}
 }

@@ -129,9 +129,7 @@ function drawEntities(startX: number, startY: number) {
         
         // Visibility Rule:
         if (entity.type === 'item') {
-            const now = Date.now();
-            const age = now - (entity.createdAt || 0);
-            if (entity.owner && entity.owner !== myPlayerId && age < 60000) {
+            if (entity.owner && entity.owner !== myPlayerId && entity.publicAt && Date.now() < entity.publicAt) {
                 continue; // Skip rendering if it's owned by someone else and not yet public
             }
         }

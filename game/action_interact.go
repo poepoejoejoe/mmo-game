@@ -36,10 +36,11 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 		}
 
 		owner := targetData["owner"]
-		createdAt, _ := strconv.ParseInt(targetData["createdAt"], 10, 64)
-		isPublic := time.Now().UnixMilli()-createdAt >= 60000 // 1 minute
+		publicAt, _ := strconv.ParseInt(targetData["publicAt"], 10, 64)
 
-		if owner == playerID || isPublic || owner == "" {
+		isPublic := owner == "" || (publicAt > 0 && time.Now().UnixMilli() >= publicAt)
+
+		if owner == playerID || isPublic {
 			itemID := ItemID(targetData["itemId"])
 			quantity, _ := strconv.Atoi(targetData["quantity"])
 

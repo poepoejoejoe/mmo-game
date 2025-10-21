@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"mmo-game/models"
 	"strconv"
+	"time"
 )
 
 func GenerateWorld() {
@@ -47,19 +48,15 @@ func GenerateWorld() {
 	spawnTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeGround), Health: 0})
 	pipe.HSet(ctx, worldKey, "0,0", spawnTileJSON)
 
-	// --- For Testing: Place a fire and an item on it ---
-	fireTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeFire)})
-	pipe.HSet(ctx, worldKey, "3,3", fireTileJSON)
-	// --- End For Testing ---
-
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Fatalf("Failed to generate world: %v", err)
 	}
 
-	// --- For Testing: Place an item on the fire ---
+	// --- For Testing: Loot ownership ---
 	// This needs to be done after the pipeline executes
-	dropID, createdAt, err := CreateWorldItem(3, 3, ItemRatMeat, 1, "", 0)
+	// Public item for anyone to pickup
+	dropID, createdAt, publicAt, err := CreateWorldItem(1, 1, ItemWood, 1, "", 0)
 	if err != nil {
 		log.Printf("Failed to create test item: %v", err)
 	} else {
@@ -67,15 +64,34 @@ func GenerateWorld() {
 			"type":       string(ServerEventEntityJoined),
 			"entityId":   dropID,
 			"entityType": string(EntityTypeItem),
-			"itemId":     ItemRatMeat,
-			"x":          3,
-			"y":          3,
+			"itemId":     ItemWood,
+			"x":          1,
+			"y":          1,
 			"owner":      "",
 			"createdAt":  createdAt,
+			"publicAt":   publicAt,
 		}
 		PublishUpdate(itemUpdate)
 	}
-	// --- End For Testing ---
+
+	// owned item that will be public in 5 seconds
+	dropID, createdAt, publicAt, err = CreateWorldItem(2, 2, ItemStone, 1, "aplayer", 5*time.Second)
+	if err != nil {
+		log.Printf("Failed to create test item: %v", err)
+	} else {
+		itemUpdate := map[string]interface{}{
+			"type":       string(ServerEventEntityJoined),
+			"entityId":   dropID,
+			"entityType": string(EntityTypeItem),
+			"itemId":     ItemStone,
+			"x":          2,
+			"y":          2,
+			"owner":      "aplayer",
+			"createdAt":  createdAt,
+			"publicAt":   publicAt,
+		}
+		PublishUpdate(itemUpdate)
+	}
 
 	log.Println("World generation complete.")
 }

@@ -5,10 +5,11 @@ export interface EntityState {
     id?: string;
     x: number;
     y: number;
-    type: string;
+    type: 'player' | 'npc' | 'item';
     itemId?: string;
     owner?: string;
     createdAt?: number;
+    publicAt?: number;
 }
 
 export interface WorldTile {
@@ -56,10 +57,11 @@ export interface EntityJoinedMessage extends ServerMessage {
     entityId: string;    // <-- RENAMED
     x: number;
     y: number;
-    entityType: string;
+    entityType: 'player' | 'npc' | 'item';
     itemId?: string;
     owner?: string;
     createdAt?: number;
+    publicAt?: number;
 }
 
 // --- RENAMED and UPDATED ---

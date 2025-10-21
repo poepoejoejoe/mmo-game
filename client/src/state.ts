@@ -46,12 +46,12 @@ export function setEntityPosition(entityId: string, x: number, y: number) {
 }
 
 // --- UPDATED ---
-export function addEntity(entityId: string, x: number, y: number, type: string, itemId?: string, owner?: string, createdAt?: number) {
-    clientState.entities[entityId] = { x, y, type, itemId, owner, createdAt };
+export function addEntity(id: string, x: number, y: number, type: 'player' | 'npc' | 'item', itemId?: string, owner?: string, createdAt?: number, publicAt?: number) {
+    clientState.entities[id] = { x, y, type, itemId, owner, createdAt, publicAt };
 }
 
-export function removeEntity(entityId: string) {
-    delete clientState.entities[entityId];
+export function removeEntity(id: string) {
+    delete clientState.entities[id];
 }
 
 // (Other functions remain the same)
