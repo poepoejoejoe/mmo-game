@@ -16,10 +16,11 @@
     
     <div id="info-panel">
         <div id="player-coords">Connecting to server...</div>
+        <div id="build-mode-indicator" style="display: none;"></div>
         <div class="controls">
             <span>Use Arrow Keys or WASD to Move</span>
             <span>Left-click adjacent resources to gather</span>
-            <span>Press 'B' to enter/exit Build Mode</span>
+            <span>Press 'B' for Wall / 'F' for Fire to enter/exit Build Mode</span>
         </div>
         <div id="player-id"></div>
     </div>
@@ -41,6 +42,9 @@
             <h3>Crafting</h3>
             <button id="craft-wall-btn" disabled>
                 Craft Wall (10 Wood)
+            </button>
+            <button id="craft-fire-btn" disabled>
+                Craft Fire (10 Wood)
             </button>
         </div>
         

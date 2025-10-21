@@ -69,21 +69,46 @@ export const tileDefs: Record<string, TileProperties> = {
         maxHealth: 10,
         color: '#8a6d3b',
     },
+    'fire': {
+        isCollidable: false,
+        isGatherable: false,
+        isDestructible: false,
+        isBuildableOn: false,
+        movementPenalty: false,
+        maxHealth: 0,
+        color: '#FF4500',
+    },
 };
 
 /**
  * Helper function to safely get tile properties, defaulting to 'void'.
  */
 export function getTileProperties(type: string): TileProperties {
-    return tileDefs[type] || tileDefs['void'];
+	switch (type) {
+		case 'ground':
+			return { color: '#6B8E23', isCollidable: false, isBuildableOn: true, isGatherable: false, isDestructible: false, movementPenalty: false, maxHealth: 0 };
+		case 'water':
+			return { color: '#4682B4', isCollidable: false, movementPenalty: true, isBuildableOn: false, isGatherable: false, isDestructible: false, maxHealth: 0 };
+		case 'tree':
+			return { color: '#228B22', isCollidable: true, isGatherable: true, maxHealth: 2, isDestructible: false, isBuildableOn: false, movementPenalty: false };
+		case 'rock':
+			return { color: '#A9A9A9', isCollidable: true, isGatherable: true, maxHealth: 4, isDestructible: false, isBuildableOn: false, movementPenalty: false };
+		case 'wooden_wall':
+			return { color: '#A0522D', isCollidable: true, isDestructible: true, maxHealth: 10, isGatherable: false, isBuildableOn: false, movementPenalty: false };
+		case 'fire':
+			return { color: '#FF4500', isCollidable: false, isGatherable: false, isDestructible: false, isBuildableOn: false, movementPenalty: false, maxHealth: 0 };
+		default:
+			return { color: '#708090', isCollidable: false, isBuildableOn: false, isGatherable: false, isDestructible: false, movementPenalty: false, maxHealth: 0 };
+	}
 }
 
 export const itemDefinitions: { [key: string]: { character: string, color: string } } = {
     'wood': { character: 'W', color: '#8B4513' },
     'stone': { character: 'S', color: '#808080' },
-    'goop': { character: 'G', color: '#00FF00' },
-    'rat_meat': { character: 'M', color: '#FF0000' },
-    'treasure_map': { character: 'M', color: '#FFFF00' },
+    'goop': { character: 'G', color: '#90EE90' },
+    'rat_meat': { character: 'M', color: '#DC143C' },
+    'treasure_map': { character: 'M', color: '#FFD700' },
+    'fire': { character: 'F', color: '#FF4500' },
     'default': { character: '?', color: '#FFFFFF' },
 };
 

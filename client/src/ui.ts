@@ -5,9 +5,11 @@ let cooldownBar: HTMLDivElement;
 let cooldownText: HTMLElement;
 let inventorySlotsEl: HTMLElement;
 let craftWallBtn: HTMLButtonElement;
+let craftFireBtn: HTMLButtonElement;
 let gameCanvas: HTMLElement;
 let healthBar: HTMLDivElement;
 let healthText: HTMLElement;
+let buildModeIndicator: HTMLElement;
 
 export function initializeUI() {
     playerIdEl = document.getElementById('player-id')!;
@@ -15,9 +17,11 @@ export function initializeUI() {
     cooldownText = document.getElementById('cooldown-text')!;
     inventorySlotsEl = document.getElementById('inventory-slots')!;
     craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
+    craftFireBtn = document.getElementById('craft-fire-btn') as HTMLButtonElement;
     gameCanvas = document.getElementById('game-canvas')!;
     healthBar = document.getElementById('health-bar') as HTMLDivElement;
     healthText = document.getElementById('health-text')!;
+    buildModeIndicator = document.getElementById('build-mode-indicator')!;
 }
 
 export function startCooldown(duration: number): void {
@@ -41,6 +45,7 @@ export function updateCraftingUI(): void {
         }
     }
     craftWallBtn.disabled = woodCount < 10;
+    craftFireBtn.disabled = woodCount < 10;
 }
 
 export function updateInventoryUI(): void {
@@ -65,11 +70,14 @@ export function updateInventoryUI(): void {
     updateCraftingUI();
 }
 
-export function setBuildModeActive(isActive: boolean): void {
-    if (isActive) {
+export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {
+    if (isActive && buildItem) {
         gameCanvas.classList.add('build-mode');
+        buildModeIndicator.textContent = `Building: ${buildItem.replace('_', ' ')}`;
+        buildModeIndicator.style.display = 'block';
     } else {
         gameCanvas.classList.remove('build-mode');
+        buildModeIndicator.style.display = 'none';
     }
 }
 

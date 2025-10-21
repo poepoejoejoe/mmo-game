@@ -27,6 +27,7 @@ const (
 	TileTypeTree       TileType = "tree"
 	TileTypeRock       TileType = "rock"
 	TileTypeWoodenWall TileType = "wooden_wall"
+	TileTypeFire       TileType = "fire"
 )
 
 // ItemID defines the unique identifier for an item.
@@ -39,6 +40,7 @@ const (
 	ItemGoop        ItemID = "goop"
 	ItemRatMeat     ItemID = "rat_meat"
 	ItemTreasureMap ItemID = "treasure_map"
+	ItemFire        ItemID = "fire"
 )
 
 // ItemProperties defines the static properties of an item type.
@@ -117,6 +119,9 @@ type TileProperties struct {
 	MovementPenalty bool
 	GatherResource  ItemID // Use new type
 	MaxHealth       int
+	Damage          int
+	DamageInterval  int64
+	Duration        int64
 }
 
 // --- NEW ---
@@ -225,6 +230,10 @@ func init() {
 		Stackable: false,
 		MaxStack:  1,
 	}
+	ItemDefs[ItemFire] = ItemProperties{
+		Stackable: true,
+		MaxStack:  10,
+	}
 
 	// --- Tile Definitions (USING CONSTANTS) ---
 	TileDefs[TileTypeGround] = TileProperties{
@@ -252,9 +261,20 @@ func init() {
 		IsDestructible: true,
 		MaxHealth:      10,
 	}
+	TileDefs[TileTypeFire] = TileProperties{
+		IsCollidable:   false,
+		IsBuildableOn:  false,
+		Damage:         1,
+		DamageInterval: 1000,   // 1 second
+		Duration:       120000, // 2 minutes
+	}
 
 	// --- Recipe Definitions (USING CONSTANTS) ---
 	RecipeDefs[ItemWoodenWall] = Recipe{
+		Ingredients: map[ItemID]int{ItemWood: 10},
+		Yield:       1,
+	}
+	RecipeDefs[ItemFire] = Recipe{
 		Ingredients: map[ItemID]int{ItemWood: 10},
 		Yield:       1,
 	}

@@ -10,9 +10,10 @@ import (
 )
 
 // CreateWorldItem places a new item into the world at a specific location.
-func CreateWorldItem(x, y int, itemID ItemID, quantity int, ownerID string, expiry time.Duration) (string, error) {
+func CreateWorldItem(x, y int, itemID ItemID, quantity int, ownerID string, expiry time.Duration) (string, int64, error) {
 	// Generate a unique ID for the item drop
 	dropID := string(ItemPrefix) + utils.GenerateUniqueID()
+	createdAt := time.Now().UnixMilli()
 
 	pipe := rdb.Pipeline()
 
@@ -24,7 +25,7 @@ func CreateWorldItem(x, y int, itemID ItemID, quantity int, ownerID string, expi
 		"x", x,
 		"y", y,
 		"owner", ownerID, // The player who gets initial access to it
-		"createdAt", time.Now().UnixMilli(),
+		"createdAt", createdAt,
 	)
 
 	// Add to geospatial index for quick lookups
@@ -44,11 +45,11 @@ func CreateWorldItem(x, y int, itemID ItemID, quantity int, ownerID string, expi
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Failed to create world item %s: %v", itemID, err)
-		return "", err
+		return "", 0, err
 	}
 
 	log.Printf("Created world item %s at (%d, %d)", itemID, x, y)
-	return dropID, nil
+	return dropID, createdAt, nil
 }
 
 // generateLoot determines what loot to drop based on the NPC's loot table.

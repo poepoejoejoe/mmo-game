@@ -25,6 +25,10 @@ func Init(redisClient *redis.Client, directMessageFunc SendDirectMessageFunc) {
 	loadScripts()
 }
 
+func StartDamageSystem() {
+	handleFireDamage()
+}
+
 func loadScripts() {
 	// This script safely releases a lock only if the entityID matches.
 	luaScript := `

@@ -6,13 +6,17 @@ import { getEntityProperties, getTileProperties } from './definitions';
 
 const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
+const craftFireBtn = document.getElementById('craft-fire-btn') as HTMLButtonElement;
 let canPerformAction = true;
 let isBuildMode = false;
+let buildItem: 'wooden_wall' | 'fire' | null = null;
 
 // State for continuous interaction
 let interactionInterval: number | null = null;
 let moveInterval: number | null = null;
 const pressedKeys: string[] = [];
+let isMouseDown = false;
+let lastMouseEvent: MouseEvent | null = null;
 
 /**
  * A reusable function that performs a single interaction check and network send.
@@ -21,29 +25,31 @@ const pressedKeys: string[] = [];
  * @param {number} tileY The world y-coordinate of the target tile.
  */
 function performInteraction(tileX: number, tileY: number) {
-    if (!canPerformAction || !state.getMyEntity()) return; // <-- UPDATED
+    if (!canPerformAction || !state.getMyEntity()) return;
 
-    const me = state.getMyEntity()!; // <-- UPDATED
-    // Check adjacency for any mouse action
-    if (Math.abs(me.x - tileX) + Math.abs(me.y - tileY) !== 1) return;
+    const me = state.getMyEntity()!;
 
     // Logic for Build Mode
-    if (isBuildMode) {
+    if (isBuildMode && buildItem) {
+        if (Math.max(Math.abs(me.x - tileX), Math.abs(me.y - tileY)) !== 1) return;
+
         const inventory = state.getState().inventory;
-        const wallCount = Object.values(inventory)
-            .filter(item => item?.id === 'wooden_wall')
+        const itemCount = Object.values(inventory)
+            .filter(item => item?.id === buildItem)
             .reduce((sum, item) => sum + item.quantity, 0);
-        if (wallCount < 1) return; // Not enough walls
+
+        if (itemCount < 1) return;
         
         const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
         if (!targetTileProps.isBuildableOn) return; // Can't build here
 
         startActionCooldown(ACTION_COOLDOWN);
-        network.send({ type: 'place_item', payload: { item: 'wooden_wall', x: tileX, y: tileY } });
+        network.send({ type: 'place_item', payload: { item: buildItem, x: tileX, y: tileY } });
 
     } 
     // Logic for Gather/Interact Mode
     else {
+        if (Math.abs(me.x - tileX) + Math.abs(me.y - tileY) !== 1) return;
         // --- NEW: Check for item pickup first ---
         const entities = state.getState().entities;
         let itemOnTileId: string | undefined;
@@ -134,11 +140,35 @@ function updateMovement() {
     moveInterval = setInterval(() => sendMoveCommand(dx, dy), ACTION_COOLDOWN + 50);
 }
 
+function handleMouseMove(e: MouseEvent) {
+    if (isMouseDown) {
+        lastMouseEvent = e;
+    }
+}
+
 function handleKeyDown(e: KeyboardEvent) {
     // Toggle build mode
     if (e.key === 'b') {
-        isBuildMode = !isBuildMode;
-        setBuildModeActive(isBuildMode);
+        if (buildItem === 'wooden_wall') {
+            isBuildMode = false;
+            buildItem = null;
+        } else {
+            isBuildMode = true;
+            buildItem = 'wooden_wall';
+        }
+        setBuildModeActive(isBuildMode, buildItem);
+        return;
+    }
+
+    if (e.key === 'f') {
+        if (buildItem === 'fire') {
+            isBuildMode = false;
+            buildItem = null;
+        } else {
+            isBuildMode = true;
+            buildItem = 'fire';
+        }
+        setBuildModeActive(isBuildMode, buildItem);
         return;
     }
 
@@ -159,76 +189,103 @@ function handleKeyUp(e: KeyboardEvent) {
     }
 }
 
-function handleMouseDown(e: MouseEvent) {
-    if (e.button !== 0 && e.button !== 2) return; // Only respond to left or right-click
+function handleInteractionLogic() {
+    if (!lastMouseEvent || !canPerformAction || !state.getMyEntity()) return;
 
-    const tryInteraction = () => {
-        const me = state.getMyEntity();
-        if (!me) return;
+    const me = state.getMyEntity()!;
+    const rect = gameCanvas.getBoundingClientRect();
+    const scaleX = gameCanvas.width / rect.width;
+    const scaleY = gameCanvas.height / rect.height;
+    const canvasX = (lastMouseEvent.clientX - rect.left) * scaleX;
+    const canvasY = (lastMouseEvent.clientY - rect.top) * scaleY;
+    const tileGridX = Math.floor(canvasX / TILE_SIZE);
+    const tileGridY = Math.floor(canvasY / TILE_SIZE);
+    const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
+    const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
+    const tileX = tileGridX + startX;
+    const tileY = tileGridY + startY;
 
-        const rect = gameCanvas.getBoundingClientRect();
-        const scaleX = gameCanvas.width / rect.width;
-        const scaleY = gameCanvas.height / rect.height;
+    // --- Build Mode Logic ---
+    if (isBuildMode && buildItem) {
+        if (Math.max(Math.abs(me.x - tileX), Math.abs(me.y - tileY)) !== 1) return;
 
-        const canvasX = (e.clientX - rect.left) * scaleX;
-        const canvasY = (e.clientY - rect.top) * scaleY;
+        const inventory = state.getState().inventory;
+        const itemCount = Object.values(inventory)
+            .filter(item => item?.id === buildItem)
+            .reduce((sum, item) => sum + item.quantity, 0);
 
-        const tileGridX = Math.floor(canvasX / TILE_SIZE);
-        const tileGridY = Math.floor(canvasY / TILE_SIZE);
-
-        const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
-        const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
-
-        const tileX = tileGridX + startX;
-        const tileY = tileGridY + startY;
-
-        // --- NEW: Combat Logic ---
-        const entities = state.getState().entities;
-        let targetEntityId: string | undefined;
-        for (const id in entities) {
-            const entity = entities[id];
-            if (entity.x === tileX && entity.y === tileY) {
-                targetEntityId = id;
-                break;
-            }
-        }
-
-        if (targetEntityId) {
-            const targetEntity = entities[targetEntityId];
-            const myPlayerId = state.getState().playerId;
-            const targetEntityProps = getEntityProperties(targetEntity.type, targetEntityId, myPlayerId);
-
-            if (targetEntityProps.isAttackable) {
-                if (!canPerformAction) return;
-
-                // Check adjacency for attack
-                if (Math.abs(me.x - targetEntity.x) + Math.abs(me.y - targetEntity.y) !== 1) {
-                    // Maybe pathfind towards it later, for now just do nothing if not adjacent
-                    return;
-                }
-
-                startActionCooldown(ACTION_COOLDOWN);
-                network.send({ type: 'attack', payload: { entityId: targetEntityId } });
-                return; // Stop further processing
-            }
-        }
+        if (itemCount < 1) return;
         
-        // Fallback to tile interaction only for left-click
-        if (e.button === 0) {
-            performInteraction(tileX, tileY);
-        }
-    };
+        const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
+        if (!targetTileProps.isBuildableOn) return;
 
-    tryInteraction(); // Fire once immediately on click
+        startActionCooldown(ACTION_COOLDOWN);
+        network.send({ type: 'place_item', payload: { item: buildItem, x: tileX, y: tileY } });
+        return;
+    }
+
+    // --- Interaction Logic (Attack, Pickup, Gather) ---
+    const entities = state.getState().entities;
+    let attackableEntityId: string | undefined;
+    let itemOnTileId: string | undefined;
+
+    for (const id in entities) {
+        const e = entities[id];
+        if (e.x === tileX && e.y === tileY) {
+            if (e.type === 'item') {
+                itemOnTileId = id;
+            } else {
+                const myPlayerId = state.getState().playerId;
+                if(myPlayerId) {
+                    const props = getEntityProperties(e.type, id, myPlayerId);
+                    if (props.isAttackable) {
+                        attackableEntityId = id;
+                    }
+                }
+            }
+        }
+    }
     
-    // Only set up interval for left-click
-    if (e.button === 0) {
-        // Then set an interval to repeat the action while the mouse is held down
-        interactionInterval = setInterval(tryInteraction, ACTION_COOLDOWN + 50);
+    // Priority 1: Attack
+    if (attackableEntityId) {
+        if (Math.abs(me.x - tileX) + Math.abs(me.y - tileY) !== 1) return;
+        startActionCooldown(ACTION_COOLDOWN);
+        network.send({ type: 'attack', payload: { entityId: attackableEntityId } });
+        return;
+    }
+
+    // Priority 2: Pick up item
+    if (itemOnTileId) {
+        if (Math.max(Math.abs(me.x - tileX), Math.abs(me.y - tileY)) > 1) return;
+        startActionCooldown(ACTION_COOLDOWN);
+        network.send({ type: 'interact', payload: { entityId: itemOnTileId } });
+        return;
+    }
+
+    // Priority 3: Gather resource
+    const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
+    if (targetTileProps.isGatherable || targetTileProps.isDestructible) {
+        if (Math.abs(me.x - tileX) + Math.abs(me.y - tileY) !== 1) return;
+        const cooldown = targetTileProps.movementPenalty ? WATER_PENALTY : ACTION_COOLDOWN;
+        startActionCooldown(cooldown);
+        network.send({ type: 'interact', payload: { x: tileX, y: tileY } });
     }
 }
 
+function handleMouseDown(e: MouseEvent) {
+    if (e.button !== 0) return; // Only respond to left-click for interactions
+
+    isMouseDown = true;
+    lastMouseEvent = e;
+
+    handleInteractionLogic();
+    
+    interactionInterval = setInterval(handleInteractionLogic, ACTION_COOLDOWN + 50);
+}
+
 function handleMouseUpOrLeave() {
+    isMouseDown = false;
+    lastMouseEvent = null;
     // When the mouse is released or leaves the canvas, stop the continuous interaction
     if (interactionInterval) {
         clearInterval(interactionInterval);
@@ -251,6 +308,7 @@ export function initializeInput() {
 
     // Replace the single 'click' listener with more detailed mouse events for click-and-hold
     gameCanvas.addEventListener('mousedown', handleMouseDown);
+    gameCanvas.addEventListener('mousemove', handleMouseMove);
     // Listen on the whole window to ensure we always catch the mouseup event
     window.addEventListener('mouseup', handleMouseUpOrLeave);
     gameCanvas.addEventListener('mouseleave', handleMouseUpOrLeave);
@@ -259,6 +317,12 @@ export function initializeInput() {
         if (!canPerformAction || craftWallBtn.disabled) return;
         startActionCooldown(ACTION_COOLDOWN);
         network.send({ type: 'craft', payload: { item: 'wooden_wall' } });
+    });
+
+    craftFireBtn.addEventListener('click', () => {
+        if (!canPerformAction || craftFireBtn.disabled) return;
+        startActionCooldown(ACTION_COOLDOWN);
+        network.send({ type: 'craft', payload: { item: 'fire' } });
     });
 }
 

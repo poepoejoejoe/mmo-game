@@ -47,9 +47,35 @@ func GenerateWorld() {
 	spawnTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeGround), Health: 0})
 	pipe.HSet(ctx, worldKey, "0,0", spawnTileJSON)
 
+	// --- For Testing: Place a fire and an item on it ---
+	fireTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeFire)})
+	pipe.HSet(ctx, worldKey, "3,3", fireTileJSON)
+	// --- End For Testing ---
+
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Fatalf("Failed to generate world: %v", err)
 	}
+
+	// --- For Testing: Place an item on the fire ---
+	// This needs to be done after the pipeline executes
+	dropID, createdAt, err := CreateWorldItem(3, 3, ItemRatMeat, 1, "", 0)
+	if err != nil {
+		log.Printf("Failed to create test item: %v", err)
+	} else {
+		itemUpdate := map[string]interface{}{
+			"type":       string(ServerEventEntityJoined),
+			"entityId":   dropID,
+			"entityType": string(EntityTypeItem),
+			"itemId":     ItemRatMeat,
+			"x":          3,
+			"y":          3,
+			"owner":      "",
+			"createdAt":  createdAt,
+		}
+		PublishUpdate(itemUpdate)
+	}
+	// --- End For Testing ---
+
 	log.Println("World generation complete.")
 }

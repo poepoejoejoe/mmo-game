@@ -2,6 +2,7 @@
 // It ensures that both we and the LLM know the exact shape of our objects.
 
 export interface EntityState {
+    id?: string;
     x: number;
     y: number;
     type: string;
@@ -57,6 +58,8 @@ export interface EntityJoinedMessage extends ServerMessage {
     y: number;
     entityType: string;
     itemId?: string;
+    owner?: string;
+    createdAt?: number;
 }
 
 // --- RENAMED and UPDATED ---

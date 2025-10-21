@@ -67,9 +67,18 @@ function drawWorld(startX: number, startY: number) {
             const tileProps = getTileProperties(tileData.type);
             ctx.fillStyle = tileProps.color;
             ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            if (tileProps.maxHealth > 0 && tileData.health < tileProps.maxHealth) {
-                if (tileData.health <= 0) {
-                } else {
+
+			if (tileData.type === 'fire') {
+                const flicker = Math.random() * 0.4 - 0.2;
+                ctx.fillStyle = `rgba(255, ${100 + flicker * 50}, 0, ${0.5 + flicker})`;
+                ctx.beginPath();
+                ctx.arc(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2, TILE_SIZE / 3 + flicker * 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+			if (tileProps.maxHealth > 0 && tileData.health < tileProps.maxHealth) {
+				if (tileData.health <= 0) {
+				} else {
                     const crackIndex = Math.min(
                         crackImages.length - 1, 
                         Math.floor((1 - (tileData.health / tileProps.maxHealth)) * (crackImages.length - 1))

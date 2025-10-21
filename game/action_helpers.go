@@ -143,6 +143,30 @@ func IsAdjacent(x1, y1, x2, y2 int) bool {
 	return distSq == 1
 }
 
+func IsAdjacentOrDiagonal(x1, y1, x2, y2 int) bool {
+	dx := x1 - x2
+	if dx < 0 {
+		dx = -dx
+	}
+	dy := y1 - y2
+	if dy < 0 {
+		dy = -dy
+	}
+	return dx <= 1 && dy <= 1 && (dx != 0 || dy != 0)
+}
+
+func IsWithinPickupRange(x1, y1, x2, y2 int) bool {
+	dx := x1 - x2
+	if dx < 0 {
+		dx = -dx
+	}
+	dy := y1 - y2
+	if dy < 0 {
+		dy = -dy
+	}
+	return dx <= 1 && dy <= 1
+}
+
 // GetWorldTile fetches a tile from Redis and unmarshals it and its properties.
 func GetWorldTile(x, y int) (*models.WorldTile, *TileProperties, error) {
 	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)

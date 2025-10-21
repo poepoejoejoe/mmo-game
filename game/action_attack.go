@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"encoding/json"
 	"mmo-game/models"
 )
 
@@ -42,6 +43,9 @@ func ProcessAttack(playerID string, targetEntityID string) {
 	// For now, let's say every attack does 1 damage.
 	damage := 1
 
+	damageDealtKey := "npc:" + targetEntityID + ":damage_dealt"
+	rdb.HIncrBy(ctx, damageDealtKey, playerID, int64(damage))
+
 	// HIncrBy is atomic, safer than Get->calculate->Set
 	newHealth, err := rdb.HIncrBy(ctx, targetEntityID, "health", int64(-damage)).Result()
 	if err != nil {
@@ -60,7 +64,7 @@ func ProcessAttack(playerID string, targetEntityID string) {
 	} else {
 		// Entity is defeated
 		log.Printf("Entity %s defeated.", targetEntityID)
-		cleanupAndDropLoot(playerID, targetEntityID, targetData)
+		cleanupAndDropLoot(targetEntityID, targetData)
 	}
 
 	// We'll use a standard action cooldown.
@@ -68,8 +72,24 @@ func ProcessAttack(playerID string, targetEntityID string) {
 	rdb.HSet(ctx, playerID, "nextActionAt", nextActionTime)
 }
 
-func cleanupAndDropLoot(playerID string, npcID string, npcData map[string]string) {
+func cleanupAndDropLoot(npcID string, npcData map[string]string) {
 	CleanupEntity(npcID, npcData)
+
+	damageDealtKey := "npc:" + npcID + ":damage_dealt"
+	damageData, err := rdb.HGetAll(ctx, damageDealtKey).Result()
+	var ownerID string = ""
+	var maxDamage int64 = 0
+
+	if err == nil && len(damageData) > 0 {
+		for player, damageStr := range damageData {
+			damage, _ := strconv.ParseInt(damageStr, 10, 64)
+			if damage > maxDamage {
+				maxDamage = damage
+				ownerID = player
+			}
+		}
+	}
+	rdb.Del(ctx, damageDealtKey)
 
 	npcType := NPCType(npcData["npcType"])
 	loot := generateLoot(npcType)
@@ -78,7 +98,7 @@ func cleanupAndDropLoot(playerID string, npcID string, npcData map[string]string
 		x, _ := strconv.Atoi(npcData["x"])
 		y, _ := strconv.Atoi(npcData["y"])
 		for itemID, quantity := range loot {
-			dropID, err := CreateWorldItem(x, y, itemID, quantity, playerID, time.Minute*1)
+			dropID, createdAt, err := CreateWorldItem(x, y, itemID, quantity, ownerID, time.Minute*1)
 			if err != nil {
 				log.Printf("Failed to create world item: %v", err)
 				continue
@@ -92,10 +112,28 @@ func cleanupAndDropLoot(playerID string, npcID string, npcData map[string]string
 				"itemId":     itemID,
 				"x":          x,
 				"y":          y,
+				"owner":      ownerID,
+				"createdAt":  createdAt,
 			}
-			// For now, we will broadcast all drops.
-			// TODO: only send to owner if one exists.
-			PublishUpdate(itemUpdate)
+
+			if ownerID != "" {
+				// Send a direct message to the owner
+				jsonMsg, _ := json.Marshal(itemUpdate)
+				if sendDirectMessage != nil {
+					sendDirectMessage(ownerID, jsonMsg)
+				}
+
+				// Schedule a broadcast for when the item becomes public
+				time.AfterFunc(time.Minute, func() {
+					// Check if the item still exists before broadcasting
+					if rdb.Exists(ctx, dropID).Val() > 0 {
+						PublishUpdate(itemUpdate)
+					}
+				})
+			} else {
+				// If no owner, broadcast immediately
+				PublishUpdate(itemUpdate)
+			}
 		}
 	}
 }

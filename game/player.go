@@ -103,17 +103,37 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 			continue
 		}
 
-		entityType := entityData["entityType"] // "player" or "npc"
+		entityType := entityData["entityType"]
+
+		// --- NEW: Item Visibility Logic ---
+		if entityType == string(EntityTypeItem) {
+			owner := entityData["owner"]
+			createdAt, _ := strconv.ParseInt(entityData["createdAt"], 10, 64)
+			isPublic := time.Now().UnixMilli()-createdAt >= 60000
+
+			if owner != "" && owner != playerID && !isPublic {
+				continue // Don't include this item in the initial state
+			}
+		}
+		// --- END NEW ---
+
 		// If it's an NPC, use its more specific type
 		if npcType, ok := entityData["npcType"]; ok && entityType == string(EntityTypeNPC) {
 			entityType = npcType // e.g., "slime"
 		}
 
-		allEntitiesState[loc.Name] = models.EntityState{
+		entityState := models.EntityState{
 			X:    int(loc.Longitude),
 			Y:    int(loc.Latitude),
-			Type: entityType, // Send the specific type
+			Type: entityType,
 		}
+		if entityType == string(EntityTypeItem) {
+			createdAt, _ := strconv.ParseInt(entityData["createdAt"], 10, 64)
+			entityState.ItemID = entityData["itemId"]
+			entityState.Owner = entityData["owner"]
+			entityState.CreatedAt = createdAt
+		}
+		allEntitiesState[loc.Name] = entityState
 	}
 	// --- END UPDATE ---
 
