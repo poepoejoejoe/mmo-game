@@ -1,15 +1,261 @@
 package game
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"log"
-	"math/rand"
+	mrand "math/rand"
 	"mmo-game/models"
 	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 )
+
+func generateSecretKey() (string, error) {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+func LoginPlayer(secretKey string) (string, *models.InitialStateMessage) {
+	if secretKey == "" {
+		// This is a guest login.
+		playerID := string(RedisKeyPlayerPrefix) + uuid.New().String()
+		log.Printf("New guest player connecting. Assigning temporary ID: %s", playerID)
+		initialState := InitializePlayer(playerID)
+		return playerID, initialState
+	}
+
+	// This is a returning player.
+	playerID, err := rdb.Get(ctx, string(RedisKeySecretPrefix)+secretKey).Result()
+	if err == redis.Nil {
+		// The key is invalid. Treat them as a new guest.
+		log.Printf("Invalid secret key received. Treating as new guest.")
+		playerID := string(RedisKeyPlayerPrefix) + uuid.New().String()
+		initialState := InitializePlayer(playerID)
+		return playerID, initialState
+	} else if err != nil {
+		log.Printf("Error retrieving player ID from secret key: %v", err)
+		return "", nil
+	}
+
+	log.Printf("Player %s reconnecting with secret key.", playerID)
+
+	// --- NEW: Add player back to the world and announce their arrival ---
+	// Get player's state before announcing their return
+	initialState := getPlayerState(playerID)
+	if initialState != nil {
+		if playerEntityState, ok := initialState.Entities[playerID]; ok {
+			// Announce the player's return to everyone else
+			updateMsg := map[string]interface{}{
+				"type":       string(ServerEventEntityJoined),
+				"entityId":   playerID,
+				"x":          playerEntityState.X,
+				"y":          playerEntityState.Y,
+				"entityType": string(EntityTypePlayer),
+				"name":       playerEntityState.Name,
+			}
+			PublishUpdate(updateMsg)
+
+			// Also add them back to the geospatial index
+			rdb.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
+				Name:      playerID,
+				Longitude: float64(playerEntityState.X),
+				Latitude:  float64(playerEntityState.Y),
+			})
+		}
+	}
+	// --- END NEW ---
+
+	return playerID, initialState
+}
+
+func RegisterPlayer(playerID string, name string) (*models.RegisteredMessage, *models.InitialStateMessage) {
+	// 1. Validate the name (basic validation for now)
+	if len(name) < 3 || len(name) > 15 {
+		// Maybe send an error message back to the client in the future.
+		log.Printf("Player %s tried to register with invalid name: %s", playerID, name)
+		return nil, nil
+	}
+
+	// 2. Generate a new secret key
+	secretKey, err := generateSecretKey()
+	if err != nil {
+		log.Printf("Failed to generate secret key for player %s: %v", playerID, err)
+		return nil, nil
+	}
+
+	// 3. Update the player's data in Redis
+	pipe := rdb.Pipeline()
+	pipe.HSet(ctx, playerID, "name", name)
+	pipe.Set(ctx, string(RedisKeySecretPrefix)+secretKey, playerID, 0) // No expiration for now
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		log.Printf("Failed to save registered player data for %s: %v", playerID, err)
+		return nil, nil
+	}
+
+	log.Printf("Player %s has registered with name %s", playerID, name)
+
+	// 4. Create the confirmation message
+	registeredMsg := &models.RegisteredMessage{
+		Type:      string(ServerEventRegistered),
+		SecretKey: secretKey,
+		PlayerID:  playerID,
+		Name:      name,
+	}
+
+	// 5. Get the current full state to send to the new player
+	initialState := getPlayerState(playerID)
+
+	// 6. Announce the player's "real" name to the world
+	updateMsg := map[string]interface{}{
+		"type":     string(ServerEventEntityJoined),
+		"entityId": playerID,
+		"name":     name,
+		// We also need to send x and y, so let's fetch them.
+		"x":          initialState.Entities[playerID].X,
+		"y":          initialState.Entities[playerID].Y,
+		"entityType": string(EntityTypePlayer),
+	}
+	PublishUpdate(updateMsg)
+
+	return registeredMsg, initialState
+}
+
+// getPlayerState is a helper function to gather the full world state for a player.
+func getPlayerState(playerID string) *models.InitialStateMessage {
+	playerData, _ := rdb.HGetAll(ctx, playerID).Result()
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
+	gearKey := string(RedisKeyPlayerGear) + playerID
+
+	// Use a large radius to find all entities in the zone.
+	locations, _ := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), 0, 0, &redis.GeoRadiusQuery{
+		Radius:    TilesToKilometers(WorldSize), // Search the entire world
+		Unit:      "km",
+		WithCoord: true,
+	}).Result()
+	allEntitiesState := make(map[string]models.EntityState)
+
+	for _, loc := range locations {
+		entityData, err := rdb.HGetAll(ctx, loc.Name).Result()
+		if err != nil {
+			continue
+		}
+
+		entityType := entityData["entityType"]
+
+		if entityType == string(EntityTypeItem) {
+			owner := entityData["owner"]
+			createdAt, _ := strconv.ParseInt(entityData["createdAt"], 10, 64)
+			isPublic := time.Now().UnixMilli()-createdAt >= 60000
+
+			if owner != "" && owner != playerID && !isPublic {
+				continue
+			}
+		}
+
+		if npcType, ok := entityData["npcType"]; ok && entityType == string(EntityTypeNPC) {
+			entityType = npcType
+		}
+
+		entityState := models.EntityState{
+			X:    int(loc.Longitude),
+			Y:    int(loc.Latitude),
+			Type: entityType,
+		}
+
+		if name, ok := entityData["name"]; ok {
+			entityState.Name = name
+		}
+
+		if entityType == string(EntityTypeItem) {
+			createdAt, _ := strconv.ParseInt(entityData["createdAt"], 10, 64)
+			entityState.ItemID = entityData["itemId"]
+			entityState.Owner = entityData["owner"]
+			entityState.CreatedAt = createdAt
+		}
+		allEntitiesState[loc.Name] = entityState
+	}
+
+	// --- NEW: Ensure the player's own entity is included ---
+	// This is crucial because the player might not be in the GeoRadius result
+	// if they are reconnecting after a cleanup.
+	if _, ok := allEntitiesState[playerID]; !ok {
+		playerEntityData, err := rdb.HGetAll(ctx, playerID).Result()
+		if err == nil {
+			x, _ := strconv.Atoi(playerEntityData["x"])
+			y, _ := strconv.Atoi(playerEntityData["y"])
+			entityState := models.EntityState{
+				X:    x,
+				Y:    y,
+				Type: playerEntityData["entityType"],
+				Name: playerEntityData["name"],
+			}
+			allEntitiesState[playerID] = entityState
+		}
+	}
+	// --- END NEW ---
+
+	worldDataRaw, _ := rdb.HGetAll(ctx, string(RedisKeyWorldZone0)).Result()
+	worldDataTyped := make(map[string]models.WorldTile)
+	for coord, tileJSON := range worldDataRaw {
+		var tile models.WorldTile
+		json.Unmarshal([]byte(tileJSON), &tile)
+		worldDataTyped[coord] = tile
+	}
+
+	inventoryDataRaw, _ := rdb.HGetAll(ctx, inventoryKey).Result()
+	inventoryDataTyped := make(map[string]models.Item)
+	for slot, itemJSON := range inventoryDataRaw {
+		if itemJSON == "" {
+			continue
+		}
+		var item models.Item
+		json.Unmarshal([]byte(itemJSON), &item)
+		inventoryDataTyped[slot] = item
+	}
+
+	gearDataRaw, _ := rdb.HGetAll(ctx, gearKey).Result()
+	gearDataTyped := make(map[string]models.Item)
+	for slot, itemJSON := range gearDataRaw {
+		if itemJSON == "" {
+			continue
+		}
+		var item models.Item
+		json.Unmarshal([]byte(itemJSON), &item)
+		gearDataTyped[slot] = item
+	}
+
+	initialState := &models.InitialStateMessage{
+		Type:      string(ServerEventInitialState),
+		PlayerId:  playerID,
+		Entities:  allEntitiesState,
+		World:     worldDataTyped,
+		Inventory: inventoryDataTyped,
+		Gear:      gearDataTyped,
+	}
+
+	playerHealth, _ := strconv.Atoi(playerData["health"])
+	statsUpdateMsg := models.PlayerStatsUpdateMessage{
+		Type:      string(ServerEventPlayerStatsUpdate),
+		Health:    playerHealth,
+		MaxHealth: PlayerDefs.MaxHealth,
+	}
+	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
+	time.AfterFunc(100*time.Millisecond, func() {
+		if sendDirectMessage != nil {
+			sendDirectMessage(playerID, statsUpdateJSON)
+		}
+	})
+
+	return initialState
+}
 
 // (FindOpenSpawnPoint remains the same)
 func FindOpenSpawnPoint(entityID string) (int, int) {
@@ -22,8 +268,8 @@ func FindOpenSpawnPoint(entityID string) (int, int) {
 	}
 	// --- End For Testing ---
 
-	startX := rand.Intn(WorldSize) - WorldSize/2
-	startY := rand.Intn(WorldSize) - WorldSize/2
+	startX := mrand.Intn(WorldSize) - WorldSize/2
+	startY := mrand.Intn(WorldSize) - WorldSize/2
 
 	x, y, dx, dy := startX, startY, 0, -1
 	for i := 0; i < (WorldSize * 2); i++ {
@@ -103,144 +349,30 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		return nil
 	}
 
-	// --- UPDATED: Gather all entity types for initial state ---
-	// Use a large radius to find all entities in the zone.
-	locations, _ := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), 0, 0, &redis.GeoRadiusQuery{
-		Radius:    TilesToKilometers(WorldSize), // Search the entire world
-		Unit:      "km",
-		WithCoord: true,
-	}).Result()
-	allEntitiesState := make(map[string]models.EntityState)
-
-	// This is an N+1 query. We can optimize this later with Lua or by
-	// storing entity type directly in the GeoSet (if possible) or a separate set.
-	// For now, this is functional.
-	for _, loc := range locations {
-		// Get the entity's type from its hash
-		entityData, err := rdb.HGetAll(ctx, loc.Name).Result()
-		if err != nil {
-			continue
-		}
-
-		entityType := entityData["entityType"]
-
-		// --- NEW: Item Visibility Logic ---
-		if entityType == string(EntityTypeItem) {
-			owner := entityData["owner"]
-			createdAt, _ := strconv.ParseInt(entityData["createdAt"], 10, 64)
-			isPublic := time.Now().UnixMilli()-createdAt >= 60000
-
-			if owner != "" && owner != playerID && !isPublic {
-				continue // Don't include this item in the initial state
-			}
-		}
-		// --- END NEW ---
-
-		// If it's an NPC, use its more specific type
-		if npcType, ok := entityData["npcType"]; ok && entityType == string(EntityTypeNPC) {
-			entityType = npcType // e.g., "slime"
-		}
-
-		entityState := models.EntityState{
-			X:    int(loc.Longitude),
-			Y:    int(loc.Latitude),
-			Type: entityType,
-		}
-		if entityType == string(EntityTypeItem) {
-			createdAt, _ := strconv.ParseInt(entityData["createdAt"], 10, 64)
-			entityState.ItemID = entityData["itemId"]
-			entityState.Owner = entityData["owner"]
-			entityState.CreatedAt = createdAt
-		}
-		allEntitiesState[loc.Name] = entityState
-	}
-	// --- END UPDATE ---
-
-	worldDataRaw, _ := rdb.HGetAll(ctx, string(RedisKeyWorldZone0)).Result()
-	worldDataTyped := make(map[string]models.WorldTile)
-	for coord, tileJSON := range worldDataRaw {
-		var tile models.WorldTile
-		json.Unmarshal([]byte(tileJSON), &tile)
-		worldDataTyped[coord] = tile
-	}
-
-	inventoryDataRaw, _ := rdb.HGetAll(ctx, inventoryKey).Result()
-	inventoryDataTyped := make(map[string]models.Item)
-	for slot, itemJSON := range inventoryDataRaw {
-		if itemJSON == "" {
-			continue // Skip empty slots
-		}
-		var item models.Item
-		json.Unmarshal([]byte(itemJSON), &item)
-		inventoryDataTyped[slot] = item
-	}
-
-	gearDataRaw, _ := rdb.HGetAll(ctx, gearKey).Result()
-	gearDataTyped := make(map[string]models.Item)
-	for slot, itemJSON := range gearDataRaw {
-		if itemJSON == "" {
-			continue // Skip empty slots
-		}
-		var item models.Item
-		json.Unmarshal([]byte(itemJSON), &item)
-		gearDataTyped[slot] = item
-	}
-
-	initialState := &models.InitialStateMessage{
-		Type:      string(ServerEventInitialState),
-		PlayerId:  playerID,
-		Entities:  allEntitiesState, // This map now includes the 'type'
-		World:     worldDataTyped,
-		Inventory: inventoryDataTyped,
-		Gear:      gearDataTyped,
-	}
-
 	// Announce the new player's arrival to everyone else
 	updateMsg := map[string]interface{}{
 		"type":       string(ServerEventEntityJoined),
 		"entityId":   playerID,
 		"x":          spawnX,
 		"y":          spawnY,
-		"entityType": string(EntityTypePlayer), // <-- NEW: Send the type
+		"entityType": string(EntityTypePlayer), // Guests don't have a name yet
 	}
 	PublishUpdate(updateMsg)
 
-	// --- NEW: Send initial stats to the player ---
-	statsUpdateMsg := models.PlayerStatsUpdateMessage{
-		Type:      string(ServerEventPlayerStatsUpdate),
-		Health:    PlayerDefs.MaxHealth,
-		MaxHealth: PlayerDefs.MaxHealth,
-	}
-	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
-	// We need to do this after the initial state is sent, so we'll
-	// just wait a moment before sending. This is a bit of a hack.
-	time.AfterFunc(100*time.Millisecond, func() {
-		if sendDirectMessage != nil {
-			sendDirectMessage(playerID, statsUpdateJSON)
-		}
-	})
-	// --- END NEW ---
-
-	return initialState
+	return getPlayerState(playerID)
 }
 
 // (CleanupPlayer remains the same as previous step)
 func CleanupPlayer(playerID string) {
 	log.Printf("Cleaning up player %s.", playerID)
-	playerData, err := rdb.HGetAll(ctx, playerID).Result()
-	if err != nil {
-		log.Printf("Could not get player data for cleanup: %v", err)
-		CleanupEntity(playerID, nil)
-		return
-	}
 
-	CleanupEntity(playerID, playerData)
-
-	pipe := rdb.Pipeline()
-	pipe.Del(ctx, string(RedisKeyPlayerInventory)+playerID)
-	pipe.Del(ctx, string(RedisKeyPlayerGear)+playerID)
-	_, err = pipe.Exec(ctx)
-	if err != nil {
-		log.Printf("Error cleaning up player inventory for %s: %v", playerID, err)
+	// Announce the entity has left
+	leftMsg := map[string]interface{}{
+		"type":     string(ServerEventEntityLeft),
+		"entityId": playerID,
 	}
+	PublishUpdate(leftMsg)
+
+	// Remove the entity from the geospatial index, but do NOT delete their data.
+	rdb.ZRem(ctx, string(RedisKeyZone0Positions), playerID)
 }

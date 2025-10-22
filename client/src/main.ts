@@ -2,7 +2,7 @@ import './styles.css';
 import { initializeNetwork } from './network';
 import { initializeInput } from './input';
 import { initializeRenderer, startRenderLoop } from './renderer';
-import { initializeUI } from './ui';
+import { initializeUI, promptForRegistration } from './ui';
 
 // Initialize all the game modules when the DOM is ready.
 document.addEventListener('DOMContentLoaded', () => {

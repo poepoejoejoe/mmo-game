@@ -8,13 +8,14 @@ import {
     EntityMovedMessage,
     PlayerChatMessage,
     PlayerStatsUpdateMessage,
+    RegisteredMessage,
     ResourceDamagedMessage, 
     ServerMessage, 
     StateCorrectionMessage, 
     WorldUpdateMessage 
 } from './types';
 import * as state from './state';
-import { addChatMessage, updateInventoryUI, updatePlayerHealth, updatePlayerIdDisplay } from './ui';
+import { addChatMessage, promptForRegistration, updateInventoryUI, updatePlayerHealth, updatePlayerIdDisplay, updatePlayerNameDisplay } from './ui';
 import { showDamageIndicator } from './renderer';
 
 let ws: WebSocket;
@@ -35,7 +36,13 @@ function handleMessage(event: MessageEvent) {
             // state.setInitialState now receives the full entity map
             state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory, stateMsg.gear);
             updateInventoryUI();
-            updatePlayerIdDisplay();
+            const myEntity = state.getMyEntity();
+            if (myEntity && myEntity.name) {
+                updatePlayerNameDisplay(myEntity.name);
+            } else {
+                // If we logged in but don't have a name, show the registration prompt.
+                promptForRegistration();
+            }
             break;
         }
         case 'state_correction': {
@@ -55,6 +62,7 @@ function handleMessage(event: MessageEvent) {
                 joinMsg.x,
                 joinMsg.y,
                 joinMsg.entityType,
+                joinMsg.name,
                 joinMsg.itemId,
                 joinMsg.owner,
                 joinMsg.createdAt,
@@ -108,6 +116,13 @@ function handleMessage(event: MessageEvent) {
             state.setEntityChat(chatMsg.playerId, chatMsg.message); // Update the entity's state for canvas rendering
             break;
         }
+        case 'registered': {
+            const regMsg = msg as RegisteredMessage;
+            localStorage.setItem('secretKey', regMsg.secretKey);
+            state.setPlayerId(regMsg.playerId); // Update our player ID
+            updatePlayerNameDisplay(regMsg.name);
+            break;
+        }
     }
 }
 
@@ -119,6 +134,14 @@ export function initializeNetwork() {
     ws.onopen = () => {
         console.log('Connected to the server.');
         document.getElementById('player-coords')!.textContent = 'Connected! Waiting for world state...';
+
+        const secretKey = localStorage.getItem('secretKey');
+        send({
+            type: 'login',
+            payload: {
+                secretKey: secretKey,
+            },
+        });
     };
 
     ws.onclose = () => {

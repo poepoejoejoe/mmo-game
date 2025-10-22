@@ -41,6 +41,7 @@ type EntityState struct {
 	X         int    `json:"x"`
 	Y         int    `json:"y"`
 	Type      string `json:"type"`
+	Name      string `json:"name,omitempty"`
 	ItemID    string `json:"itemId,omitempty"`
 	Owner     string `json:"owner,omitempty"`
 	CreatedAt int64  `json:"createdAt,omitempty"`
@@ -134,4 +135,19 @@ type PlayerChatMessage struct {
 	Type     string `json:"type"`
 	PlayerID string `json:"playerId"`
 	Message  string `json:"message"`
+}
+
+type LoginPayload struct {
+	SecretKey string `json:"secretKey"`
+}
+
+type RegisterPayload struct {
+	Name string `json:"name"`
+}
+
+type RegisteredMessage struct {
+	Type      string `json:"type"`
+	SecretKey string `json:"secretKey"`
+	PlayerID  string `json:"playerId"`
+	Name      string `json:"name"`
 }

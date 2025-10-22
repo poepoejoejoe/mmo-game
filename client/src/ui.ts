@@ -1,5 +1,6 @@
 import * as state from './state';
 import { edibleDefs, itemDefinitions } from './definitions';
+import { send } from './network';
 
 let playerIdEl: HTMLElement;
 let cooldownBar: HTMLDivElement;
@@ -15,6 +16,9 @@ let healthText: HTMLElement;
 let buildModeIndicator: HTMLElement;
 let gearSlotsEl: HTMLElement;
 let chatMessagesEl: HTMLElement;
+let registrationContainer: HTMLElement;
+let nameInput: HTMLInputElement;
+let registerButton: HTMLButtonElement;
 
 export function initializeUI() {
     playerIdEl = document.getElementById('player-id')!;
@@ -31,11 +35,43 @@ export function initializeUI() {
     buildModeIndicator = document.getElementById('build-mode-indicator')!;
     gearSlotsEl = document.getElementById('gear-slots')!;
     chatMessagesEl = document.getElementById('chat-messages')!;
+    registrationContainer = document.getElementById('registration-container')!;
+    nameInput = document.getElementById('name-input') as HTMLInputElement;
+    registerButton = document.getElementById('register-button') as HTMLButtonElement;
+
+    registerButton.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (name) {
+            send({
+                type: 'register',
+                payload: { name: name }
+            });
+            registrationContainer.style.display = 'none';
+        }
+    });
+}
+
+export function promptForRegistration() {
+    // Show the registration UI if the player hasn't registered.
+    if (!localStorage.getItem('secretKey')) {
+        registrationContainer.style.display = 'block';
+    }
 }
 
 export function addChatMessage(playerId: string, message: string) {
     const messageEl = document.createElement('div');
-    messageEl.innerHTML = `<strong>${playerId}:</strong> ${message}`;
+    const s = state.getState();
+    const entity = s.entities[playerId];
+
+    let displayName = playerId;
+    if (entity && entity.name) {
+        displayName = entity.name;
+    } else {
+        // guest-xxxx
+        displayName = playerId.substring(0, 12);
+    }
+    
+    messageEl.innerHTML = `<strong>${displayName}:</strong> ${message}`;
     chatMessagesEl.prepend(messageEl); // Prepend to add new messages to the top (which is visually the bottom)
 }
 
@@ -171,6 +207,10 @@ export function updatePlayerIdDisplay() {
     if (playerId) {
         playerIdEl.textContent = `Your ID: ${playerId}`;
     }
+}
+
+export function updatePlayerNameDisplay(name: string) {
+    playerIdEl.textContent = `Welcome, ${name}!`;
 }
 
 export function updatePlayerHealth(health: number, maxHealth: number) {

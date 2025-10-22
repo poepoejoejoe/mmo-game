@@ -72,6 +72,8 @@ const (
 	ClientEventAttack    ClientEventType = "attack"
 	ClientEventEat       ClientEventType = "eat"
 	ClientEventSendChat  ClientEventType = "send_chat"
+	ClientEventLogin     ClientEventType = "login"
+	ClientEventRegister  ClientEventType = "register"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -90,6 +92,7 @@ const (
 	ServerEventPlayerStatsUpdate ServerEventType = "player_stats_update"
 	ServerEventItemDropped       ServerEventType = "item_dropped"
 	ServerEventGearUpdate        ServerEventType = "gear_update"
+	ServerEventRegistered        ServerEventType = "registered"
 )
 
 // MoveDirection defines the valid move directions.
@@ -116,6 +119,7 @@ const (
 	NPCSlimePrefix          RedisKey = "npc:slime:" // <-- NEW
 	NPCRatPrefix            RedisKey = "npc:rat:"   // <-- NEW
 	ItemPrefix              RedisKey = "item:"
+	RedisKeySecretPrefix    RedisKey = "secret:"
 )
 
 // --- END NEW CONSTANTS ---

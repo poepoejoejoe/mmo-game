@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -39,19 +38,9 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	playerID := string(game.RedisKeyPlayerPrefix) + uuid.New().String()
-	client := &Client{hub: hub, id: playerID, conn: conn, send: make(chan []byte, 256)}
-	client.hub.register <- client
+	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
 
-	// Pass the new player's ID to the game logic to get their initial state.
-	initialStateMsg := game.InitializePlayer(client.id)
-	if initialStateMsg != nil {
-		initialStateJSON, _ := json.Marshal(initialStateMsg)
-		// Send the "welcome" packet to the newly connected client.
-		client.send <- initialStateJSON
-	}
-
-	// Start the concurrent read and write loops for this client.
+	// We don't register the client with the hub until they have successfully logged in.
 	go client.writePump()
 	go client.readPump()
 }
@@ -83,88 +72,124 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		// Route the message to the appropriate game logic based on its type.
-		switch game.ClientEventType(msg.Type) {
-		case game.ClientEventMove:
-			var moveData models.MovePayload
-			if err := json.Unmarshal(msg.Payload, &moveData); err != nil {
-				continue
+		// The first message must be a login message.
+		if c.id == "" {
+			if game.ClientEventType(msg.Type) != game.ClientEventLogin {
+				log.Println("Client sent non-login message before authenticating. Closing connection.")
+				break
 			}
-			// Call the game logic to process the move.
-			correctionMsg := game.ProcessMove(c.id, game.MoveDirection(moveData.Direction))
-			if correctionMsg != nil {
-				// If the move was invalid, send a correction back to this client.
-				correctionJSON, _ := json.Marshal(correctionMsg)
-				c.send <- correctionJSON
+			var loginData models.LoginPayload
+			if err := json.Unmarshal(msg.Payload, &loginData); err != nil {
+				log.Printf("Error unmarshalling login payload: %v", err)
+				break
 			}
 
-		case game.ClientEventInteract:
-			// Call the game logic to process the interaction.
-			correctionMsg, inventoryMsg := game.ProcessInteract(c.id, msg.Payload)
-			if correctionMsg != nil {
-				// If the interaction was invalid, send a correction.
-				correctionJSON, _ := json.Marshal(correctionMsg)
-				c.send <- correctionJSON
+			playerID, initialState := game.LoginPlayer(loginData.SecretKey)
+			if initialState != nil {
+				c.id = playerID
+				c.hub.register <- c
+				initialStateJSON, _ := json.Marshal(initialState)
+				c.send <- initialStateJSON
 			}
-			if inventoryMsg != nil {
-				// If the interaction was successful, send an inventory update.
-				inventoryJSON, _ := json.Marshal(inventoryMsg)
-				c.send <- inventoryJSON
+
+		} else { // Client is already logged in, handle other messages.
+			switch game.ClientEventType(msg.Type) {
+			case game.ClientEventRegister:
+				var registerData models.RegisterPayload
+				if err := json.Unmarshal(msg.Payload, &registerData); err != nil {
+					log.Printf("Error unmarshalling register payload: %v", err)
+					continue
+				}
+				registeredMsg, initialState := game.RegisterPlayer(c.id, registerData.Name)
+				if registeredMsg != nil {
+					registeredJSON, _ := json.Marshal(registeredMsg)
+					c.send <- registeredJSON
+				}
+				if initialState != nil {
+					initialStateJSON, _ := json.Marshal(initialState)
+					c.send <- initialStateJSON
+				}
+			case game.ClientEventMove:
+				var moveData models.MovePayload
+				if err := json.Unmarshal(msg.Payload, &moveData); err != nil {
+					continue
+				}
+				// Call the game logic to process the move.
+				correctionMsg := game.ProcessMove(c.id, game.MoveDirection(moveData.Direction))
+				if correctionMsg != nil {
+					// If the move was invalid, send a correction back to this client.
+					correctionJSON, _ := json.Marshal(correctionMsg)
+					c.send <- correctionJSON
+				}
+
+			case game.ClientEventInteract:
+				// Call the game logic to process the interaction.
+				correctionMsg, inventoryMsg := game.ProcessInteract(c.id, msg.Payload)
+				if correctionMsg != nil {
+					// If the interaction was invalid, send a correction.
+					correctionJSON, _ := json.Marshal(correctionMsg)
+					c.send <- correctionJSON
+				}
+				if inventoryMsg != nil {
+					// If the interaction was successful, send an inventory update.
+					inventoryJSON, _ := json.Marshal(inventoryMsg)
+					c.send <- inventoryJSON
+				}
+			case game.ClientEventEquip:
+				inventoryUpdate, gearUpdate := game.ProcessEquip(c.id, msg.Payload)
+				if inventoryUpdate != nil {
+					inventoryJSON, _ := json.Marshal(inventoryUpdate)
+					c.send <- inventoryJSON
+				}
+				if gearUpdate != nil {
+					gearJSON, _ := json.Marshal(gearUpdate)
+					c.send <- gearJSON
+				}
+			case game.ClientEventUnequip:
+				inventoryUpdate, gearUpdate := game.ProcessUnequip(c.id, msg.Payload)
+				if inventoryUpdate != nil {
+					inventoryJSON, _ := json.Marshal(inventoryUpdate)
+					c.send <- inventoryJSON
+				}
+				if gearUpdate != nil {
+					gearJSON, _ := json.Marshal(gearUpdate)
+					c.send <- gearJSON
+				}
+			case game.ClientEventCraft:
+				inventoryUpdate, correctionMsg := game.ProcessCraft(c.id, msg.Payload)
+				if correctionMsg != nil {
+					correctionJSON, _ := json.Marshal(correctionMsg)
+					c.send <- correctionJSON
+				}
+				if inventoryUpdate != nil {
+					inventoryJSON, _ := json.Marshal(inventoryUpdate)
+					c.send <- inventoryJSON
+				}
+			case game.ClientEventPlaceItem:
+				correctionMsg, inventoryMsg := game.ProcessPlaceItem(c.id, msg.Payload)
+				if correctionMsg != nil {
+					correctionJSON, _ := json.Marshal(correctionMsg)
+					c.send <- correctionJSON
+				}
+				if inventoryMsg != nil {
+					inventoryJSON, _ := json.Marshal(inventoryMsg)
+					c.send <- inventoryJSON
+				}
+			case game.ClientEventAttack:
+				var attackData models.AttackPayload
+				if err := json.Unmarshal(msg.Payload, &attackData); err != nil {
+					continue
+				}
+				damageMsg := game.ProcessAttack(c.id, attackData.EntityID)
+				if damageMsg != nil {
+					damageJSON, _ := json.Marshal(damageMsg)
+					c.send <- damageJSON
+				}
+			case game.ClientEventEat:
+				game.ProcessEat(c.id, msg.Payload)
+			case game.ClientEventSendChat:
+				game.ProcessSendChat(c.id, msg.Payload)
 			}
-		case game.ClientEventEquip:
-			inventoryUpdate, gearUpdate := game.ProcessEquip(c.id, msg.Payload)
-			if inventoryUpdate != nil {
-				inventoryJSON, _ := json.Marshal(inventoryUpdate)
-				c.send <- inventoryJSON
-			}
-			if gearUpdate != nil {
-				gearJSON, _ := json.Marshal(gearUpdate)
-				c.send <- gearJSON
-			}
-		case game.ClientEventUnequip:
-			inventoryUpdate, gearUpdate := game.ProcessUnequip(c.id, msg.Payload)
-			if inventoryUpdate != nil {
-				inventoryJSON, _ := json.Marshal(inventoryUpdate)
-				c.send <- inventoryJSON
-			}
-			if gearUpdate != nil {
-				gearJSON, _ := json.Marshal(gearUpdate)
-				c.send <- gearJSON
-			}
-		case game.ClientEventCraft:
-			inventoryUpdate, correctionMsg := game.ProcessCraft(c.id, msg.Payload)
-			if correctionMsg != nil {
-				correctionJSON, _ := json.Marshal(correctionMsg)
-				c.send <- correctionJSON
-			}
-			if inventoryUpdate != nil {
-				inventoryJSON, _ := json.Marshal(inventoryUpdate)
-				c.send <- inventoryJSON
-			}
-		case game.ClientEventPlaceItem:
-			correctionMsg, inventoryMsg := game.ProcessPlaceItem(c.id, msg.Payload)
-			if correctionMsg != nil {
-				correctionJSON, _ := json.Marshal(correctionMsg)
-				c.send <- correctionJSON
-			}
-			if inventoryMsg != nil {
-				inventoryJSON, _ := json.Marshal(inventoryMsg)
-				c.send <- inventoryJSON
-			}
-		case game.ClientEventAttack:
-			var attackData models.AttackPayload
-			if err := json.Unmarshal(msg.Payload, &attackData); err != nil {
-				continue
-			}
-			damageMsg := game.ProcessAttack(c.id, attackData.EntityID)
-			if damageMsg != nil {
-				damageJSON, _ := json.Marshal(damageMsg)
-				c.send <- damageJSON
-			}
-		case game.ClientEventEat:
-			game.ProcessEat(c.id, msg.Payload)
-		case game.ClientEventSendChat:
-			game.ProcessSendChat(c.id, msg.Payload)
 		}
 	}
 }

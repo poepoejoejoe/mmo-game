@@ -15,6 +15,10 @@ export function getState(): ClientState {
     return clientState;
 }
 
+export function setPlayerId(id: string) {
+    clientState.playerId = id;
+}
+
 export function getMyEntity(): EntityState | undefined {
     if (!clientState.playerId) return undefined;
     return clientState.entities[clientState.playerId];
@@ -49,8 +53,8 @@ export function setEntityPosition(entityId: string, x: number, y: number) {
 }
 
 // --- UPDATED ---
-export function addEntity(id: string, x: number, y: number, type: 'player' | 'npc' | 'item', itemId?: string, owner?: string, createdAt?: number, publicAt?: number) {
-    clientState.entities[id] = { x, y, type, itemId, owner, createdAt, publicAt };
+export function addEntity(id: string, x: number, y: number, type: 'player' | 'npc' | 'item', name?: string, itemId?: string, owner?: string, createdAt?: number, publicAt?: number) {
+    clientState.entities[id] = { id, x, y, type, name, itemId, owner, createdAt, publicAt };
 }
 
 export function removeEntity(id: string) {

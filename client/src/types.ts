@@ -12,6 +12,7 @@ export interface EntityState {
     publicAt?: number;
     lastChatMessage?: string;
     lastChatTimestamp?: number;
+    name?: string;
 }
 
 export interface WorldTile {
@@ -62,6 +63,7 @@ export interface EntityJoinedMessage extends ServerMessage {
     x: number;
     y: number;
     entityType: 'player' | 'npc' | 'item';
+    name?: string;
     itemId?: string;
     owner?: string;
     createdAt?: number;
@@ -127,4 +129,24 @@ export interface PlayerChatMessage extends ServerMessage {
 export interface SendChatMessage {
     type: 'send_chat';
     message: string;
+}
+
+// --- Client to Server ---
+export interface ClientLoginMessage {
+    type: 'login';
+    secretKey?: string;
+}
+
+export interface ClientRegisterMessage {
+    type: 'register';
+    name: string;
+}
+
+
+// --- Server to Client ---
+export interface RegisteredMessage extends ServerMessage {
+    type: 'registered';
+    secretKey: string;
+    playerId: string;
+    name: string;
 }
