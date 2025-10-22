@@ -1,9 +1,8 @@
 {
   "asset_name": "rock-tile-2",
   "asset_type": "texture",
-  "description": "A seamless, top-down, stylized rock texture with small pebbles for a fantasy MMO game.",
+  "description": "A seamless, top-down, stylized rock texture, variant 2.",
   "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 32, "height": 32 },
-  "llm_prompt": "rocks that look like boulders"
+  "resize": { "width": 64, "height": 64 },
+  "llm_prompt": "A seamless and tileable texture of a different style of rocky ground. This one should have smaller, more gravel-like stones, suitable for a path or rough terrain in a fantasy game."
 }

@@ -1,10 +1,9 @@
 {
   "asset_name": "fire-icon",
   "asset_type": "icon",
-  "description": "An inventory icon for fire.",
+  "description": "An icon representing fire or warmth.",
   "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 48, "height": 48 },
+  "resize": { "width": 64, "height": 64 },
   "transparent": true,
-  "llm_prompt": "An inventory icon of a crackling campfire or a magical flame, clearly readable on a small scale."
+  "llm_prompt": "A clear and simple icon of a stylized flame or campfire for a game UI. The fire should be bright and inviting. The icon needs to be easily understandable at a small size."
 }

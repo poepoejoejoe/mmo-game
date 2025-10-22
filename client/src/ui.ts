@@ -2,6 +2,22 @@ import * as state from './state';
 import { edibleDefs, itemDefinitions } from './definitions';
 import { send } from './network';
 
+function createIconElement(itemDef: any): HTMLElement {
+    const iconEl = document.createElement('div');
+    iconEl.classList.add('item-icon');
+
+    if (itemDef.asset) {
+        const img = document.createElement('img');
+        img.src = itemDef.asset;
+        img.alt = itemDef.text || 'item icon';
+        iconEl.appendChild(img);
+    } else {
+        iconEl.textContent = itemDef.icon || itemDef.character;
+    }
+
+    return iconEl;
+}
+
 // Top Bar
 let registrationContainer: HTMLElement;
 let nameInput: HTMLInputElement;
@@ -80,6 +96,10 @@ export function initializeUI() {
     updateButtonSelection();
     toggleChat(); // to set initial state
     toggleChat(); // toggle back to open, but apply style
+
+    inventoryButton.innerHTML = `<img src="assets/inventory-icon.png" alt="Inventory">`;
+    craftingButton.innerHTML = `<img src="assets/crafting-icon.png" alt="Crafting">`;
+    gearButton.innerHTML = `<img src="assets/gear-icon.png" alt="Gear">`;
 }
 
 export function promptForRegistration() {
@@ -201,9 +221,7 @@ export function updateCraftingUI(): void {
         button.disabled = !canCraft;
         button.dataset.item = recipe.item; // Store the item to be crafted
 
-        const iconEl = document.createElement('div');
-        iconEl.classList.add('item-icon');
-        iconEl.textContent = itemDef.icon || itemDef.character;
+        const iconEl = createIconElement(itemDef);
         button.appendChild(iconEl);
 
         const textEl = document.createElement('div');
@@ -227,9 +245,7 @@ export function updateGearUI(): void {
 
         if (item) {
             const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
-            const iconEl = document.createElement('div');
-            iconEl.classList.add('item-icon');
-            iconEl.textContent = itemDef.icon || itemDef.character;
+            const iconEl = createIconElement(itemDef);
             slotEl.appendChild(iconEl);
 
             const unequipButton = document.createElement('button');
@@ -260,9 +276,7 @@ export function updateInventoryUI(): void {
 
         if (item) {
             const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
-            const iconEl = document.createElement('div');
-            iconEl.classList.add('item-icon');
-            iconEl.textContent = itemDef.icon || itemDef.character;
+            const iconEl = createIconElement(itemDef);
             slotEl.appendChild(iconEl);
 
             const quantityEl = document.createElement('div');

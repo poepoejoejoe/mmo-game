@@ -1,10 +1,9 @@
 {
   "asset_name": "slime",
   "asset_type": "sprite",
-  "description": "A top-down slime monster sprite for a fantasy MMO. The slime should be a classic, green, slightly translucent, and bubbly monster.",
+  "description": "A top-down sprite of a classic slime monster.",
   "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 32, "height": 32 },
+  "resize": { "width": 64, "height": 64 },
   "transparent": true,
-  "llm_prompt": "A top-down 2D sprite of a green slime monster. The slime is slightly translucent and bubbly, with a cute but mischievous look."
+  "llm_prompt": "A top-down 2D sprite of a classic, green, gooey slime monster for a fantasy video game. The slime should be semi-transparent and have a simple, blob-like shape. It should look like a basic, early-game enemy."
 }

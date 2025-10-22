@@ -1,10 +1,9 @@
 {
   "asset_name": "gear-icon",
   "asset_type": "icon",
-  "description": "A simple icon of a gear for a settings or options menu.",
+  "description": "An icon for player equipment (armor and weapons).",
   "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 48, "height": 48 },
+  "resize": { "width": 64, "height": 64 },
   "transparent": true,
-  "llm_prompt": "A simple, clear UI icon of a single gear for a settings menu with a clear silhouette."
+  "llm_prompt": "A clear and simple icon representing player gear for a fantasy game UI. It should feature a helmet, a sword, and a piece of chest armor to clearly signify equipment. The icon needs to be easily understandable at a small size."
 }

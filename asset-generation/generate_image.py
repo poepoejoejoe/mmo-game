@@ -4,29 +4,20 @@ import argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from PIL import Image
+from PIL import Image, ImageFilter
 from io import BytesIO
 from rembg import remove
 
 def process_background_removal(input_image):
     """
     Removes the background from a PIL Image object using rembg.
-    
-    Args:
-        input_image (PIL.Image.Image): The input image (e.g., with a solid black background).
-        
-    Returns:
-        PIL.Image.Image: The image with the background removed (as RGBA).
     """
-    print("Transparency requested. Removing black background...")
+    print("Transparency requested. Removing background...")
     try:
-        # rembg's remove() function directly accepts a PIL Image object
-        # It returns an RGBA image
         output_image = remove(input_image)
         return output_image
     except Exception as e:
         print(f"An error occurred during background removal: {e}")
-        # Return the original image if processing fails
         return input_image
 
 def generate_image(prompt_file, theme_file):
@@ -35,8 +26,8 @@ def generate_image(prompt_file, theme_file):
     """
     load_dotenv()
 
-    # The genai.Client() will automatically use the GEMINI_API_KEY from the .env file
     try:
+        # The genai.Client() will automatically use the GEMINI_API_KEY from the .env file
         client = genai.Client()
     except Exception as e:
         print("Could not initialize the client. Make sure your GEMINI_API_KEY is set in the .env file.")
@@ -52,95 +43,70 @@ def generate_image(prompt_file, theme_file):
     # Combine the prompts
     base_prompt = prompt_data.get("llm_prompt", "")
     style_suffix = theme_data.get("base_prompt_suffix", "")
-    
-    final_prompt = f"{base_prompt} {style_suffix}"
-    
-    # not using right now
-    # asset_type = prompt_data.get("asset_type")
-    # if asset_type in ["sprite", "icon"]:
-    #     sprite_suffix = theme_data.get("sprite_icon_prompt_suffix", "")
-    #     final_prompt = f"{final_prompt} {sprite_suffix}"
+    asset_type = prompt_data.get("asset_type")
 
-    # --- MODIFIED: Check for transparency flag ---
-    # Store the flag to use for post-processing
+    # Build a more detailed prompt
+    style_modifiers = theme_data.get("style_modifiers", {})
+    global_modifiers = style_modifiers.get("global", "")
+    asset_specific_modifiers = style_modifiers.get(asset_type, "")
+    
+    final_prompt = f"{base_prompt}, {style_suffix}. {global_modifiers}. {asset_specific_modifiers}."
+    
     is_transparent = prompt_data.get("transparent", False)
     if is_transparent:
-        # New strategy: ask for a solid black background for rembg
-        final_prompt = f"{final_prompt} the image should have a solid black background."
-    # --- END MODIFICATION ---
+        # Ask for a solid, unnatural background color for easy removal
+        final_prompt = f"{final_prompt} The image should have a solid, pure green background that can be easily removed."
+
+    negative_prompt = theme_data.get("negative_prompt", "")
+    if negative_prompt:
+        final_prompt = f"{final_prompt} --no {negative_prompt}"
 
     print(f"Generating image with prompt: \"{final_prompt.strip()}\"")
     
-    generation_params = {
-        "model": "gemini-2.5-flash-image", # Updated to a valid model
-        "contents": [final_prompt.strip()],
-    }
-    
-    if "aspect_ratio" in prompt_data:
-        generation_params["config"] = types.GenerateContentConfig(
-            image_config=types.ImageConfig(
-                aspect_ratio=prompt_data["aspect_ratio"],
-            )
+    try:
+        response = client.generate_image(
+            model='gemini-2.5-flash-image-preview',
+            prompt=final_prompt.strip(),
         )
 
-    try:
-        response = client.models.generate_content(**generation_params)
-
-        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
-            image_part = None
-            for part in response.candidates[0].content.parts:
-                if part.inline_data is not None:
-                    image_part = part
-                    break
+        if response.images:
+            image_data = response.images[0]
+            image = Image.open(BytesIO(image_data))
             
-            if image_part:
-                image = Image.open(BytesIO(image_part.inline_data.data))
-                
-                # The resize and transparency logic has been disabled as per the new strategy.
-                # The values are kept in the prompt files for potential future use.
+            # Re-enable resizing
+            if "resize" in prompt_data:
+                resize_dims = (prompt_data["resize"]["width"], prompt_data["resize"]["height"])
+                print(f"Resizing image to {resize_dims}...")
+                image = image.resize(resize_dims, Image.Resampling.LANCZOS)
+                # Add a sharpen filter to counteract blurriness from downscaling
+                image = image.filter(ImageFilter.SHARPEN)
+            
+            if is_transparent:
+                image = process_background_removal(image)
 
-                # # Check for and apply resizing
-                # if "resize" in prompt_data:
-                #     resize_dims = (prompt_data["resize"]["width"], prompt_data["resize"]["height"])
-                #     print(f"Resizing image to {resize_dims}...")
-                #     image = image.resize(resize_dims, Image.Resampling.LANCZOS)
+            output_dir = os.path.join(os.path.dirname(__file__), '..', 'client', 'public', 'assets')
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
                 
-                # --- NEW: Post-process for transparency ---
-                if is_transparent:
-                    image = process_background_removal(image)
-                # --- END NEW LOGIC ---
+            output_format = prompt_data.get("output_format", "png")
+            if is_transparent:
+                output_format = "png"
+            
+            file_name = f'{prompt_data["asset_name"]}.{output_format}'
+            output_path = os.path.join(output_dir, file_name)
 
-                output_dir = os.path.join(os.path.dirname(__file__), '..', 'client', 'public', 'assets')
-                if not os.path.exists(output_dir):
-                    os.makedirs(output_dir)
-                    
-                # --- MODIFIED: Determine output format ---
-                output_format = prompt_data["output_format"]
-                if is_transparent:
-                    output_format = "png"  # Force PNG for transparency
-                
-                file_name = f'{prompt_data["asset_name"]}.{output_format}'
-                output_path = os.path.join(output_dir, file_name)
-
-                # --- MODIFIED: Save image with correct mode ---
-                if output_format == "png":
-                    # Ensure RGBA mode if we are saving as PNG
-                    # (rembg already returns RGBA, but this is a good safeguard)
-                    if image.mode != "RGBA":
-                         image = image.convert("RGBA")
-                    image.save(output_path, "PNG")
-                else:
-                    # For other formats like JPG, convert to RGB
-                    if image.mode == 'RGBA':
-                        image = image.convert('RGB')
-                    image.save(output_path) # Let PIL handle format based on extension
-                # --- END MODIFICATION ---
-                
-                print(f"Image successfully generated and saved to {output_path}")
+            if output_format == "png":
+                if image.mode != "RGBA":
+                     image = image.convert("RGBA")
+                image.save(output_path, "PNG")
             else:
-                print("Image generation failed: No image data found in the response.")
+                if image.mode == 'RGBA':
+                    image = image.convert('RGB')
+                image.save(output_path)
+            
+            print(f"Image successfully generated and saved to {output_path}")
         else:
-            print("Image generation failed: The response did not contain valid candidate data.")
+            print("Image generation failed: No image data found in the response.")
             print("Full response:", response)
 
     except Exception as e:
@@ -150,7 +116,7 @@ def generate_image(prompt_file, theme_file):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate game assets using AI.")
     parser.add_argument("path", type=str, help="Path to a single JSON prompt file or a directory of prompt files.")
-    parser.add_argument("--theme", type=str, default="asset-generation/themes/default.json", help="Path to the JSON theme file.")
+    parser.add_argument("--theme", type=str, default="asset-generation/themes/vibrant.json", help="Path to the JSON theme file.")
     args = parser.parse_args()
 
     if os.path.isdir(args.path):

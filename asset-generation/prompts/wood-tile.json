@@ -1,9 +1,8 @@
 {
   "asset_name": "wood-tile",
   "asset_type": "texture",
-  "description": "A seamless, top-down, stylized wooden plank floor texture for a fantasy MMO game.",
+  "description": "A seamless, top-down, stylized texture of a forest.",
   "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 32, "height": 32 },
-  "llm_prompt": "A repeating seamless tileable texture of trees. The trees are alpine like."
+  "resize": { "width": 64, "height": 64 },
+  "llm_prompt": "A seamless and tileable texture of a dense forest from a top-down perspective. It should feature the tops of lush, green trees, creating a canopy look suitable for a fantasy game world."
 }

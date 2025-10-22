@@ -1,10 +1,9 @@
 {
   "asset_name": "wooden-wall-icon",
   "asset_type": "icon",
-  "description": "An inventory icon for a wooden wall.",
+  "description": "An icon for a wooden wall.",
   "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 48, "height": 48 },
+  "resize": { "width": 64, "height": 64 },
   "transparent": true,
-  "llm_prompt": "An inventory icon representing a section of a wooden wall or fence, clearly visable on a small scale."
+  "llm_prompt": "A clear and simple icon of a section of a wooden wall or barricade for a crafting menu in a fantasy game. It should be easily recognizable as a defensive structure."
 }

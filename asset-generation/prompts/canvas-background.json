@@ -1,9 +1,0 @@
-{
-  "asset_name": "canvas-background",
-  "asset_type": "texture",
-  "description": "A subtle, textured background for the game canvas. Something more interesting than a flat color. Maybe like old parchment or a soft, earthy texture.",
-  "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 256, "height": 256 },
-  "llm_prompt": "A large, subtle background texture, like a soft, earthy-toned parchment or canvas with a gentle, painterly texture. It should not be distracting or have hard lines. The color is a warm, light tan."
-}

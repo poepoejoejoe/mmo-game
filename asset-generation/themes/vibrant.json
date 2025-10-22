@@ -1,0 +1,10 @@
+{
+  "base_prompt_suffix": "A digital painting in a vibrant, stylized fantasy art style for a top-down RPG. The asset should have clean lines, rich colors, and a slightly painterly texture. It should be easily recognizable at small sizes.",
+  "style_modifiers": {
+    "global": "digital painting, vibrant colors, clean lines, fantasy art, painterly texture, top-down perspective",
+    "icon": "simple background, centered, clear silhouette, high contrast",
+    "sprite": "dynamic pose, expressive, no background, consistent lighting from top-left",
+    "texture": "seamless, tileable, repeating pattern, uniform lighting"
+  },
+  "negative_prompt": "photorealistic, 3d render, blurry, noisy, text, watermark, signature, ugly, deformed"
+}

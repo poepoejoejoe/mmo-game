@@ -1,10 +1,9 @@
 {
   "asset_name": "stone-icon",
   "asset_type": "icon",
-  "description": "An inventory icon for a stack of stone.",
+  "description": "An inventory icon for a piece of stone or rock.",
   "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 48, "height": 48 },
+  "resize": { "width": 64, "height": 64 },
   "transparent": true,
-  "llm_prompt": "An inventory icon of a stack of grey rocks or stones, clearly readable on a small scale."
+  "llm_prompt": "A clear and simple icon of a piece of stone or rock for a fantasy game inventory. The icon should clearly represent a generic stone, suitable for crafting."
 }

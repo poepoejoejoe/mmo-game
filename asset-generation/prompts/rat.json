@@ -1,10 +1,9 @@
 {
   "asset_name": "rat",
   "asset_type": "sprite",
-  "description": "A top-down rat monster sprite for a fantasy MMO. The rat should be a common brown rat, but slightly menacing.",
+  "description": "A top-down sprite of a common rat, a low-level enemy.",
   "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 32, "height": 32 },
+  "resize": { "width": 64, "height": 64 },
   "transparent": true,
-  "llm_prompt": "A top-down 2D sprite of a large brown rat monster that looks slightly menacing."
+  "llm_prompt": "A top-down 2D sprite of a common sewer rat for a fantasy video game. The rat should be facing forward, in a slightly aggressive pose. It should look like a basic, early-game enemy."
 }

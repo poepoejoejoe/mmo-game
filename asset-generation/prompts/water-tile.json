@@ -1,9 +1,8 @@
 {
   "asset_name": "water-tile",
   "asset_type": "texture",
-  "description": "A seamless, top-down, stylized water texture for a fantasy MMO game. The water should be a pleasant blue with subtle ripples.",
+  "description": "A seamless, top-down, stylized water texture.",
   "output_format": "png",
-  "aspect_ratio": "1:1",
-  "resize": { "width": 32, "height": 32 },
-  "llm_prompt": "A repeating seamless tileable texture of stylized blue water with gentle, painterly ripples."
+  "resize": { "width": 64, "height": 64 },
+  "llm_prompt": "A seamless and tileable texture of calm, blue water. It should have gentle, stylized ripples to indicate it's water, but not be too busy. Suitable for a lake or river in a fantasy game."
 }

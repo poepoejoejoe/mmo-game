@@ -9,6 +9,7 @@ export interface TileProperties {
     gatherResource?: string;
     maxHealth: number;
     color: string; // Add color here for rendering
+    asset?: string | string[];
 }
 
 // The master definition map for all tile types.
@@ -29,7 +30,8 @@ export const tileDefs: Record<string, TileProperties> = {
         isBuildableOn: true,
         movementPenalty: false,
         maxHealth: 0,
-        color: '#4a4a4a',
+        color: '#6B8E23',
+        asset: undefined,
     },
     'water': {
         isCollidable: false,
@@ -38,7 +40,8 @@ export const tileDefs: Record<string, TileProperties> = {
         isBuildableOn: false,
         movementPenalty: true,
         maxHealth: 0,
-        color: '#2980b9',
+        color: '#4682B4',
+        asset: 'assets/water-tile.png',
     },
     'tree': {
         isCollidable: true,
@@ -48,7 +51,8 @@ export const tileDefs: Record<string, TileProperties> = {
         movementPenalty: false,
         gatherResource: 'wood',
         maxHealth: 2,
-        color: '#27ae60',
+        color: '#228B22',
+        asset: 'assets/wood-tile.png'
     },
     'rock': {
         isCollidable: true,
@@ -58,7 +62,8 @@ export const tileDefs: Record<string, TileProperties> = {
         movementPenalty: false,
         gatherResource: 'rock',
         maxHealth: 4,
-        color: '#888',
+        color: '#A9A9A9',
+        asset: ['assets/rock-tile-1.png', 'assets/rock-tile-2.png'],
     },
     'wooden_wall': {
         isCollidable: true,
@@ -67,7 +72,8 @@ export const tileDefs: Record<string, TileProperties> = {
         isBuildableOn: false,
         movementPenalty: false,
         maxHealth: 10,
-        color: '#8a6d3b',
+        color: '#A0522D',
+        asset: 'assets/wooden-wall-icon.png',
     },
     'fire': {
         isCollidable: false,
@@ -77,6 +83,7 @@ export const tileDefs: Record<string, TileProperties> = {
         movementPenalty: false,
         maxHealth: 0,
         color: '#FF4500',
+        asset: 'assets/fire-icon.png',
     },
 };
 
@@ -84,37 +91,23 @@ export const tileDefs: Record<string, TileProperties> = {
  * Helper function to safely get tile properties, defaulting to 'void'.
  */
 export function getTileProperties(type: string): TileProperties {
-	switch (type) {
-		case 'ground':
-			return { color: '#6B8E23', isCollidable: false, isBuildableOn: true, isGatherable: false, isDestructible: false, movementPenalty: false, maxHealth: 0 };
-		case 'water':
-			return { color: '#4682B4', isCollidable: false, movementPenalty: true, isBuildableOn: false, isGatherable: false, isDestructible: false, maxHealth: 0 };
-		case 'tree':
-			return { color: '#228B22', isCollidable: true, isGatherable: true, maxHealth: 2, isDestructible: false, isBuildableOn: false, movementPenalty: false };
-		case 'rock':
-			return { color: '#A9A9A9', isCollidable: true, isGatherable: true, maxHealth: 4, isDestructible: false, isBuildableOn: false, movementPenalty: false };
-		case 'wooden_wall':
-			return { color: '#A0522D', isCollidable: true, isDestructible: true, maxHealth: 10, isGatherable: false, isBuildableOn: false, movementPenalty: false };
-		case 'fire':
-			return { color: '#FF4500', isCollidable: false, isGatherable: false, isDestructible: false, isBuildableOn: false, movementPenalty: false, maxHealth: 0 };
-		default:
-			return { color: '#708090', isCollidable: false, isBuildableOn: false, isGatherable: false, isDestructible: false, movementPenalty: false, maxHealth: 0 };
-	}
+    return tileDefs[type] || tileDefs['void'];
 }
 
-export const itemDefinitions: { [key: string]: { icon?: string, character: string, color: string, equippable?: { slot: string, damage?: number } } } = {
-    'wood': { icon: '🌲', character: 'W', color: '#8B4513' },
-    'stone': { icon: '🪨', character: 'S', color: '#808080' },
+export const itemDefinitions: { [key: string]: { icon?: string, character: string, color: string, asset?: string, equippable?: { slot: string, damage?: number } } } = {
+    'wood': { icon: '🌲', character: 'W', color: '#8B4513', asset: 'assets/wood-icon.png' },
+    'stone': { icon: '🪨', character: 'S', color: '#808080', asset: 'assets/stone-icon.png' },
     'goop': { icon: '💧', character: 'G', color: '#90EE90' },
     'rat_meat': { icon: '🍖', character: 'M', color: '#DC143C' },
     'cooked_rat_meat': { icon: '🥩', character: 'M', color: '#A52A2A' },
     'treasure_map': { icon: '🗺️', character: 'M', color: '#FFD700' },
-    'fire': { icon: '🔥', character: 'F', color: '#FF4500' },
-    'wooden_wall': { icon: '🧱', character: '#', color: '#A0522D' },
+    'fire': { icon: '🔥', character: 'F', color: '#FF4500', asset: 'assets/fire-icon.png' },
+    'wooden_wall': { icon: '🧱', character: '#', color: '#A0522D', asset: 'assets/wooden-wall-icon.png' },
     'crude_axe': {
         icon: '🪓',
         character: 'A',
         color: '#b5a642',
+        asset: 'assets/crude-axe-icon.png',
         equippable: {
             slot: 'weapon-slot',
             damage: 2,
@@ -134,20 +127,24 @@ export const edibleDefs: { [key: string]: { healAmount: number } } = {
 export interface EntityProperties {
     color: string;
     isAttackable?: boolean;
+    asset?: string;
 }
 
 // The master definition map for all entity types.
 export const entityDefs: Record<string, EntityProperties> = {
     'player': {
         color: '#3498db', // Blue
+        asset: 'assets/player.png',
     },
     'slime': {
         color: '#b3db45ff', // Green
         isAttackable: true,
+        asset: 'assets/slime.png',
     },
     'rat': {
         color: '#800080', // Purple
         isAttackable: true,
+        asset: 'assets/rat.png',
     },
     'item': {
         color: 'transparent', // We'll render items with text instead

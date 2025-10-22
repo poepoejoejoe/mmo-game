@@ -1,7 +1,7 @@
 import * as state from './state';
 import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, TILE_SIZE } from './constants';
 // --- UPDATED ---
-import { getTileProperties, getEntityProperties, itemDefinitions } from './definitions';
+import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -16,6 +16,9 @@ interface DamageIndicator {
 const damageIndicators: DamageIndicator[] = [];
 const DAMAGE_INDICATOR_LIFETIME = 1000; // 1 second
 
+export const assetImages: { [key: string]: HTMLImageElement } = {};
+let assetsLoaded = false;
+
 export function showDamageIndicator(x: number, y: number, damage: number) {
     damageIndicators.push({
         text: `-${damage}`,
@@ -27,8 +30,45 @@ export function showDamageIndicator(x: number, y: number, damage: number) {
 
 // (Asset loading functions remain the same...)
 const crackImages: HTMLImageElement[] = [];
-let assetsLoaded = false;
 function loadAssets() {
+    const assetDefs = [
+        ...Object.values(tileDefs),
+        ...Object.values(itemDefinitions),
+        ...Object.values(entityDefs),
+    ];
+
+    const assetPaths = new Set<string>();
+    assetPaths.add('assets/grass-texture.png');
+    for (const def of assetDefs) {
+        if (def.asset) {
+            if (Array.isArray(def.asset)) {
+                def.asset.forEach(path => assetPaths.add(path));
+            } else {
+                assetPaths.add(def.asset);
+            }
+        }
+    }
+
+    let loadedCount = 0;
+    const totalAssets = assetPaths.size;
+    if (totalAssets === 0) {
+        assetsLoaded = true;
+        return;
+    }
+
+    assetPaths.forEach(path => {
+        const img = new Image();
+        img.src = path;
+        img.onload = () => {
+            assetImages[path] = img;
+            loadedCount++;
+            if (loadedCount === totalAssets) {
+                assetsLoaded = true;
+                console.log("All game assets loaded.");
+            }
+        };
+    });
+
     const crackSVGs = [
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L7.5 7.5' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 M8 8 L10 9' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
@@ -41,19 +81,43 @@ function loadAssets() {
         "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M1 15 L4 12 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e"
     ];
     
-    let loadedCount = 0;
+    let loadedCrackCount = 0;
     crackSVGs.forEach((svg, index) => {
         const img = new Image();
         img.src = svg;
         img.onload = () => {
             crackImages[index] = img;
-            loadedCount++;
-            if (loadedCount === crackSVGs.length) {
-                assetsLoaded = true;
+            loadedCrackCount++;
+            if (loadedCrackCount === crackSVGs.length) {
                 console.log("All crack assets loaded.");
             }
         };
     });
+}
+
+function drawBackground(startX: number, startY: number) {
+    if (!ctx) return;
+    const bgImage = assetImages['assets/grass-texture.png'];
+    if (!bgImage) {
+        // Fallback for when image not loaded yet
+        ctx.fillStyle = '#6B8E23'; // ground color
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    const pattern = ctx.createPattern(bgImage, 'repeat');
+    if (pattern) {
+        ctx.fillStyle = pattern;
+        ctx.save();
+        
+        const pixelOffsetX = startX * TILE_SIZE;
+        const pixelOffsetY = startY * TILE_SIZE;
+        
+        ctx.translate(-pixelOffsetX, -pixelOffsetY);
+        ctx.fillRect(pixelOffsetX, pixelOffsetY, canvas.width, canvas.height);
+        
+        ctx.restore();
+    }
 }
 
 // (drawWorld remains the same)
@@ -64,9 +128,28 @@ function drawWorld(startX: number, startY: number, viewportWidth: number, viewpo
             const tileX = startX + x;
             const tileY = startY + y;
             const tileData = state.getTileData(tileX, tileY);
+            if (tileData.type === 'ground') {
+                continue;
+            }
             const tileProps = getTileProperties(tileData.type);
-            ctx.fillStyle = tileProps.color;
-            ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            
+            if (tileProps.asset) {
+                let assetPath = tileProps.asset;
+                if (Array.isArray(assetPath)) {
+                    // Deterministic selection based on tile coordinates
+                    assetPath = assetPath[(tileX + tileY) % assetPath.length];
+                }
+                const img = assetImages[assetPath];
+                if (img) {
+                    ctx.drawImage(img, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                } else {
+                    ctx.fillStyle = tileProps.color;
+                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            } else {
+                ctx.fillStyle = tileProps.color;
+                ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
 
 			if (tileData.type === 'fire') {
                 const flicker = Math.random() * 0.4 - 0.2;
@@ -139,15 +222,23 @@ function drawEntities(startX: number, startY: number) {
 
         if (entity.type === 'item' && entity.itemId) {
             const itemDef = itemDefinitions[entity.itemId] || itemDefinitions['default'];
-            ctx.fillStyle = itemDef.color;
-            ctx.font = `bold ${TILE_SIZE * 0.8}px 'Roboto', sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(itemDef.character, screenX + TILE_SIZE / 2, screenY + TILE_SIZE / 2);
+            if (itemDef.asset && assetImages[itemDef.asset]) {
+                ctx.drawImage(assetImages[itemDef.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
+            } else {
+                ctx.fillStyle = itemDef.color;
+                ctx.font = `bold ${TILE_SIZE * 0.8}px 'Roboto', sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(itemDef.character, screenX + TILE_SIZE / 2, screenY + TILE_SIZE / 2);
+            }
         } else {
             const props = getEntityProperties(entity.type, entityId, myPlayerId);
-            ctx.fillStyle = props.color;
-            ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+            if (props.asset && assetImages[props.asset]) {
+                ctx.drawImage(assetImages[props.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
+            } else {
+                ctx.fillStyle = props.color;
+                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+            }
         }
 
         // --- NEW: Render Chat Message ---
@@ -206,6 +297,7 @@ function render() {
     const startX = me.x - Math.floor(viewportWidth / 2);
     const startY = me.y - Math.floor(viewportHeight / 2);
 
+    drawBackground(startX, startY);
     drawWorld(startX, startY, viewportWidth, viewportHeight);
     drawEntities(startX, startY);
     drawDamageIndicators(startX, startY);
