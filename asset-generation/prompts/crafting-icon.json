@@ -1,0 +1,10 @@
+{
+  "asset_name": "crafting-icon",
+  "asset_type": "icon",
+  "description": "A simple icon of a hammer and anvil for a crafting button.",
+  "output_format": "png",
+  "aspect_ratio": "1:1",
+  "resize": { "width": 48, "height": 48 },
+  "transparent": true,
+  "llm_prompt": "A simple, clear UI icon of a hammer and anvil for a crafting button with a clear silhouette."
+}

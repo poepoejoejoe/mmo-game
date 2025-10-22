@@ -1,0 +1,10 @@
+{
+  "asset_name": "slime",
+  "asset_type": "sprite",
+  "description": "A top-down slime monster sprite for a fantasy MMO. The slime should be a classic, green, slightly translucent, and bubbly monster.",
+  "output_format": "png",
+  "aspect_ratio": "1:1",
+  "resize": { "width": 32, "height": 32 },
+  "transparent": true,
+  "llm_prompt": "A top-down 2D sprite of a green slime monster. The slime is slightly translucent and bubbly, with a cute but mischievous look."
+}

@@ -1,0 +1,10 @@
+{
+  "asset_name": "fire-icon",
+  "asset_type": "icon",
+  "description": "An inventory icon for fire.",
+  "output_format": "png",
+  "aspect_ratio": "1:1",
+  "resize": { "width": 48, "height": 48 },
+  "transparent": true,
+  "llm_prompt": "An inventory icon of a crackling campfire or a magical flame, clearly readable on a small scale."
+}

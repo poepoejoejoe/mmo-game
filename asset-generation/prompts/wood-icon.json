@@ -1,0 +1,10 @@
+{
+  "asset_name": "wood-icon",
+  "asset_type": "icon",
+  "description": "An inventory icon for a stack of wood.",
+  "output_format": "png",
+  "aspect_ratio": "1:1",
+  "resize": { "width": 48, "height": 48 },
+  "transparent": true,
+  "llm_prompt": "An inventory icon of a stack of logs or woodpile, clearly visable on a small scale."
+}

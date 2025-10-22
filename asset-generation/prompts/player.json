@@ -1,0 +1,10 @@
+{
+  "asset_name": "player",
+  "asset_type": "sprite",
+  "description": "A top-down player character sprite for a fantasy MMO. The character should be a generic adventurer, wearing simple leather armor.",
+  "output_format": "png",
+  "aspect_ratio": "1:1",
+  "resize": { "width": 32, "height": 32 },
+  "transparent": true,
+  "llm_prompt": "A top-down 2D sprite of a fantasy adventurer character. The character is wearing simple leather armor and has a neutral."
+}

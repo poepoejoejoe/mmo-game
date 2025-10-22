@@ -1,0 +1,10 @@
+{
+  "asset_name": "stone-icon",
+  "asset_type": "icon",
+  "description": "An inventory icon for a stack of stone.",
+  "output_format": "png",
+  "aspect_ratio": "1:1",
+  "resize": { "width": 48, "height": 48 },
+  "transparent": true,
+  "llm_prompt": "An inventory icon of a stack of grey rocks or stones, clearly readable on a small scale."
+}

@@ -1,0 +1,9 @@
+{
+  "asset_name": "rock-tile-1",
+  "asset_type": "texture",
+  "description": "A seamless, top-down, stylized rock texture for a fantasy MMO game. The rock should be a medium grey with some subtle cracks and texture.",
+  "output_format": "png",
+  "aspect_ratio": "1:1",
+  "resize": { "width": 32, "height": 32 },
+  "llm_prompt": "texture of stylized grey stone ground. The rocks are somewhat flat, not suitable for walking on"
+}

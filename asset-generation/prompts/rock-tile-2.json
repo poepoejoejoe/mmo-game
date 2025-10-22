@@ -1,0 +1,9 @@
+{
+  "asset_name": "rock-tile-2",
+  "asset_type": "texture",
+  "description": "A seamless, top-down, stylized rock texture with small pebbles for a fantasy MMO game.",
+  "output_format": "png",
+  "aspect_ratio": "1:1",
+  "resize": { "width": 32, "height": 32 },
+  "llm_prompt": "rocks that look like boulders"
+}
