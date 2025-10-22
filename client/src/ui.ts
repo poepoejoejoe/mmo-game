@@ -17,13 +17,19 @@ let gameCanvas: HTMLElement;
 let playerCoordsEl: HTMLElement;
 let healthText: HTMLElement;
 let playerNameDisplayEl: HTMLElement;
-let inventoryView: HTMLElement;
-let craftingView: HTMLElement;
+export let inventoryView: HTMLElement;
+export let craftingView: HTMLElement;
+export let gearView: HTMLElement;
+let infoPanel: HTMLElement;
 let inventoryButton: HTMLButtonElement;
 let craftingButton: HTMLButtonElement;
+let gearButton: HTMLButtonElement;
 let chatMessagesEl: HTMLElement;
+let chatButton: HTMLButtonElement;
+let chatContainer: HTMLElement;
 
-let currentPanel: 'inventory' | 'crafting' | null = 'inventory';
+let currentPanel: 'inventory' | 'crafting' | 'gear' | null = 'inventory';
+let isChatOpen = true;
 
 export function initializeUI() {
     // Top Bar
@@ -43,9 +49,14 @@ export function initializeUI() {
     playerNameDisplayEl = document.getElementById('player-name-display')!;
     inventoryView = document.getElementById('inventory-view')!;
     craftingView = document.getElementById('crafting-view')!;
+    gearView = document.getElementById('gear-view')!;
+    infoPanel = document.getElementById('info-panel')!;
     inventoryButton = document.getElementById('inventory-button') as HTMLButtonElement;
     craftingButton = document.getElementById('crafting-button') as HTMLButtonElement;
+    gearButton = document.getElementById('gear-button') as HTMLButtonElement;
     chatMessagesEl = document.getElementById('chat-messages')!;
+    chatButton = document.getElementById('chat-button') as HTMLButtonElement;
+    chatContainer = document.getElementById('chat-container')!;
 
     registerButton.addEventListener('click', () => {
         const name = nameInput.value.trim();
@@ -60,11 +71,15 @@ export function initializeUI() {
 
     inventoryButton.addEventListener('click', () => toggleInfoPanel('inventory'));
     craftingButton.addEventListener('click', () => toggleInfoPanel('crafting'));
+    gearButton.addEventListener('click', () => toggleInfoPanel('gear'));
     helpButton.addEventListener('click', () => toggleModal('help-modal', true));
     helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
+    chatButton.addEventListener('click', toggleChat);
     
     // Set initial state on load
     updateButtonSelection();
+    toggleChat(); // to set initial state
+    toggleChat(); // toggle back to open, but apply style
 }
 
 export function promptForRegistration() {
@@ -74,7 +89,16 @@ export function promptForRegistration() {
     }
 }
 
-function toggleInfoPanel(panelType: 'inventory' | 'crafting') {
+function toggleChat() {
+    isChatOpen = !isChatOpen;
+    if (isChatOpen) {
+        chatContainer.style.display = 'flex';
+    } else {
+        chatContainer.style.display = 'none';
+    }
+}
+
+function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear') {
     if (panelType === currentPanel) {
         currentPanel = null;
     } else {
@@ -87,15 +111,24 @@ function toggleInfoPanel(panelType: 'inventory' | 'crafting') {
 function updateButtonSelection() {
     inventoryButton.classList.remove('selected');
     craftingButton.classList.remove('selected');
+    gearButton.classList.remove('selected');
     inventoryView.style.display = 'none';
     craftingView.style.display = 'none';
+    gearView.style.display = 'none';
+    infoPanel.style.display = 'none';
 
     if (currentPanel === 'inventory') {
         inventoryButton.classList.add('selected');
         inventoryView.style.display = 'flex';
+        infoPanel.style.display = 'flex';
     } else if (currentPanel === 'crafting') {
         craftingButton.classList.add('selected');
         craftingView.style.display = 'flex';
+        infoPanel.style.display = 'flex';
+    } else if (currentPanel === 'gear') {
+        gearButton.classList.add('selected');
+        gearView.style.display = 'flex';
+        infoPanel.style.display = 'flex';
     }
 }
 
@@ -173,8 +206,34 @@ export function updateCraftingUI(): void {
 }
 
 export function updateGearUI(): void {
-    // Gear display was removed in the new design.
-    // It can be re-integrated into the inventory panel later.
+    const gear = state.getState().gear;
+    gearView.innerHTML = ''; // Clear existing slots
+
+    for (const slot in gear) {
+        const item = gear[slot];
+
+        const slotEl = document.createElement('div');
+        slotEl.classList.add('inventory-slot'); // Reuse styles
+
+        if (item) {
+            const nameEl = document.createElement('div');
+            nameEl.classList.add('item-name');
+            nameEl.textContent = item.id;
+            slotEl.appendChild(nameEl);
+
+            const unequipButton = document.createElement('button');
+            unequipButton.textContent = 'Unequip';
+            unequipButton.classList.add('unequip-button');
+            unequipButton.dataset.slot = slot;
+            slotEl.appendChild(unequipButton);
+        } else {
+            const nameEl = document.createElement('div');
+            nameEl.classList.add('item-name');
+            nameEl.textContent = slot; // e.g. "hand", "head"
+            slotEl.appendChild(nameEl);
+        }
+        gearView.appendChild(slotEl);
+    }
 }
 
 export function updateInventoryUI(): void {
@@ -223,6 +282,7 @@ export function updateInventoryUI(): void {
     }
 
     updateCraftingUI();
+    updateGearUI();
 }
 
 export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {

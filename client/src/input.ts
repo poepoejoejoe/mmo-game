@@ -1,6 +1,6 @@
 import * as state from './state';
 import * as network from './network';
-import { setBuildModeActive, startCooldown } from './ui';
+import { setBuildModeActive, startCooldown, gearView, inventoryView, craftingView } from './ui';
 import { ACTION_COOLDOWN, TILE_SIZE, WATER_PENALTY } from './constants';
 import { getEntityProperties, getTileProperties } from './definitions';
 
@@ -359,6 +359,21 @@ export function initializeInput() {
             if (inventorySlot) {
                 startActionCooldown(ACTION_COOLDOWN);
                 network.send({ type: 'equip', payload: { inventorySlot } });
+            }
+        }
+    });
+
+    gearView.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const button = target.closest('button');
+        if (!button) return;
+
+        if (button.classList.contains('unequip-button')) {
+            if (!canPerformAction) return;
+            const gearSlot = button.dataset.slot;
+            if (gearSlot) {
+                startActionCooldown(ACTION_COOLDOWN);
+                network.send({ type: 'unequip', payload: { gearSlot } });
             }
         }
     });

@@ -24,6 +24,10 @@
 
         <!-- Bottom UI -->
         <div class="bottom-ui">
+            <div class="left-hud-container">
+                <button class="action-button" id="chat-button">💬</button>
+            </div>
+
             <div id="chat-container">
                 <div id="chat-messages"></div>
                 <input type="text" id="chat-input" placeholder="Say something...">
@@ -33,7 +37,6 @@
                 </div>
             </div>
 
-            <!-- Player HUD -->
             <div id="player-hud-bottom">
                 <div id="player-name-display"></div>
                 <div class="hp-display">
@@ -44,7 +47,6 @@
             </div>
 
             <div class="right-hud-container">
-                <!-- This is the space that will be populated -->
                 <div id="info-panel">
                     <div id="inventory-view" style="display: flex;">
                         <!-- Inventory slots will be dynamically generated here -->
@@ -52,11 +54,14 @@
                     <div id="crafting-view" style="display: none;">
                         <!-- Crafting recipes will be dynamically generated here -->
                     </div>
+                    <div id="gear-view" style="display: none;">
+                        <!-- Gear/equipment will be displayed here -->
+                    </div>
                 </div>
-
                 <div id="main-action-bar" class="action-bar">
                     <button class="action-button" id="inventory-button">🎒</button>
                     <button class="action-button" id="crafting-button">🔨</button>
+                    <button class="action-button" id="gear-button">🛡️</button>
                 </div>
             </div>
         </div>
