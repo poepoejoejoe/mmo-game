@@ -5,8 +5,6 @@ import { ACTION_COOLDOWN, TILE_SIZE, WATER_PENALTY } from './constants';
 import { getEntityProperties, getTileProperties } from './definitions';
 
 const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-const craftingView = document.getElementById('crafting-view')!;
-const inventoryView = document.getElementById('inventory-view')!;
 const chatInputEl = document.getElementById('chat-input') as HTMLInputElement;
 const nameInputEl = document.getElementById('name-input') as HTMLInputElement;
 let canPerformAction = true;
@@ -19,65 +17,6 @@ let moveInterval: number | null = null;
 const pressedKeys: string[] = [];
 let isMouseDown = false;
 let lastMouseEvent: MouseEvent | null = null;
-
-/**
- * A reusable function that performs a single interaction check and network send.
- * This is called repeatedly when the mouse is held down.
- * @param {number} tileX The world x-coordinate of the target tile.
- * @param {number} tileY The world y-coordinate of the target tile.
- */
-function performInteraction(tileX: number, tileY: number) {
-    if (!canPerformAction || !state.getMyEntity()) return;
-
-    const me = state.getMyEntity()!;
-
-    // Logic for Build Mode
-    if (isBuildMode && buildItem) {
-        if (Math.max(Math.abs(me.x - tileX), Math.abs(me.y - tileY)) !== 1) return;
-
-        const inventory = state.getState().inventory;
-        const itemCount = Object.values(inventory)
-            .filter(item => item?.id === buildItem)
-            .reduce((sum, item) => sum + item.quantity, 0);
-
-        if (itemCount < 1) return;
-        
-        const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
-        if (!targetTileProps.isBuildableOn) return; // Can't build here
-
-        startActionCooldown(ACTION_COOLDOWN);
-        network.send({ type: 'place_item', payload: { item: buildItem, x: tileX, y: tileY } });
-
-    } 
-    // Logic for Gather/Interact Mode
-    else {
-        if (Math.abs(me.x - tileX) + Math.abs(me.y - tileY) !== 1) return;
-        // --- NEW: Check for item pickup first ---
-        const entities = state.getState().entities;
-        let itemOnTileId: string | undefined;
-        for (const id in entities) {
-            const e = entities[id];
-            if (e.x === tileX && e.y === tileY && e.type === 'item') {
-                itemOnTileId = id;
-                break;
-            }
-        }
-
-        if (itemOnTileId) {
-            startActionCooldown(ACTION_COOLDOWN);
-            network.send({ type: 'interact', payload: { entityId: itemOnTileId } });
-            return;
-        }
-
-        const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
-        if (!targetTileProps.isGatherable && !targetTileProps.isDestructible) return; // Nothing to interact with
-
-        const cooldown = targetTileProps.movementPenalty ? WATER_PENALTY : ACTION_COOLDOWN;
-        startActionCooldown(cooldown);
-        network.send({ type: 'interact', payload: { x: tileX, y: tileY } });
-    }
-}
-
 
 function sendMoveCommand(dx: number, dy: number) {
     if (dx === 0 && dy === 0) return;
