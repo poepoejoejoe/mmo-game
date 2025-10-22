@@ -366,6 +366,22 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 func CleanupPlayer(playerID string) {
 	log.Printf("Cleaning up player %s.", playerID)
 
+	// --- NEW: Get player's position and remove their tile lock ---
+	playerData, err := rdb.HGetAll(ctx, playerID).Result()
+	if err != nil {
+		log.Printf("Error getting player data for cleanup %s: %v", playerID, err)
+		// We should still proceed with cleanup as much as possible.
+	} else {
+		if xStr, ok := playerData["x"]; ok {
+			if yStr, ok := playerData["y"]; ok {
+				tileKey := string(RedisKeyLockTile) + xStr + "," + yStr
+				rdb.Del(ctx, tileKey)
+				log.Printf("Removed tile lock for player %s at %s,%s", playerID, xStr, yStr)
+			}
+		}
+	}
+	// --- END NEW ---
+
 	// Announce the entity has left
 	leftMsg := map[string]interface{}{
 		"type":     string(ServerEventEntityLeft),
