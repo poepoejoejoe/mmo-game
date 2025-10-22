@@ -57,10 +57,10 @@ function loadAssets() {
 }
 
 // (drawWorld remains the same)
-function drawWorld(startX: number, startY: number) {
+function drawWorld(startX: number, startY: number, viewportWidth: number, viewportHeight: number) {
     if (!ctx) return;
-    for (let y = 0; y < VIEWPORT_HEIGHT; y++) {
-        for (let x = 0; x < VIEWPORT_WIDTH; x++) {
+    for (let y = 0; y < viewportHeight; y++) {
+        for (let x = 0; x < viewportWidth; x++) {
             const tileX = startX + x;
             const tileY = startY + y;
             const tileData = state.getTileData(tileX, tileY);
@@ -199,17 +199,36 @@ function render() {
     const me = state.getMyEntity();
     if (!me || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
-    const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
-    drawWorld(startX, startY);
+
+    const viewportWidth = Math.ceil(canvas.width / TILE_SIZE);
+    const viewportHeight = Math.ceil(canvas.height / TILE_SIZE);
+
+    const startX = me.x - Math.floor(viewportWidth / 2);
+    const startY = me.y - Math.floor(viewportHeight / 2);
+
+    drawWorld(startX, startY, viewportWidth, viewportHeight);
     drawEntities(startX, startY);
     drawDamageIndicators(startX, startY);
-    document.getElementById('player-coords')!.textContent = `Your Position: (${me.x}, ${me.y})`;
+    
+    // updatePlayerCoords is now called from main.ts on state update.
+    // document.getElementById('player-coords')!.textContent = `Your Position: (${me.x}, ${me.y})`;
 }
 
 function gameLoop() {
     render();
     requestAnimationFrame(gameLoop);
+}
+
+function resizeCanvas() {
+    const mainContent = document.querySelector('.main-content') as HTMLElement;
+    if (!canvas || !mainContent) return;
+
+    const rect = mainContent.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    // We might need to re-render here if the aspect ratio changes significantly
+    // For now, the gameLoop will handle the continuous rendering.
 }
 
 export function initializeRenderer() {
@@ -219,8 +238,13 @@ export function initializeRenderer() {
         return;
     }
     ctx = canvas.getContext('2d')!;
-    canvas.width = VIEWPORT_WIDTH * TILE_SIZE;
-    canvas.height = VIEWPORT_HEIGHT * TILE_SIZE;
+    
+    // Initial resize
+    resizeCanvas();
+
+    // Resize canvas when the window is resized
+    window.addEventListener('resize', resizeCanvas);
+    
     loadAssets();
 }
 

@@ -2,42 +2,50 @@ import * as state from './state';
 import { edibleDefs, itemDefinitions } from './definitions';
 import { send } from './network';
 
-let playerIdEl: HTMLElement;
-let cooldownBar: HTMLDivElement;
-let cooldownText: HTMLElement;
-let inventorySlotsEl: HTMLElement;
-let craftWallBtn: HTMLButtonElement;
-let craftFireBtn: HTMLButtonElement;
-let craftRatMeatBtn: HTMLButtonElement;
-let craftCrudeAxeBtn: HTMLButtonElement;
-let gameCanvas: HTMLElement;
-let healthBar: HTMLDivElement;
-let healthText: HTMLElement;
-let buildModeIndicator: HTMLElement;
-let gearSlotsEl: HTMLElement;
-let chatMessagesEl: HTMLElement;
+// Top Bar
 let registrationContainer: HTMLElement;
 let nameInput: HTMLInputElement;
 let registerButton: HTMLButtonElement;
+let welcomeMessageEl: HTMLElement;
+let helpButton: HTMLButtonElement;
+let helpModalClose: HTMLElement;
+
+// Main Content
+let gameCanvas: HTMLElement;
+
+// Bottom Bar
+let playerCoordsEl: HTMLElement;
+let healthText: HTMLElement;
+let playerNameDisplayEl: HTMLElement;
+let inventoryView: HTMLElement;
+let craftingView: HTMLElement;
+let inventoryButton: HTMLButtonElement;
+let craftingButton: HTMLButtonElement;
+let chatMessagesEl: HTMLElement;
+
+let currentPanel: 'inventory' | 'crafting' | null = 'inventory';
 
 export function initializeUI() {
-    playerIdEl = document.getElementById('player-id')!;
-    cooldownBar = document.getElementById('cooldown-bar') as HTMLDivElement;
-    cooldownText = document.getElementById('cooldown-text')!;
-    inventorySlotsEl = document.getElementById('inventory-slots')!;
-    craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
-    craftFireBtn = document.getElementById('craft-fire-btn') as HTMLButtonElement;
-    craftRatMeatBtn = document.getElementById('craft-rat-meat-btn') as HTMLButtonElement;
-    craftCrudeAxeBtn = document.getElementById('craft-crude-axe-btn') as HTMLButtonElement;
-    gameCanvas = document.getElementById('game-canvas')!;
-    healthBar = document.getElementById('health-bar') as HTMLDivElement;
-    healthText = document.getElementById('health-text')!;
-    buildModeIndicator = document.getElementById('build-mode-indicator')!;
-    gearSlotsEl = document.getElementById('gear-slots')!;
-    chatMessagesEl = document.getElementById('chat-messages')!;
+    // Top Bar
     registrationContainer = document.getElementById('registration-container')!;
     nameInput = document.getElementById('name-input') as HTMLInputElement;
     registerButton = document.getElementById('register-button') as HTMLButtonElement;
+    welcomeMessageEl = document.getElementById('welcome-message')!;
+    helpButton = document.getElementById('help-button') as HTMLButtonElement;
+    helpModalClose = document.getElementById('help-modal-close') as HTMLElement;
+
+    // Main Content
+    gameCanvas = document.getElementById('game-canvas')!;
+
+    // Bottom Bar
+    playerCoordsEl = document.getElementById('player-coords')!;
+    healthText = document.getElementById('health-text')!;
+    playerNameDisplayEl = document.getElementById('player-name-display')!;
+    inventoryView = document.getElementById('inventory-view')!;
+    craftingView = document.getElementById('crafting-view')!;
+    inventoryButton = document.getElementById('inventory-button') as HTMLButtonElement;
+    craftingButton = document.getElementById('crafting-button') as HTMLButtonElement;
+    chatMessagesEl = document.getElementById('chat-messages')!;
 
     registerButton.addEventListener('click', () => {
         const name = nameInput.value.trim();
@@ -49,14 +57,59 @@ export function initializeUI() {
             registrationContainer.style.display = 'none';
         }
     });
+
+    inventoryButton.addEventListener('click', () => toggleInfoPanel('inventory'));
+    craftingButton.addEventListener('click', () => toggleInfoPanel('crafting'));
+    helpButton.addEventListener('click', () => toggleModal('help-modal', true));
+    helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
+    
+    // Set initial state on load
+    updateButtonSelection();
 }
 
 export function promptForRegistration() {
-    // Show the registration UI if the player hasn't registered.
     if (!localStorage.getItem('secretKey')) {
-        registrationContainer.style.display = 'block';
+        registrationContainer.style.display = 'flex';
+        welcomeMessageEl.style.display = 'none';
     }
 }
+
+function toggleInfoPanel(panelType: 'inventory' | 'crafting') {
+    if (panelType === currentPanel) {
+        currentPanel = null;
+    } else {
+        currentPanel = panelType;
+    }
+    updateButtonSelection();
+    updateInventoryUI(); // Re-render to show/hide views
+}
+
+function updateButtonSelection() {
+    inventoryButton.classList.remove('selected');
+    craftingButton.classList.remove('selected');
+    inventoryView.style.display = 'none';
+    craftingView.style.display = 'none';
+
+    if (currentPanel === 'inventory') {
+        inventoryButton.classList.add('selected');
+        inventoryView.style.display = 'flex';
+    } else if (currentPanel === 'crafting') {
+        craftingButton.classList.add('selected');
+        craftingView.style.display = 'flex';
+    }
+}
+
+function toggleModal(modalId: string, show: boolean) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        if (show) {
+            modal.classList.add('active');
+        } else {
+            modal.classList.remove('active');
+        }
+    }
+}
+
 
 export function addChatMessage(playerId: string, message: string) {
     const messageEl = document.createElement('div');
@@ -72,84 +125,61 @@ export function addChatMessage(playerId: string, message: string) {
     }
     
     messageEl.innerHTML = `<strong>${displayName}:</strong> ${message}`;
-    chatMessagesEl.prepend(messageEl); // Prepend to add new messages to the top (which is visually the bottom)
+    chatMessagesEl.prepend(messageEl);
 }
 
 export function startCooldown(duration: number): void {
-    cooldownText.textContent = "Working...";
-    cooldownBar.style.transform = "translateX(-100%)";
-    cooldownBar.style.transition = "none";
-    cooldownBar.offsetHeight;
-    cooldownBar.style.transition = `transform ${duration}ms linear`;
-    cooldownBar.style.transform = "translateX(0%)";
-    setTimeout(() => {
-        cooldownText.textContent = "Ready";
-    }, duration);
+    // This UI element was removed in the new design.
+    // We can re-add it later if needed.
+    console.log(`Action cooldown started for ${duration}ms`);
 }
 
 export function updateCraftingUI(): void {
     const inventory = state.getState().inventory;
-    let woodCount = 0;
-    let stoneCount = 0;
-    let goopCount = 0;
-    let ratMeatCount = 0;
+    craftingView.innerHTML = ''; // Clear existing recipes
+
+    // Define a type for recipe requirements
+    type RecipeRequirements = { [key: string]: number };
+
+    // Example recipes (can be moved to definitions.ts)
+    const recipes = [
+        { id: 'craft-wall-btn', text: 'Wall (10 Wood)', req: { wood: 10 } as RecipeRequirements, item: 'wooden_wall' },
+        { id: 'craft-fire-btn', text: 'Fire (10 Wood)', req: { wood: 10 } as RecipeRequirements, item: 'fire' },
+        { id: 'cook-rat-meat-btn', text: 'Cook Meat (1 Rat Meat)', req: { rat_meat: 1 } as RecipeRequirements, item: 'cooked_rat_meat' },
+        { id: 'craft-axe-btn', text: 'Axe (10W, 10S, 5G)', req: { wood: 10, stone: 10, goop: 5 } as RecipeRequirements, item: 'crude_axe' },
+    ];
+
+    const counts: { [key: string]: number } = { wood: 0, stone: 0, goop: 0, rat_meat: 0 };
     for (const slot in inventory) {
-        if (inventory[slot] && inventory[slot].id === 'wood') {
-            woodCount += inventory[slot].quantity;
-        }
-        if (inventory[slot] && inventory[slot].id === 'stone') {
-            stoneCount += inventory[slot].quantity;
-        }
-        if (inventory[slot] && inventory[slot].id === 'goop') {
-            goopCount += inventory[slot].quantity;
-        }
-        if (inventory[slot] && inventory[slot].id === 'rat_meat') {
-            ratMeatCount += inventory[slot].quantity;
+        if (inventory[slot]) {
+            counts[inventory[slot].id] = (counts[inventory[slot].id] || 0) + inventory[slot].quantity;
         }
     }
-    craftWallBtn.disabled = woodCount < 10;
-    craftFireBtn.disabled = woodCount < 10;
-    craftRatMeatBtn.disabled = ratMeatCount < 1;
-    craftCrudeAxeBtn.disabled = woodCount < 10 || stoneCount < 10 || goopCount < 5;
+
+    recipes.forEach(recipe => {
+        const canCraft = Object.keys(recipe.req).every(itemId => counts[itemId] >= recipe.req[itemId]);
+        const recipeEl = document.createElement('div');
+        recipeEl.classList.add('crafting-recipe');
+        
+        const button = document.createElement('button');
+        button.id = recipe.id;
+        button.textContent = recipe.text;
+        button.disabled = !canCraft;
+        button.dataset.item = recipe.item; // Store the item to be crafted
+        
+        recipeEl.appendChild(button);
+        craftingView.appendChild(recipeEl);
+    });
 }
 
 export function updateGearUI(): void {
-    const gear = state.getState().gear;
-    
-    // Clear existing gear slots
-    const slots = gearSlotsEl.querySelectorAll('.gear-slot');
-    slots.forEach(slot => {
-        const display = slot.querySelector('.gear-item-display') as HTMLElement;
-        const unequipBtn = slot.querySelector('.unequip-button') as HTMLButtonElement;
-        
-        display.textContent = '-';
-        unequipBtn.style.display = 'none';
-        unequipBtn.dataset.slot = slot.id;
-    });
-
-    for (const slotId in gear) {
-        const item = gear[slotId];
-        const slotEl = document.getElementById(slotId);
-        if (slotEl) {
-            const display = slotEl.querySelector('.gear-item-display') as HTMLElement;
-            const unequipBtn = slotEl.querySelector('.unequip-button') as HTMLButtonElement;
-            if (item && item.id) {
-                const itemDef = itemDefinitions[item.id];
-                let displayText = item.id;
-                if (itemDef && itemDef.equippable && itemDef.equippable.damage) {
-                    displayText += ` (+${itemDef.equippable.damage} dmg)`;
-                }
-                display.textContent = displayText;
-                unequipBtn.style.display = 'inline-block';
-            }
-        }
-    }
+    // Gear display was removed in the new design.
+    // It can be re-integrated into the inventory panel later.
 }
-
 
 export function updateInventoryUI(): void {
     const inventory = state.getState().inventory;
-    inventorySlotsEl.innerHTML = ''; // Clear existing slots
+    inventoryView.innerHTML = ''; // Clear existing slots
 
     for (let i = 0; i < 10; i++) {
         const slotKey = `slot_${i}`;
@@ -159,11 +189,20 @@ export function updateInventoryUI(): void {
         slotEl.classList.add('inventory-slot');
 
         if (item) {
-            slotEl.textContent = `${item.id}: ${item.quantity}`;
+            const nameEl = document.createElement('div');
+            nameEl.classList.add('item-name');
+            nameEl.textContent = item.id;
+            slotEl.appendChild(nameEl);
+
+            const quantityEl = document.createElement('div');
+            quantityEl.classList.add('item-quantity');
+            quantityEl.textContent = String(item.quantity);
+            slotEl.appendChild(quantityEl);
+            
             const edible = edibleDefs[item.id];
             if (edible) {
                 const eatButton = document.createElement('button');
-                eatButton.textContent = `Eat (${edible.healAmount}hp)`;
+                eatButton.textContent = `Eat`;
                 eatButton.classList.add('eat-button');
                 eatButton.dataset.item = item.id;
                 slotEl.appendChild(eatButton);
@@ -171,50 +210,48 @@ export function updateInventoryUI(): void {
 
             const itemDef = itemDefinitions[item.id];
             if (itemDef && itemDef.equippable) {
-                let buttonText = 'Equip';
-                if (itemDef.equippable.damage) {
-                    buttonText += ` (+${itemDef.equippable.damage} dmg)`;
-                }
                 const equipButton = document.createElement('button');
-                equipButton.textContent = buttonText;
+                equipButton.textContent = 'Equip';
                 equipButton.classList.add('equip-button');
                 equipButton.dataset.slot = slotKey;
                 slotEl.appendChild(equipButton);
             }
         } else {
-            slotEl.textContent = '-'; // Empty slot
+            slotEl.innerHTML = `&nbsp;`; // Empty slot
         }
-        inventorySlotsEl.appendChild(slotEl);
+        inventoryView.appendChild(slotEl);
     }
 
     updateCraftingUI();
-    updateGearUI();
 }
 
 export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {
     if (isActive && buildItem) {
         gameCanvas.classList.add('build-mode');
-        buildModeIndicator.textContent = `Building: ${buildItem.replace('_', ' ')}`;
-        buildModeIndicator.style.display = 'block';
     } else {
         gameCanvas.classList.remove('build-mode');
-        buildModeIndicator.style.display = 'none';
     }
 }
 
 export function updatePlayerIdDisplay() {
-    const playerId = state.getState().playerId;
-    if (playerId) {
-        playerIdEl.textContent = `Your ID: ${playerId}`;
-    }
+    // This is now handled by updatePlayerNameDisplay
 }
 
 export function updatePlayerNameDisplay(name: string) {
-    playerIdEl.textContent = `Welcome, ${name}!`;
+    if (name) {
+        welcomeMessageEl.textContent = `Welcome, ${name}!`;
+        playerNameDisplayEl.textContent = name;
+        registrationContainer.style.display = 'none';
+        welcomeMessageEl.style.display = 'block';
+    } else {
+        welcomeMessageEl.style.display = 'none';
+    }
 }
 
 export function updatePlayerHealth(health: number, maxHealth: number) {
-    healthText.textContent = `HP: ${health} / ${maxHealth}`;
-    const healthPercentage = (health / maxHealth) * 100;
-    healthBar.style.width = `${healthPercentage}%`;
+    healthText.textContent = `${health} / ${maxHealth}`;
+}
+
+export function updatePlayerCoords(x: number, y: number) {
+    playerCoordsEl.textContent = `(${x}, ${y})`;
 }

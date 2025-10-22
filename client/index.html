@@ -4,86 +4,85 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MMO Grid World</title>
-    <!-- Vite will automatically handle linking the CSS during development -->
     <link rel="stylesheet" href="/src/styles.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   </head>
   <body>
-    <h1>MMO Grid World</h1>
-    
-    <!-- The game world is now rendered on this single canvas element -->
-    <canvas id="game-canvas"></canvas>
-    
-    <div id="info-panel">
-        <div id="player-coords">Connecting to server...</div>
-        <div id="build-mode-indicator" style="display: none;"></div>
-        <div class="controls">
-            <span>Use Arrow Keys or WASD to Move</span>
-            <span>Left-click adjacent resources to gather</span>
-            <span>Press 'B' for Wall / 'F' for Fire to enter/exit Build Mode</span>
-        </div>
-        <div id="player-id"></div>
-    </div>
-
-    <div id="registration-container" style="display: none;">
-        <p>Choose a name to save your progress:</p>
-        <input type="text" id="name-input" placeholder="Your Name" maxlength="15">
-        <button id="register-button">Save</button>
-    </div>
-
-    <div id="chat-container">
-        <div id="chat-messages"></div>
-        <input type="text" id="chat-input" placeholder="Say something..." />
-    </div>
-
-    <!-- UI bar at the bottom of the screen -->
-    <div id="ui-bottom-bar">
-        <div id="player-health">
-            <div id="health-bar"></div>
-            <div id="health-text"></div>
-        </div>
-        <div id="inventory">
-            <h3>Inventory</h3>
-            <div id="inventory-slots">
-                <!-- Inventory slots will be dynamically generated here -->
+    <div class="game-container">
+        <!-- Top Info bar -->
+        <div class="top-info">
+            <span class="game-title">MMO Grid World</span>
+            <!-- Registration will be shown here if needed -->
+            <div id="registration-container" style="display: none;">
+                <input type="text" id="name-input" placeholder="Enter Your Name" maxlength="15">
+                <button id="register-button">Save</button>
             </div>
+            <div id="welcome-message"></div>
+            <button class="help-button" id="help-button">?</button>
         </div>
 
-        <div id="gear">
-            <h3>Gear</h3>
-            <div id="gear-slots">
-                <div class="gear-slot" id="weapon-slot">
-                    <span>Weapon:</span>
-                    <div class="gear-item-display">-</div>
-                    <button class="unequip-button" style="display: none;">Unequip</button>
+        <!-- Game World -->
+        <div class="main-content">
+            <canvas id="game-canvas"></canvas>
+        </div>
+
+        <!-- Bottom UI -->
+        <div class="bottom-ui">
+            <div id="chat-container">
+                <div id="chat-messages"></div>
+                <input type="text" id="chat-input" placeholder="Say something...">
+            </div>
+
+            <!-- Player HUD -->
+            <div id="player-hud-bottom">
+                <div id="player-name-display"></div>
+                <div class="hp-display">
+                    <span>❤️</span>
+                    <span id="health-text"></span>
                 </div>
-                <!-- Other gear slots can be added here -->
+                <div id="player-coords"></div>
             </div>
-        </div>
 
-        <div id="crafting">
-            <h3>Crafting</h3>
-            <button id="craft-wall-btn" disabled>
-                Craft Wall (10 Wood)
-            </button>
-            <button id="craft-fire-btn" disabled>
-                Craft Fire (10 Wood)
-            </button>
-            <button id="craft-rat-meat-btn" disabled>
-                Cook Rat meat (1 Rat Meat)
-            </button>
-            <button id="craft-crude-axe-btn" disabled>
-                Craft Crude Axe (10 Wood, 10 Stone, 5 Goop)
-            </button>
+            <div class="right-hud-container">
+                <!-- This is the space that will be populated -->
+                <div id="info-panel">
+                    <div id="inventory-view" style="display: flex;">
+                        <!-- Inventory slots will be dynamically generated here -->
+                    </div>
+                    <div id="crafting-view" style="display: none;">
+                        <!-- Crafting recipes will be dynamically generated here -->
+                    </div>
+                </div>
+
+                <div id="main-action-bar" class="action-bar">
+                    <button class="action-button" id="inventory-button">🎒</button>
+                    <button class="action-button" id="crafting-button">🔨</button>
+                </div>
+            </div>
         </div>
         
-        <div id="action-cooldown">
-            <div id="cooldown-bar"></div>
-            <div id="cooldown-text">Ready</div>
+        <!-- Mobile Joystick -->
+        <div class="mobile-controls">
+            <div class="joystick">
+                <div class="joystick-handle"></div>
+            </div>
         </div>
     </div>
 
-    <!-- This script tag is the entry point for the entire TypeScript application -->
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Controls</h2>
+                <span class="close-button" id="help-modal-close">&times;</span>
+            </div>
+            <p><b>Arrow Keys / WASD:</b> Move</p>
+            <p><b>Left-Click Adjacent Resource:</b> Gather</p>
+            <p><b>B:</b> Build Wall</p>
+            <p><b>F:</b> Build Fire</p>
+        </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

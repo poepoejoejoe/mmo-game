@@ -1,17 +1,14 @@
 import * as state from './state';
 import * as network from './network';
 import { setBuildModeActive, startCooldown } from './ui';
-import { ACTION_COOLDOWN, TILE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, WATER_PENALTY } from './constants';
+import { ACTION_COOLDOWN, TILE_SIZE, WATER_PENALTY } from './constants';
 import { getEntityProperties, getTileProperties } from './definitions';
 
 const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-const craftWallBtn = document.getElementById('craft-wall-btn') as HTMLButtonElement;
-const craftFireBtn = document.getElementById('craft-fire-btn') as HTMLButtonElement;
-const craftRatMeatBtn = document.getElementById('craft-rat-meat-btn') as HTMLButtonElement;
-const craftCrudeAxeBtn = document.getElementById('craft-crude-axe-btn') as HTMLButtonElement;
-const inventorySlotsEl = document.getElementById('inventory-slots')!;
-const gearSlotsEl = document.getElementById('gear-slots')!;
+const craftingView = document.getElementById('crafting-view')!;
+const inventoryView = document.getElementById('inventory-view')!;
 const chatInputEl = document.getElementById('chat-input') as HTMLInputElement;
+const nameInputEl = document.getElementById('name-input') as HTMLInputElement;
 let canPerformAction = true;
 let isBuildMode = false;
 let buildItem: 'wooden_wall' | 'fire' | null = null;
@@ -152,8 +149,8 @@ function handleMouseMove(e: MouseEvent) {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-    // If typing in chat, don't process game keybinds
-    if (document.activeElement === chatInputEl) {
+    // If typing in chat or name input, don't process game keybinds
+    if (document.activeElement === chatInputEl || document.activeElement === nameInputEl) {
         return;
     }
 
@@ -192,8 +189,8 @@ function handleKeyDown(e: KeyboardEvent) {
 }
 
 function handleKeyUp(e: KeyboardEvent) {
-    // If typing in chat, don't process game keybinds
-    if (document.activeElement === chatInputEl) {
+    // If typing in chat or name input, don't process game keybinds
+    if (document.activeElement === chatInputEl || document.activeElement === nameInputEl) {
         return;
     }
     const index = pressedKeys.indexOf(e.key);
@@ -214,8 +211,13 @@ function handleInteractionLogic() {
     const canvasY = (lastMouseEvent.clientY - rect.top) * scaleY;
     const tileGridX = Math.floor(canvasX / TILE_SIZE);
     const tileGridY = Math.floor(canvasY / TILE_SIZE);
-    const startX = me.x - Math.floor(VIEWPORT_WIDTH / 2);
-    const startY = me.y - Math.floor(VIEWPORT_HEIGHT / 2);
+    
+    // Dynamically calculate viewport dimensions
+    const viewportWidth = Math.ceil(gameCanvas.width / TILE_SIZE);
+    const viewportHeight = Math.ceil(gameCanvas.height / TILE_SIZE);
+
+    const startX = me.x - Math.floor(viewportWidth / 2);
+    const startY = me.y - Math.floor(viewportHeight / 2);
     const tileX = tileGridX + startX;
     const tileY = tileGridY + startY;
 
@@ -338,19 +340,22 @@ export function initializeInput() {
     window.addEventListener('mouseup', handleMouseUpOrLeave);
     gameCanvas.addEventListener('mouseleave', handleMouseUpOrLeave);
 
-    inventorySlotsEl.addEventListener('click', (e) => {
+    inventoryView.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        if (target.classList.contains('eat-button')) {
+        const button = target.closest('button');
+        if (!button) return;
+
+        if (button.classList.contains('eat-button')) {
             if (!canPerformAction) return;
-            const itemToEat = target.dataset.item;
+            const itemToEat = button.dataset.item;
             if (itemToEat) {
                 startActionCooldown(ACTION_COOLDOWN);
                 network.send({ type: 'eat', payload: { item: itemToEat } });
             }
         }
-        if (target.classList.contains('equip-button')) {
+        if (button.classList.contains('equip-button')) {
             if (!canPerformAction) return;
-            const inventorySlot = target.dataset.slot;
+            const inventorySlot = button.dataset.slot;
             if (inventorySlot) {
                 startActionCooldown(ACTION_COOLDOWN);
                 network.send({ type: 'equip', payload: { inventorySlot } });
@@ -358,40 +363,18 @@ export function initializeInput() {
         }
     });
 
-    gearSlotsEl.addEventListener('click', (e) => {
+    craftingView.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        if (target.classList.contains('unequip-button')) {
-            if (!canPerformAction) return;
-            const gearSlot = target.dataset.slot;
-            if (gearSlot) {
-                startActionCooldown(ACTION_COOLDOWN);
-                network.send({ type: 'unequip', payload: { gearSlot } });
-            }
+        const button = target.closest('button');
+        if (!button || button.disabled || !canPerformAction) return;
+
+        // The item to craft is now stored in the button's ID
+        const itemToCraft = button.dataset.item;
+        
+        if (itemToCraft) {
+            startActionCooldown(ACTION_COOLDOWN);
+            network.send({ type: 'craft', payload: { item: itemToCraft } });
         }
-    });
-
-    craftWallBtn.addEventListener('click', () => {
-        if (!canPerformAction || craftWallBtn.disabled) return;
-        startActionCooldown(ACTION_COOLDOWN);
-        network.send({ type: 'craft', payload: { item: 'wooden_wall' } });
-    });
-
-    craftFireBtn.addEventListener('click', () => {
-        if (!canPerformAction || craftFireBtn.disabled) return;
-        startActionCooldown(ACTION_COOLDOWN);
-        network.send({ type: 'craft', payload: { item: 'fire' } });
-    });
-
-    craftRatMeatBtn.addEventListener('click', () => {
-        if (!canPerformAction || craftRatMeatBtn.disabled) return;
-        startActionCooldown(ACTION_COOLDOWN);
-        network.send({ type: 'craft', payload: { item: 'cooked_rat_meat' } });
-    });
-
-    craftCrudeAxeBtn.addEventListener('click', () => {
-        if (!canPerformAction || craftCrudeAxeBtn.disabled) return;
-        startActionCooldown(ACTION_COOLDOWN);
-        network.send({ type: 'craft', payload: { item: 'crude_axe' } });
     });
 }
 
