@@ -102,14 +102,17 @@ export function getTileProperties(type: string): TileProperties {
 	}
 }
 
-export const itemDefinitions: { [key: string]: { character: string, color: string, equippable?: { slot: string, damage?: number } } } = {
-    'wood': { character: 'W', color: '#8B4513' },
-    'stone': { character: 'S', color: '#808080' },
-    'goop': { character: 'G', color: '#90EE90' },
-    'rat_meat': { character: 'M', color: '#DC143C' },
-    'treasure_map': { character: 'M', color: '#FFD700' },
-    'fire': { character: 'F', color: '#FF4500' },
+export const itemDefinitions: { [key: string]: { icon?: string, character: string, color: string, equippable?: { slot: string, damage?: number } } } = {
+    'wood': { icon: '🌲', character: 'W', color: '#8B4513' },
+    'stone': { icon: '🪨', character: 'S', color: '#808080' },
+    'goop': { icon: '💧', character: 'G', color: '#90EE90' },
+    'rat_meat': { icon: '🍖', character: 'M', color: '#DC143C' },
+    'cooked_rat_meat': { icon: '🥩', character: 'M', color: '#A52A2A' },
+    'treasure_map': { icon: '🗺️', character: 'M', color: '#FFD700' },
+    'fire': { icon: '🔥', character: 'F', color: '#FF4500' },
+    'wooden_wall': { icon: '🧱', character: '#', color: '#A0522D' },
     'crude_axe': {
+        icon: '🪓',
         character: 'A',
         color: '#b5a642',
         equippable: {
@@ -117,7 +120,7 @@ export const itemDefinitions: { [key: string]: { character: string, color: strin
             damage: 2,
         },
     },
-    'default': { character: '?', color: '#FFFFFF' },
+    'default': { icon: '❓', character: '?', color: '#FFFFFF' },
 };
 
 export const edibleDefs: { [key: string]: { healAmount: number } } = {

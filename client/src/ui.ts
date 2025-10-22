@@ -176,13 +176,13 @@ export function updateCraftingUI(): void {
 
     // Example recipes (can be moved to definitions.ts)
     const recipes = [
-        { id: 'craft-wall-btn', text: 'Wall (10 Wood)', req: { wood: 10 } as RecipeRequirements, item: 'wooden_wall' },
-        { id: 'craft-fire-btn', text: 'Fire (10 Wood)', req: { wood: 10 } as RecipeRequirements, item: 'fire' },
-        { id: 'cook-rat-meat-btn', text: 'Cook Meat (1 Rat Meat)', req: { rat_meat: 1 } as RecipeRequirements, item: 'cooked_rat_meat' },
-        { id: 'craft-axe-btn', text: 'Axe (10W, 10S, 5G)', req: { wood: 10, stone: 10, goop: 5 } as RecipeRequirements, item: 'crude_axe' },
+        { id: 'craft-wall-btn', text: 'Wall', req: { wood: 10 } as RecipeRequirements, item: 'wooden_wall' },
+        { id: 'craft-fire-btn', text: 'Fire', req: { wood: 10 } as RecipeRequirements, item: 'fire' },
+        { id: 'cook-rat-meat-btn', text: 'Cook Meat', req: { rat_meat: 1 } as RecipeRequirements, item: 'cooked_rat_meat' },
+        { id: 'craft-axe-btn', text: 'Axe', req: { wood: 10, stone: 10, goop: 5 } as RecipeRequirements, item: 'crude_axe' },
     ];
 
-    const counts: { [key: string]: number } = { wood: 0, stone: 0, goop: 0, rat_meat: 0 };
+    const counts: { [key: string]: number } = {};
     for (const slot in inventory) {
         if (inventory[slot]) {
             counts[inventory[slot].id] = (counts[inventory[slot].id] || 0) + inventory[slot].quantity;
@@ -193,12 +193,22 @@ export function updateCraftingUI(): void {
         const canCraft = Object.keys(recipe.req).every(itemId => counts[itemId] >= recipe.req[itemId]);
         const recipeEl = document.createElement('div');
         recipeEl.classList.add('crafting-recipe');
+
+        const itemDef = itemDefinitions[recipe.item] || itemDefinitions['default'];
         
         const button = document.createElement('button');
         button.id = recipe.id;
-        button.textContent = recipe.text;
         button.disabled = !canCraft;
         button.dataset.item = recipe.item; // Store the item to be crafted
+
+        const iconEl = document.createElement('div');
+        iconEl.classList.add('item-icon');
+        iconEl.textContent = itemDef.icon || itemDef.character;
+        button.appendChild(iconEl);
+
+        const textEl = document.createElement('div');
+        textEl.textContent = recipe.text;
+        button.appendChild(textEl);
         
         recipeEl.appendChild(button);
         craftingView.appendChild(recipeEl);
@@ -216,10 +226,11 @@ export function updateGearUI(): void {
         slotEl.classList.add('inventory-slot'); // Reuse styles
 
         if (item) {
-            const nameEl = document.createElement('div');
-            nameEl.classList.add('item-name');
-            nameEl.textContent = item.id;
-            slotEl.appendChild(nameEl);
+            const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
+            const iconEl = document.createElement('div');
+            iconEl.classList.add('item-icon');
+            iconEl.textContent = itemDef.icon || itemDef.character;
+            slotEl.appendChild(iconEl);
 
             const unequipButton = document.createElement('button');
             unequipButton.textContent = 'Unequip';
@@ -248,10 +259,11 @@ export function updateInventoryUI(): void {
         slotEl.classList.add('inventory-slot');
 
         if (item) {
-            const nameEl = document.createElement('div');
-            nameEl.classList.add('item-name');
-            nameEl.textContent = item.id;
-            slotEl.appendChild(nameEl);
+            const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
+            const iconEl = document.createElement('div');
+            iconEl.classList.add('item-icon');
+            iconEl.textContent = itemDef.icon || itemDef.character;
+            slotEl.appendChild(iconEl);
 
             const quantityEl = document.createElement('div');
             quantityEl.classList.add('item-quantity');
@@ -267,8 +279,8 @@ export function updateInventoryUI(): void {
                 slotEl.appendChild(eatButton);
             }
 
-            const itemDef = itemDefinitions[item.id];
-            if (itemDef && itemDef.equippable) {
+            const itemDefForEquip = itemDefinitions[item.id];
+            if (itemDefForEquip && itemDefForEquip.equippable) {
                 const equipButton = document.createElement('button');
                 equipButton.textContent = 'Equip';
                 equipButton.classList.add('equip-button');
