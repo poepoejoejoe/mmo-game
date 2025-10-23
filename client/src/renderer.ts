@@ -1,5 +1,5 @@
 import * as state from './state';
-import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, TILE_SIZE } from './constants';
+import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
 // --- UPDATED ---
 import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
 
@@ -105,7 +105,18 @@ function drawBackground(startX: number, startY: number) {
         return;
     }
 
-    const pattern = ctx.createPattern(bgImage, 'repeat');
+    // Create a temporary canvas to draw the scaled-down pattern
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return;
+
+    tempCanvas.width = BACKGROUND_TILE_SIZE;
+    tempCanvas.height = BACKGROUND_TILE_SIZE;
+
+    // Draw the grass texture onto the temporary canvas at the desired size
+    tempCtx.drawImage(bgImage, 0, 0, BACKGROUND_TILE_SIZE, BACKGROUND_TILE_SIZE);
+
+    const pattern = ctx.createPattern(tempCanvas, 'repeat');
     if (pattern) {
         ctx.fillStyle = pattern;
         ctx.save();
