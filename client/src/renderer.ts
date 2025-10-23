@@ -1,5 +1,5 @@
 import * as state from './state';
-import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
+import { TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
 // --- UPDATED ---
 import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
 
@@ -144,7 +144,9 @@ function drawWorld(startX: number, startY: number, viewportWidth: number, viewpo
             }
             const tileProps = getTileProperties(tileData.type);
             
-            if (tileProps.asset) {
+            if (tileProps.draw) {
+                tileProps.draw(ctx, x, y, TILE_SIZE, tileX, tileY);
+            } else if (tileProps.asset) {
                 let assetPath = tileProps.asset;
                 if (Array.isArray(assetPath)) {
                     // Deterministic selection based on tile coordinates
