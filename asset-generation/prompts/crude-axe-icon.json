@@ -3,7 +3,7 @@
   "asset_type": "icon",
   "description": "An inventory icon for a crude axe.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "small",
   "transparent": true,
   "llm_prompt": "A simple icon of a crude, primitive axe for a fantasy game inventory. The axe should be made of a sharpened stone tied to a wooden handle. It should be easily recognizable as an axe."
 }

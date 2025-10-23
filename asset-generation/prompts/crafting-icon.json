@@ -3,7 +3,7 @@
   "asset_type": "icon",
   "description": "An icon representing crafting.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "small",
   "transparent": true,
   "llm_prompt": "A clear and simple icon representing crafting for a fantasy game UI. A small hammer and anvil, crossed, is a good representation. The icon should be easily understandable at a small size."
 }

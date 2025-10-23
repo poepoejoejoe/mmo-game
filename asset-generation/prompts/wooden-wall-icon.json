@@ -3,7 +3,7 @@
   "asset_type": "icon",
   "description": "An icon for a wooden wall.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "small",
   "transparent": true,
   "llm_prompt": "A clear and simple icon of a section of a wooden wall or barricade for a crafting menu in a fantasy game. It should be easily recognizable as a defensive structure."
 }

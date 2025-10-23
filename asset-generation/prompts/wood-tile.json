@@ -3,6 +3,6 @@
   "asset_type": "texture",
   "description": "A seamless, top-down, stylized texture of a forest.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "medium",
   "llm_prompt": "A seamless and tileable texture of a dense forest from a top-down perspective. It should feature the tops of lush, green trees, creating a canopy look suitable for a fantasy game world."
 }

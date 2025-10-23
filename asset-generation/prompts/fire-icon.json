@@ -3,7 +3,7 @@
   "asset_type": "icon",
   "description": "An icon representing fire or warmth.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "small",
   "transparent": true,
   "llm_prompt": "A clear and simple icon of a stylized flame or campfire for a game UI. The fire should be bright and inviting. The icon needs to be easily understandable at a small size."
 }

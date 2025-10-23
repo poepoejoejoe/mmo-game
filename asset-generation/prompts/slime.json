@@ -3,7 +3,7 @@
   "asset_type": "sprite",
   "description": "A top-down sprite of a classic slime monster.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "medium",
   "transparent": true,
   "llm_prompt": "A top-down 2D sprite of a classic, green, gooey slime monster for a fantasy video game. The slime should be semi-transparent and have a simple, blob-like shape. It should look like a basic, early-game enemy."
 }

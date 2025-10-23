@@ -3,7 +3,7 @@
   "asset_type": "icon",
   "description": "An icon for player equipment (armor and weapons).",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "small",
   "transparent": true,
   "llm_prompt": "A clear and simple icon representing player gear for a fantasy game UI. It should feature a helmet, a sword, and a piece of chest armor to clearly signify equipment. The icon needs to be easily understandable at a small size."
 }

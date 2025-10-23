@@ -3,7 +3,7 @@
   "asset_type": "icon",
   "description": "An inventory icon for a piece of stone or rock.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "small",
   "transparent": true,
   "llm_prompt": "A clear and simple icon of a piece of stone or rock for a fantasy game inventory. The icon should clearly represent a generic stone, suitable for crafting."
 }

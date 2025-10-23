@@ -3,7 +3,7 @@
   "asset_type": "sprite",
   "description": "A top-down sprite of a common rat, a low-level enemy.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "medium",
   "transparent": true,
   "llm_prompt": "A top-down 2D sprite of a common sewer rat for a fantasy video game. The rat should be facing forward, in a slightly aggressive pose. It should look like a basic, early-game enemy."
 }

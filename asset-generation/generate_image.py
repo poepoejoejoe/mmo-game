@@ -51,6 +51,12 @@ def generate_image(prompt_file, theme_file):
     asset_specific_modifiers = style_modifiers.get(asset_type, "")
     
     final_prompt = f"{base_prompt}, {style_suffix}. {global_modifiers}. {asset_specific_modifiers}."
+
+    size_hint = prompt_data.get("size_hint")
+    if size_hint == "small":
+        final_prompt += " The asset needs to be extremely clear and readable when viewed at a very small size, as an icon."
+    elif size_hint == "medium":
+        final_prompt += " The asset should have a good level of detail, suitable for a medium-sized sprite or tile."
     
     is_transparent = prompt_data.get("transparent", False)
     if is_transparent:
@@ -64,23 +70,20 @@ def generate_image(prompt_file, theme_file):
     print(f"Generating image with prompt: \"{final_prompt.strip()}\"")
     
     try:
-        response = client.generate_image(
+        response = client.models.generate_content(
             model='gemini-2.5-flash-image-preview',
-            prompt=final_prompt.strip(),
+            contents=[final_prompt.strip()],
         )
 
-        if response.images:
-            image_data = response.images[0]
-            image = Image.open(BytesIO(image_data))
-            
-            # Re-enable resizing
-            if "resize" in prompt_data:
-                resize_dims = (prompt_data["resize"]["width"], prompt_data["resize"]["height"])
-                print(f"Resizing image to {resize_dims}...")
-                image = image.resize(resize_dims, Image.Resampling.LANCZOS)
-                # Add a sharpen filter to counteract blurriness from downscaling
-                image = image.filter(ImageFilter.SHARPEN)
-            
+        image = None
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if part.inline_data is not None:
+                    image_data = part.inline_data.data
+                    image = Image.open(BytesIO(image_data))
+                    break
+        
+        if image:
             if is_transparent:
                 image = process_background_removal(image)
 

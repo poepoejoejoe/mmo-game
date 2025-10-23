@@ -3,6 +3,6 @@
   "asset_type": "texture",
   "description": "A seamless, top-down, stylized rock texture, variant 2.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "medium",
   "llm_prompt": "A seamless and tileable texture of a different style of rocky ground. This one should have smaller, more gravel-like stones, suitable for a path or rough terrain in a fantasy game."
 }

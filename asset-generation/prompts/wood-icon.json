@@ -3,7 +3,7 @@
   "asset_type": "icon",
   "description": "An inventory icon for a stack of wood.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "small",
   "transparent": true,
   "llm_prompt": "A clear and simple icon of a stack of chopped firewood for a fantasy game inventory. The logs should be neatly piled and easily identifiable as wood."
 }

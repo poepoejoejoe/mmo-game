@@ -3,7 +3,7 @@
   "asset_type": "icon",
   "description": "An icon for the player's inventory.",
   "output_format": "png",
-  "resize": { "width": 64, "height": 64 },
+  "size_hint": "small",
   "transparent": true,
   "llm_prompt": "A simple and clear icon of a backpack or bag for an inventory button in a fantasy game UI. The icon should be easily recognizable as a container for items."
 }
