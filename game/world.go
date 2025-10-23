@@ -7,11 +7,19 @@ import (
 	"mmo-game/models"
 	"strconv"
 	"time"
+
+	"github.com/aquilax/go-perlin"
+)
+
+const (
+	perlinAlpha = 2.
+	perlinBeta  = 2.
+	perlinN     = 3
+	perlinSeed  = 100
 )
 
 func GenerateWorld() {
 	log.Println("Generating world terrain and health...")
-	// Use RedisKey constant
 	worldKey := string(RedisKeyWorldZone0)
 
 	if rdb.Exists(ctx, worldKey).Val() > 0 {
@@ -19,23 +27,31 @@ func GenerateWorld() {
 		return
 	}
 
+	p := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, perlinSeed)
 	pipe := rdb.Pipeline()
+
 	for x := -WorldSize; x <= WorldSize; x++ {
 		for y := -WorldSize; y <= WorldSize; y++ {
 			coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
-			noise := rand.Float64()
-			// Use TileType constants
-			tileType := TileTypeGround
 
-			if noise > 0.95 {
-				tileType = TileTypeRock
-			} else if noise > 0.90 {
-				tileType = TileTypeTree
-			} else if noise > 0.88 {
+			// Use Perlin noise for terrain generation
+			// Scale the coordinates to control the "zoom" of the noise
+			noiseVal := p.Noise2D(float64(x)/10.0, float64(y)/10.0)
+
+			tileType := TileTypeGround
+			if noiseVal < -0.5 {
 				tileType = TileTypeWater
+			} else if noiseVal > 0.65 {
+				tileType = TileTypeRock
+			} else if noiseVal > 0.55 {
+				tileType = TileTypeTree
+			} else {
+				// Add a bit of randomness to ground tiles for variety
+				if rand.Float64() > 0.98 {
+					tileType = TileTypeTree
+				}
 			}
 
-			// Get properties from our new definition map by casting
 			props := TileDefs[tileType]
 			tile := models.WorldTile{Type: string(tileType), Health: props.MaxHealth}
 
@@ -44,7 +60,7 @@ func GenerateWorld() {
 		}
 	}
 
-	// Use TileType constant
+	// Ensure spawn point is always ground
 	spawnTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeGround), Health: 0})
 	pipe.HSet(ctx, worldKey, "0,0", spawnTileJSON)
 

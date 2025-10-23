@@ -2,6 +2,8 @@ import * as state from './state';
 import { TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
 // --- UPDATED ---
 import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
+import { findTileGroups } from './grouper';
+import { drawRockTile, drawWaterGroup } from './drawing';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -38,7 +40,7 @@ function loadAssets() {
     ];
 
     const assetPaths = new Set<string>();
-    assetPaths.add('assets/grass-texture.png');
+    assetPaths.add('assets/agrass-texture.png');
     for (const def of assetDefs) {
         if (def.asset) {
             if (Array.isArray(def.asset)) {
@@ -132,56 +134,37 @@ function drawBackground(startX: number, startY: number) {
 }
 
 // (drawWorld remains the same)
-function drawWorld(startX: number, startY: number, viewportWidth: number, viewportHeight: number) {
+function drawWorld(startX: number, startY: number, viewportWidth: number, viewportHeight: number, time: number) {
     if (!ctx) return;
-    for (let y = 0; y < viewportHeight; y++) {
-        for (let x = 0; x < viewportWidth; x++) {
-            const tileX = startX + x;
-            const tileY = startY + y;
-            const tileData = state.getTileData(tileX, tileY);
-            if (tileData.type === 'ground') {
-                continue;
-            }
-            const tileProps = getTileProperties(tileData.type);
-            
-            if (tileProps.draw) {
-                tileProps.draw(ctx, x, y, TILE_SIZE, tileX, tileY);
-            } else if (tileProps.asset) {
-                let assetPath = tileProps.asset;
-                if (Array.isArray(assetPath)) {
-                    // Deterministic selection based on tile coordinates
-                    assetPath = assetPath[(tileX + tileY) % assetPath.length];
-                }
-                const img = assetImages[assetPath];
-                if (img) {
-                    ctx.drawImage(img, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+
+    const groups = findTileGroups(startX, startY, viewportWidth, viewportHeight);
+
+    for (const group of groups) {
+        if (group.type === 'water') {
+            drawWaterGroup(ctx, group, startX, startY, TILE_SIZE, time);
+        } else {
+            // Fallback to drawing tile by tile for other types
+            for (const tile of group.tiles) {
+                const x = tile.x - startX;
+                const y = tile.y - startY;
+
+                const tileData = state.getTileData(tile.x, tile.y);
+                const tileProps = getTileProperties(tileData.type);
+                
+                if (tileProps.draw) {
+                    tileProps.draw(ctx, x, y, TILE_SIZE, tile.x, tile.y, time);
+                } else if (tileProps.asset) {
+                    let assetPath = tileProps.asset;
+                    if (Array.isArray(assetPath)) {
+                        assetPath = assetPath[(tile.x + tile.y) % assetPath.length];
+                    }
+                    const img = assetImages[assetPath];
+                    if (img) {
+                        ctx.drawImage(img, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
                 } else {
                     ctx.fillStyle = tileProps.color;
                     ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                }
-            } else {
-                ctx.fillStyle = tileProps.color;
-                ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            }
-
-			if (tileData.type === 'fire') {
-                const flicker = Math.random() * 0.4 - 0.2;
-                ctx.fillStyle = `rgba(255, ${100 + flicker * 50}, 0, ${0.5 + flicker})`;
-                ctx.beginPath();
-                ctx.arc(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2, TILE_SIZE / 3 + flicker * 5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-			if (tileProps.maxHealth > 0 && tileData.health < tileProps.maxHealth) {
-				if (tileData.health <= 0) {
-				} else {
-                    const crackIndex = Math.min(
-                        crackImages.length - 1, 
-                        Math.floor((1 - (tileData.health / tileProps.maxHealth)) * (crackImages.length - 1))
-                    );
-                    if (assetsLoaded && crackImages[crackIndex]) {
-                        ctx.drawImage(crackImages[crackIndex], x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    }
                 }
             }
         }
@@ -299,7 +282,7 @@ function drawEntities(startX: number, startY: number) {
 
 // (render, gameLoop, initializeRenderer, startRenderLoop remain the same)
 // ...
-function render() {
+function render(time: number) {
     const me = state.getMyEntity();
     if (!me || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -311,7 +294,7 @@ function render() {
     const startY = me.y - Math.floor(viewportHeight / 2);
 
     drawBackground(startX, startY);
-    drawWorld(startX, startY, viewportWidth, viewportHeight);
+    drawWorld(startX, startY, viewportWidth, viewportHeight, time);
     drawEntities(startX, startY);
     drawDamageIndicators(startX, startY);
     
@@ -319,8 +302,8 @@ function render() {
     // document.getElementById('player-coords')!.textContent = `Your Position: (${me.x}, ${me.y})`;
 }
 
-function gameLoop() {
-    render();
+function gameLoop(time: number) {
+    render(time);
     requestAnimationFrame(gameLoop);
 }
 
@@ -357,7 +340,7 @@ export function startRenderLoop() {
     const checkState = () => {
         if (state.getMyEntity()) {
             console.log("Initial state received. Starting render loop.");
-            gameLoop();
+            requestAnimationFrame(gameLoop);
         } else {
             requestAnimationFrame(checkState);
         }

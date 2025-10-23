@@ -12,7 +12,7 @@ export interface TileProperties {
     maxHealth: number;
     color: string; // Add color here for rendering
     asset?: string | string[];
-    draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number) => void;
+    draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, time: number) => void;
 }
 
 // The master definition map for all tile types.
@@ -44,7 +44,6 @@ export const tileDefs: Record<string, TileProperties> = {
         movementPenalty: true,
         maxHealth: 0,
         color: '#4682B4',
-        asset: 'assets/water-tile.png',
     },
     'tree': {
         isCollidable: true,
