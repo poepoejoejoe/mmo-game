@@ -1,6 +1,6 @@
 // This file is the single source of truth for all game object properties.
 
-import { drawRockTile } from './drawing';
+import { drawRockTile, drawTree } from './drawing';
 
 export interface TileProperties {
     isCollidable: boolean;
@@ -12,7 +12,7 @@ export interface TileProperties {
     maxHealth: number;
     color: string; // Add color here for rendering
     asset?: string | string[];
-    draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, time: number) => void;
+    draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, time: number, tileData: any) => void;
 }
 
 // The master definition map for all tile types.
@@ -54,7 +54,7 @@ export const tileDefs: Record<string, TileProperties> = {
         gatherResource: 'wood',
         maxHealth: 2,
         color: '#228B22',
-        asset: 'assets/wood-tile.png'
+        draw: drawTree,
     },
     'rock': {
         isCollidable: true,

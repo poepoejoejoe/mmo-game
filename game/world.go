@@ -41,7 +41,7 @@ func GenerateWorld() {
 			tileType := TileTypeGround
 			if noiseVal < -0.5 {
 				tileType = TileTypeWater
-			} else if noiseVal > 0.65 {
+			} else if noiseVal > 0.60 {
 				tileType = TileTypeRock
 			} else if noiseVal > 0.55 {
 				tileType = TileTypeTree

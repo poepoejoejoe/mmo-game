@@ -1,4 +1,3 @@
-import { TILE_SIZE } from './constants';
 import { TileGroup } from './grouper';
 
 class SeededRandom {
@@ -20,12 +19,15 @@ class SeededRandom {
 }
 
 // Note: drawRockTile is simplified as neighbors are no longer needed
-export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, time: number) {
+export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, _time: number, tileData: any) {
     const rand = new SeededRandom(tileX * 1000 + tileY);
-    
-    const numRocks = rand.nextInt(2, 5);
 
-    for (let i = 0; i < numRocks; i++) {
+    const healthPercentage = tileData.health ? (tileData.health / 4) : 1;
+    
+    // Determine the max number of rocks and pre-generate their properties
+    const maxRocks = rand.nextInt(2, 5);
+    const rockProps = [];
+    for (let i = 0; i < maxRocks; i++) {
         const rockRadius = rand.nextInt(4, 10);
         const rockX = rand.nextInt(rockRadius, tileSize - rockRadius);
         const rockY = rand.nextInt(rockRadius, tileSize - rockRadius);
@@ -33,7 +35,6 @@ export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number
         const absoluteX = x * tileSize + rockX;
         const absoluteY = y * tileSize + rockY;
 
-        // Create a jagged, rock-like shape
         const vertices = rand.nextInt(5, 9);
         const shape = [];
         for (let j = 0; j < vertices; j++) {
@@ -44,6 +45,14 @@ export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number
                 y: absoluteY + Math.sin(angle) * radius,
             });
         }
+        rockProps.push({ shape, vertices });
+    }
+
+    // Determine how many rocks to draw based on health
+    const numRocksToDraw = Math.ceil(maxRocks * healthPercentage);
+
+    for (let i = 0; i < numRocksToDraw; i++) {
+        const { shape, vertices } = rockProps[i];
 
         const baseGray = rand.nextInt(80, 120);
 
@@ -80,16 +89,119 @@ export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number
         ctx.fill();
 
          // Cracks/Details
-         ctx.strokeStyle = `rgba(0, 0, 0, 0.4)`;
-         ctx.lineWidth = 1;
-         for (let j = 0; j < 2; j++) { // Add 2 cracks
-             const startVertex = rand.nextInt(0, vertices - 1);
-             const endVertex = (startVertex + rand.nextInt(1, 3)) % vertices;
-             ctx.beginPath();
-             ctx.moveTo(shape[startVertex].x, shape[startVertex].y);
-             ctx.lineTo(shape[endVertex].x, shape[endVertex].y);
-             ctx.stroke();
+         const numCracks = Math.floor(4 * (1 - healthPercentage));
+         if (numCracks > 0) {
+            ctx.strokeStyle = `rgba(0, 0, 0, 0.4)`;
+            ctx.lineWidth = 1;
+            for (let j = 0; j < numCracks; j++) {
+                const startVertex = rand.nextInt(0, vertices - 1);
+                const endVertex = (startVertex + rand.nextInt(1, 3)) % vertices;
+                ctx.beginPath();
+                ctx.moveTo(shape[startVertex].x, shape[startVertex].y);
+                ctx.lineTo(shape[endVertex].x, shape[endVertex].y);
+                ctx.stroke();
+            }
          }
+    }
+}
+
+export function drawTree(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, _time: number, tileData: any) {
+    const rand = new SeededRandom(tileX * 1000 + tileY);
+
+    const centerX = x * tileSize + tileSize / 2;
+    const centerY = y * tileSize + tileSize / 2;
+
+    const healthPercentage = tileData.health ? (tileData.health / 2) : 1;
+
+    // Trunk
+    const trunkRadius = rand.nextInt(2, 4);
+    const trunkColor = `rgb(80, 60, 40)`;
+    ctx.fillStyle = trunkColor;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, trunkRadius, 0, 2 * Math.PI);
+    ctx.fill();
+
+    if (healthPercentage <= 0) {
+        // Just a stump
+        return;
+    }
+
+    // Create a jagged, irregular canopy shape
+    const canopyBaseRadius = (tileSize * 0.4 + rand.next() * tileSize * 0.1);
+    const jaggedness = 1 + (1 - healthPercentage) * 0.8; // More jagged as health decreases
+    const vertices = 12 + rand.nextInt(0, 8);
+    const shape = [];
+    for (let j = 0; j < vertices; j++) {
+        const angle = (j / vertices) * 2 * Math.PI;
+        const radius = canopyBaseRadius * (1 + (rand.next() - 0.5) * 0.3 * jaggedness);
+        shape.push({
+            x: centerX + Math.cos(angle) * radius,
+            y: centerY + Math.sin(angle) * radius,
+        });
+    }
+
+    // --- Draw Canopy ---
+
+    // 1. Shadow
+    ctx.fillStyle = `rgba(0, 0, 0, 0.3)`;
+    ctx.beginPath();
+    ctx.moveTo(shape[0].x + 2, shape[0].y + 3);
+    for (let j = 1; j < vertices; j++) {
+        ctx.lineTo(shape[j].x + 2, shape[j].y + 3);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // 2. Base Canopy Color (Darker)
+    const baseGreen = 50 + rand.nextInt(0, 25);
+    const baseColor = `rgb(${baseGreen - 20}, ${100 + rand.nextInt(0, 50)}, ${baseGreen - 20})`;
+    ctx.fillStyle = baseColor;
+    ctx.beginPath();
+    ctx.moveTo(shape[0].x, shape[0].y);
+    for (let j = 1; j < vertices; j++) {
+        ctx.lineTo(shape[j].x, shape[j].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // 3. Leafy Texture
+    const numLeafPatches = Math.round((50 + rand.nextInt(0, 30)) * healthPercentage);
+    for (let i = 0; i < numLeafPatches; i++) {
+        const patchRadius = canopyBaseRadius * (0.1 + rand.next() * 0.2);
+        
+        // Find a random point on a circle and then move it inwards
+        const angle = rand.next() * 2 * Math.PI;
+        const dist = rand.next() * canopyBaseRadius * 0.8;
+        const patchX = centerX + Math.cos(angle) * dist;
+        const patchY = centerY + Math.sin(angle) * dist;
+
+        const greenVariation = -20 + rand.nextInt(0, 40);
+        const alpha = 0.2 + rand.next() * 0.3;
+        ctx.fillStyle = `rgba(${baseGreen + greenVariation}, ${140 + greenVariation}, ${baseGreen + greenVariation}, ${alpha})`;
+
+        ctx.beginPath();
+        ctx.arc(patchX, patchY, patchRadius, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    
+    // 4. Add some fruit/apples, only if health is high
+    if (healthPercentage > 0.6 && rand.next() > 0.7) { // 30% chance of having fruit
+        const numFruits = Math.round((5 + rand.nextInt(0, 10)) * healthPercentage);
+        for (let i = 0; i < numFruits; i++) {
+            const angle = rand.next() * 2 * Math.PI;
+            const dist = rand.next() * canopyBaseRadius * 0.7; // Keep fruit inside canopy
+            const fruitX = centerX + Math.cos(angle) * dist;
+            const fruitY = centerY + Math.sin(angle) * dist;
+            
+            const r = 80 + rand.nextInt(0, 20);
+            const g = 70 + rand.nextInt(0, 20);
+            const b = 40 + rand.nextInt(0, 10);
+            const alpha = 0.6 + rand.next() * 0.2;
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(fruitX, fruitY, 1.5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
     }
 }
 
