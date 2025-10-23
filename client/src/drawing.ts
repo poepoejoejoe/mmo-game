@@ -45,14 +45,14 @@ export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number
             });
         }
 
-        const baseGray = rand.nextInt(120, 160);
+        const baseGray = rand.nextInt(80, 120);
 
         // Shadow
-        ctx.fillStyle = `rgba(0, 0, 0, 0.2)`;
+        ctx.fillStyle = `rgba(0, 0, 0, 0.3)`;
         ctx.beginPath();
-        ctx.moveTo(shape[0].x + 1, shape[0].y + 1);
+        ctx.moveTo(shape[0].x + 2, shape[0].y + 2);
         for (let j = 1; j < vertices; j++) {
-            ctx.lineTo(shape[j].x + 1, shape[j].y + 1);
+            ctx.lineTo(shape[j].x + 2, shape[j].y + 2);
         }
         ctx.closePath();
         ctx.fill();
@@ -68,8 +68,8 @@ export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number
         ctx.fill();
 
         // Highlight
-        const highlightGray = baseGray + 20;
-        ctx.fillStyle = `rgba(${highlightGray}, ${highlightGray}, ${highlightGray}, 0.5)`;
+        const highlightGray = baseGray + 40;
+        ctx.fillStyle = `rgba(${highlightGray}, ${highlightGray}, ${highlightGray}, 0.7)`;
         ctx.beginPath();
         ctx.moveTo(shape[0].x - 1, shape[0].y - 1);
         for (let j = 1; j < vertices; j++) {
@@ -80,7 +80,7 @@ export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number
         ctx.fill();
 
          // Cracks/Details
-         ctx.strokeStyle = `rgba(0, 0, 0, 0.3)`;
+         ctx.strokeStyle = `rgba(0, 0, 0, 0.4)`;
          ctx.lineWidth = 1;
          for (let j = 0; j < 2; j++) { // Add 2 cracks
              const startVertex = rand.nextInt(0, vertices - 1);
