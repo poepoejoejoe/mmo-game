@@ -563,8 +563,14 @@ export function drawCrudeAxe(ctx: CanvasRenderingContext2D, pixelSize: number, d
         rotation = Math.PI / 2.2;
     } else if (direction === 'left') {
         rotation = Math.PI / 2.2;
+    } else if (direction === 'down') {
+        rotation += Math.PI;
     }
     ctx.rotate(rotation);
+
+    if (direction === 'down') {
+        ctx.scale(1, -1);
+    }
 
     // --- Draw Handle ---
     ctx.fillStyle = handleColor;
