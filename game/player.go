@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	mrand "math/rand"
+	"mmo-game/game/utils"
 	"mmo-game/models"
 	"strconv"
 	"time"
@@ -173,6 +174,9 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		if name, ok := entityData["name"]; ok {
 			entityState.Name = name
 		}
+		if shirtColor, ok := entityData["shirtColor"]; ok {
+			entityState.ShirtColor = shirtColor
+		}
 
 		if entityType == string(EntityTypeItem) {
 			createdAt, _ := strconv.ParseInt(entityData["createdAt"], 10, 64)
@@ -196,6 +200,9 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 				Y:    y,
 				Type: playerEntityData["entityType"],
 				Name: playerEntityData["name"],
+			}
+			if shirtColor, ok := playerEntityData["shirtColor"]; ok {
+				entityState.ShirtColor = shirtColor
 			}
 			allEntitiesState[playerID] = entityState
 		}
@@ -312,6 +319,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"nextActionAt", time.Now().UnixMilli(),
 		"entityType", string(EntityTypePlayer), // This is the internal type
 		"moveCooldown", 100, // 100ms move cooldown for players
+		"shirtColor", utils.GenerateRandomColor(),
 	)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
 

@@ -17,6 +17,7 @@ export interface EntityState {
     direction?: 'up' | 'down' | 'left' | 'right';
     lastAttackTime?: number;
     targetId?: string;
+    shirtColor?: string;
 }
 
 export interface WorldTile {

@@ -14,3 +14,11 @@ func GenerateUniqueID() string {
 	}
 	return hex.EncodeToString(bytes)
 }
+
+func GenerateRandomColor() string {
+	bytes := make([]byte, 3) // R, G, B
+	if _, err := rand.Read(bytes); err != nil {
+		return "#000000" // Fallback to black
+	}
+	return "#" + hex.EncodeToString(bytes)
+}

@@ -3,6 +3,25 @@ import { EntityState } from './types';
 import * as state from './state';
 import { itemDefinitions } from './definitions';
 
+function lightenColor(hex: string, percent: number): string {
+    let color = hex.startsWith('#') ? hex.slice(1) : hex;
+    if (color.length === 3) {
+        color = color.split('').map(char => char + char).join('');
+    }
+
+    let r = parseInt(color.substring(0, 2), 16);
+    let g = parseInt(color.substring(2, 4), 16);
+    let b = parseInt(color.substring(4, 6), 16);
+
+    r = Math.min(255, Math.floor(r * (1 + percent / 100)));
+    g = Math.min(255, Math.floor(g * (1 + percent / 100)));
+    b = Math.min(255, Math.floor(b * (1 + percent / 100)));
+
+    const toHex = (c: number) => ('00' + c.toString(16)).slice(-2);
+    
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
 function drawPath(ctx: CanvasRenderingContext2D, points: { x: number, y: number }[]) {
     if (points.length === 0) return;
     ctx.beginPath();
@@ -480,12 +499,13 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     const isMoving = !!(entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200));
     const walkCycle = isMoving ? Math.floor(time / 200) % 2 : 0;
 
+    const shirtColor = entity.shirtColor || '#7b9c48';
     const colors = {
         hairColor: '#634b3a',
         skinColor: '#d3a07c',
-        shirtColor: '#7b9c48',
+        shirtColor: shirtColor,
         pantsColor: '#6d533b',
-        shirtStripeColor: '#9abe6d'
+        shirtStripeColor: lightenColor(shirtColor, 20)
     };
 
     // Shadow
@@ -545,7 +565,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.restore();
 }
 
-export function drawItem(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }) {
+export function drawItem(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, _time: number, assetImages: { [key: string]: HTMLImageElement }) {
     if (!entity.itemId) return;
 
     const itemDef = itemDefinitions[entity.itemId] || itemDefinitions['default'];

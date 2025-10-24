@@ -168,5 +168,9 @@ export function getEntityProperties(type: string, entityId: string, myPlayerId: 
     if (entityId === myPlayerId) {
         return entityDefs['player'];
     }
-    return entityDefs[type] || entityDefs['default'];
+    // This is wrong, it needs to check the type
+    if (entityDefs[type]) {
+        return entityDefs[type];
+    }
+    return entityDefs['default'];
 }
