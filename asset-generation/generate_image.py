@@ -54,7 +54,7 @@ def generate_image(prompt_file, theme_file):
 
     size_hint = prompt_data.get("size_hint")
     if size_hint == "small":
-        final_prompt += " The asset needs to be extremely clear and readable when viewed at a very small size, as an icon."
+        final_prompt += " The asset needs to be extremely clear and instantly recognizable when viewed at a very small size. It should have a strong silhouette, high contrast, and simplified details to ensure it is clear from a zoomed-out view."
     elif size_hint == "medium":
         final_prompt += " The asset should have a good level of detail, suitable for a medium-sized sprite or tile."
     

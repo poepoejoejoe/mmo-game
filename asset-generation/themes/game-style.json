@@ -1,0 +1,10 @@
+{
+  "base_prompt_suffix": "in a simple, 2D top-down cartoon art style for a fantasy game. The art should be bright and charming.",
+  "style_modifiers": {
+    "global": "bright saturated colors, simple shapes, 2D, top-down perspective, cute, cartoonish",
+    "icon": "clear silhouette, high contrast, easily recognizable, simple design",
+    "sprite": "smooth rounded shapes, cute and chubby appearance, soft shadows, minimal detail",
+    "texture": "simple, flat color, minimal detail, seamless, tileable"
+  },
+  "negative_prompt": "photorealistic, 3d, complex textures, text, watermark, signature, blurry, noisy, dark, gloomy"
+}

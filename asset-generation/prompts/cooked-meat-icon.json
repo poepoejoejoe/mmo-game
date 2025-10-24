@@ -1,0 +1,9 @@
+{
+  "asset_name": "cooked-meat-icon",
+  "asset_type": "icon",
+  "description": "An icon for cooked meat.",
+  "output_format": "png",
+  "size_hint": "small",
+  "transparent": true,
+  "llm_prompt": "A simple icon of a cooked piece of meat, like a pork chop or steak, for a fantasy game UI. The icon should be easily understandable at a small size."
+}

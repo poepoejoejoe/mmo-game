@@ -1,0 +1,9 @@
+{
+  "asset_name": "chat-icon",
+  "asset_type": "icon",
+  "description": "An icon for the chat window.",
+  "output_format": "png",
+  "size_hint": "small",
+  "transparent": true,
+  "llm_prompt": "A simple speech bubble icon for a fantasy game UI. The icon should be easily understandable at a small size."
+}

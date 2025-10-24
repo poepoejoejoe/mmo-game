@@ -1,7 +1,7 @@
 {
   "base_prompt_suffix": "stylized fantasy art style for a top-down RPG. The art style is graphic and stylized, like a living memory, slightly desaturated and dream-like. The asset should have clean lines. It should be easily recognizable at small sizes.",
   "style_modifiers": {
-    "global": "grapohic, stylized, clean lines, fantasy art, top-down perspective",
+    "global": "graphic, stylized, clean lines, fantasy art, top-down perspective",
     "icon": "all black background, centered, clear silhouette, high contrast",
     "sprite": "dynamic pose, expressive, all black background, consistent lighting from top-left",
     "texture": "seamless, tileable, repeating pattern, uniform lighting"

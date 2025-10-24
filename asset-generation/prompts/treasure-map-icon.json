@@ -1,0 +1,9 @@
+{
+  "asset_name": "treasure-map-icon",
+  "asset_type": "icon",
+  "description": "An icon for a treasure map.",
+  "output_format": "png",
+  "size_hint": "small",
+  "transparent": true,
+  "llm_prompt": "A simple icon of a rolled up or folded treasure map for a fantasy game UI. A red X should be visible. The icon should be easily understandable at a small size."
+}
