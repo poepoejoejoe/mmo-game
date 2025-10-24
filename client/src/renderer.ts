@@ -3,7 +3,7 @@ import { TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
 // --- UPDATED ---
 import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
 import { findTileGroups } from './grouper';
-import { drawRockTile, drawWaterGroup } from './drawing';
+import { drawWaterGroup } from './drawing';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -172,7 +172,7 @@ function drawDamageIndicators(startX: number, startY: number) {
 }
 
 
-function drawEntities(startX: number, startY: number) {
+function drawEntities(startX: number, startY: number, time: number) {
     if (!ctx) return;
 
     const allEntities = state.getState().entities;
@@ -204,7 +204,9 @@ function drawEntities(startX: number, startY: number) {
             }
         } else {
             const props = getEntityProperties(entity.type, entityId, myPlayerId);
-            if (props.asset && assetImages[props.asset]) {
+            if (props.draw) {
+                props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages);
+            } else if (props.asset && assetImages[props.asset]) {
                 ctx.drawImage(assetImages[props.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
             } else {
                 ctx.fillStyle = props.color;
@@ -270,7 +272,7 @@ function render(time: number) {
 
     drawBackground(startX, startY);
     drawWorld(startX, startY, viewportWidth, viewportHeight, time);
-    drawEntities(startX, startY);
+    drawEntities(startX, startY, time);
     drawDamageIndicators(startX, startY);
     
     // updatePlayerCoords is now called from main.ts on state update.

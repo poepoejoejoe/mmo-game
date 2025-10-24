@@ -1,6 +1,7 @@
 // This file is the single source of truth for all game object properties.
 
-import { drawRockTile, drawTree } from './drawing';
+import { drawRockTile, drawTree, drawPlayer } from './drawing';
+import { EntityState } from './types';
 
 export interface TileProperties {
     isCollidable: boolean;
@@ -130,13 +131,14 @@ export interface EntityProperties {
     color: string;
     isAttackable?: boolean;
     asset?: string;
+    draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }) => void;
 }
 
 // The master definition map for all entity types.
 export const entityDefs: Record<string, EntityProperties> = {
     'player': {
         color: '#3498db', // Blue
-        asset: 'assets/player.png',
+        draw: drawPlayer,
     },
     'slime': {
         color: '#b3db45ff', // Green

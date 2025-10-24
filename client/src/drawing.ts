@@ -1,4 +1,7 @@
 import { TileGroup } from './grouper';
+import { EntityState } from './types';
+import * as state from './state';
+import { itemDefinitions } from './definitions';
 
 class SeededRandom {
     private seed: number;
@@ -384,3 +387,88 @@ export function drawWaterGroup(ctx: CanvasRenderingContext2D, group: TileGroup, 
 }
 
 export function drawWaterTile() { /* This function is now obsolete */ }
+
+export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }) {
+    ctx.imageSmoothingEnabled = false;
+
+    const pixelSize = Math.max(1, Math.floor(tileSize / 16));
+
+    const centerX = x + tileSize / 2;
+    const centerY = y + tileSize / 2;
+
+    const isMoving = entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200);
+    const walkCycle = isMoving ? Math.floor(time / 200) % 2 : 0;
+
+    const hairColor = '#634b3a';
+    const skinColor = '#d3a07c';
+    const shirtColor = '#7b9c48';
+    const pantsColor = '#6d533b';
+    const shirtStripeColor = '#9abe6d';
+
+    const torsoWidth = pixelSize * 8;
+    const legWidth = pixelSize * 3;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.beginPath();
+    ctx.ellipse(centerX, y + tileSize - pixelSize * 2, pixelSize * 6, pixelSize * 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Legs (drawn first) ---
+    ctx.fillStyle = pantsColor;
+    const legY = centerY + pixelSize * 2;
+    // Left Leg
+    const leftLegX = centerX - pixelSize * 4;
+    ctx.fillRect(leftLegX, legY + (isMoving && walkCycle === 1 ? pixelSize : 0), legWidth, pixelSize * 4);
+    // Right Leg
+    const rightLegX = centerX + pixelSize;
+    ctx.fillRect(rightLegX, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
+
+    // --- Arms ---
+    ctx.fillStyle = skinColor;
+    const armY = centerY - pixelSize * 3;
+    const armHeight = pixelSize * 5;
+    // Left Arm
+    ctx.fillRect(centerX - torsoWidth / 2 - pixelSize * 2, armY + (isMoving && walkCycle === 1 ? pixelSize : 0), pixelSize * 2, armHeight);
+    // Right Arm
+    ctx.fillRect(centerX + torsoWidth / 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), pixelSize * 2, armHeight);
+
+
+    // --- Torso ---
+    ctx.fillStyle = shirtColor;
+    ctx.fillRect(centerX - torsoWidth / 2, centerY - pixelSize * 4, torsoWidth, pixelSize * 6);
+    ctx.fillStyle = shirtStripeColor;
+    ctx.fillRect(centerX - torsoWidth / 2, centerY - pixelSize, torsoWidth, pixelSize * 2);
+
+    // --- Head ---
+    const headX = centerX - pixelSize * 4;
+    const headY = centerY - pixelSize * 9;
+    // Hair
+    ctx.fillStyle = hairColor;
+    ctx.fillRect(headX - pixelSize, headY + pixelSize, pixelSize * 10, pixelSize * 8);
+    // Face
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(headX, headY + pixelSize * 4, pixelSize * 8, pixelSize * 4);
+    // Eyes
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(headX + pixelSize * 2, headY + pixelSize * 5, pixelSize, pixelSize * 2);
+    ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
+
+
+    // --- Equipment ---
+    if (entity.id === state.getState().playerId) {
+        const gear = state.getState().gear;
+        const weaponItem = gear['weapon-slot'];
+        if (weaponItem) {
+            const weaponDef = itemDefinitions[weaponItem.id];
+            if (weaponDef && weaponDef.asset) {
+                const img = assetImages[weaponDef.asset];
+                if (img) {
+                    const wepX = centerX + torsoWidth / 2 - pixelSize;
+                    const wepY = armY + (isMoving && walkCycle === 0 ? pixelSize : 0) + pixelSize;
+                    ctx.drawImage(img, wepX, wepY, tileSize * 0.75, tileSize * 0.75);
+                }
+            }
+        }
+    }
+}

@@ -49,12 +49,13 @@ export function setEntityPosition(entityId: string, x: number, y: number) {
     if (clientState.entities[entityId]) {
         clientState.entities[entityId].x = x;
         clientState.entities[entityId].y = y;
+        clientState.entities[entityId].lastMoveTime = Date.now();
     }
 }
 
 // --- UPDATED ---
 export function addEntity(id: string, x: number, y: number, type: 'player' | 'npc' | 'item', name?: string, itemId?: string, owner?: string, createdAt?: number, publicAt?: number) {
-    clientState.entities[id] = { id, x, y, type, name, itemId, owner, createdAt, publicAt };
+    clientState.entities[id] = { id, x, y, type, name, itemId, owner, createdAt, publicAt, lastMoveTime: 0 };
 }
 
 export function removeEntity(id: string) {

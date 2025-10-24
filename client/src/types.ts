@@ -13,6 +13,7 @@ export interface EntityState {
     lastChatMessage?: string;
     lastChatTimestamp?: number;
     name?: string;
+    lastMoveTime?: number;
 }
 
 export interface WorldTile {
