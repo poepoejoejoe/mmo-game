@@ -388,6 +388,171 @@ export function drawWaterGroup(ctx: CanvasRenderingContext2D, group: TileGroup, 
 
 export function drawWaterTile() { /* This function is now obsolete */ }
 
+function drawPlayerFacingDown(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
+    const torsoWidth = pixelSize * 8;
+    const legWidth = pixelSize * 3;
+
+    // --- Legs (drawn first) ---
+    ctx.fillStyle = colors.pantsColor;
+    const legY = pixelSize * 2;
+    // Left Leg
+    ctx.fillRect(-pixelSize * 4, legY + (isMoving && walkCycle === 1 ? pixelSize : 0), legWidth, pixelSize * 4);
+    // Right Leg
+    ctx.fillRect(pixelSize, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
+
+    // --- Arms ---
+    ctx.fillStyle = colors.skinColor;
+    const armY = -pixelSize * 3;
+    const armHeight = pixelSize * 5;
+    // Left Arm
+    ctx.fillRect(-torsoWidth / 2 - pixelSize * 2, armY + (isMoving && walkCycle === 1 ? pixelSize : 0), pixelSize * 2, armHeight);
+    // --- Right Arm 
+    ctx.fillStyle = colors.skinColor;
+    ctx.fillRect(torsoWidth / 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), pixelSize * 2, armHeight);
+
+    // --- Torso ---
+    ctx.fillStyle = colors.shirtColor;
+    ctx.fillRect(-torsoWidth / 2, -pixelSize * 4, torsoWidth, pixelSize * 6);
+    ctx.fillStyle = colors.shirtStripeColor;
+    ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
+
+    // --- Head ---
+    const headX = -pixelSize * 4;
+    const headY = -pixelSize * 9;
+    // Hair
+    ctx.fillStyle = colors.hairColor;
+    ctx.fillRect(headX - pixelSize, headY + pixelSize, pixelSize * 10, pixelSize * 8);
+    // Face
+    ctx.fillStyle = colors.skinColor;
+    ctx.fillRect(headX, headY + pixelSize * 4, pixelSize * 8, pixelSize * 4);
+    // Eyes
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(headX + pixelSize * 2, headY + pixelSize * 5, pixelSize, pixelSize * 2);
+    ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
+
+
+}
+
+function drawPlayerFacingUp(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
+    const torsoWidth = pixelSize * 8;
+    const legWidth = pixelSize * 3;
+
+    // --- Legs ---
+    ctx.fillStyle = colors.pantsColor;
+    const legY = pixelSize * 2;
+    ctx.fillRect(-pixelSize * 4, legY + (isMoving && walkCycle === 1 ? pixelSize : 0), legWidth, pixelSize * 4);
+    ctx.fillRect(pixelSize, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
+
+    // --- Arms ---
+    ctx.fillStyle = colors.skinColor;
+    const armY = -pixelSize * 3;
+    const armHeight = pixelSize * 5;
+    ctx.fillRect(-torsoWidth / 2 - pixelSize * 2, armY + (isMoving && walkCycle === 1 ? pixelSize : 0), pixelSize * 2, armHeight);
+    
+    // --- Right Arm ---
+    ctx.fillStyle = colors.skinColor;
+    ctx.fillRect(torsoWidth / 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), pixelSize * 2, armHeight);
+
+    // --- Torso ---
+    ctx.fillStyle = colors.shirtColor;
+    ctx.fillRect(-torsoWidth / 2, -pixelSize * 4, torsoWidth, pixelSize * 6);
+    ctx.fillStyle = colors.shirtStripeColor;
+    ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
+
+    // --- Head (Back) ---
+    const headX = -pixelSize * 4;
+    const headY = -pixelSize * 9;
+    ctx.fillStyle = colors.hairColor;
+    ctx.fillRect(headX - pixelSize, headY + pixelSize, pixelSize * 10, pixelSize * 8); // Full hair, no face
+}
+
+function drawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
+    const torsoWidth = pixelSize * 4;
+    const legWidth = pixelSize * 3;
+    const armWidth = pixelSize * 2;
+
+    // --- Far Leg ---
+    ctx.fillStyle = colors.pantsColor;
+    const legY = pixelSize * 2;
+    ctx.fillRect(-pixelSize / 2, legY + (isMoving && walkCycle === 1 ? -pixelSize : 0), legWidth, pixelSize * 4);
+
+    // --- Far Arm ---
+    ctx.fillStyle = colors.skinColor;
+    const armY = -pixelSize * 3;
+    ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 1 ? -pixelSize : 0), armWidth, pixelSize * 4);
+
+    // --- Torso ---
+    ctx.fillStyle = colors.shirtColor;
+    ctx.fillRect(-torsoWidth / 2, -pixelSize * 4, torsoWidth, pixelSize * 6);
+    ctx.fillStyle = colors.shirtStripeColor;
+    ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
+
+    // --- Near Leg ---
+    ctx.fillStyle = colors.pantsColor;
+    ctx.fillRect(-pixelSize * 1.5, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
+
+    // --- Head ---
+    const headX = -pixelSize * 3;
+    const headY = -pixelSize * 9;
+    // Hair
+    ctx.fillStyle = colors.hairColor;
+    ctx.fillRect(headX, headY + pixelSize, pixelSize * 7, pixelSize * 8);
+    // Face
+    ctx.fillStyle = colors.skinColor;
+    ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 4, pixelSize * 2, pixelSize * 4);
+    // Eye
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
+
+    // --- Near Arm (drawn last to be on top of torso but behind head) ---
+    // This is the key change: we draw this arm AFTER the torso and leg, but BEFORE the head.
+    // Wait, that's not right. We need to draw it after torso but before head.
+    // Let's re-order.
+
+}
+
+function reorderedDrawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
+    const torsoWidth = pixelSize * 4;
+    const legWidth = pixelSize * 3;
+    const armWidth = pixelSize * 2;
+    const legY = pixelSize * 2;
+    const armY = -pixelSize * 3;
+
+    // 1. Draw Far Limbs
+    ctx.fillStyle = colors.pantsColor;
+    ctx.fillRect(-pixelSize / 2, legY + (isMoving && walkCycle === 1 ? -pixelSize : 0), legWidth, pixelSize * 4);
+    ctx.fillStyle = colors.skinColor;
+    ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 1 ? -pixelSize : 0), armWidth, pixelSize * 4);
+
+    // 2. Draw Torso
+    ctx.fillStyle = colors.shirtColor;
+    ctx.fillRect(-torsoWidth / 2, -pixelSize * 4, torsoWidth, pixelSize * 6);
+    ctx.fillStyle = colors.shirtStripeColor;
+    ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
+
+    // 3. Draw Near Leg
+    ctx.fillStyle = colors.pantsColor;
+    ctx.fillRect(-pixelSize * 1.5, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
+
+    // 4. Draw Near Arm (behind head)
+    ctx.fillStyle = colors.skinColor;
+    ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), armWidth, pixelSize * 4);
+
+    // 5. Draw Head (on top of near arm)
+    const headX = -pixelSize * 3;
+    const headY = -pixelSize * 9;
+    // Hair
+    ctx.fillStyle = colors.hairColor;
+    ctx.fillRect(headX, headY + pixelSize, pixelSize * 7, pixelSize * 8);
+    // Face
+    ctx.fillStyle = colors.skinColor;
+    ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 4, pixelSize * 2, pixelSize * 4);
+    // Eye
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
+}
+
+
 export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }) {
     ctx.imageSmoothingEnabled = false;
 
@@ -399,14 +564,13 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     const isMoving = entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200);
     const walkCycle = isMoving ? Math.floor(time / 200) % 2 : 0;
 
-    const hairColor = '#634b3a';
-    const skinColor = '#d3a07c';
-    const shirtColor = '#7b9c48';
-    const pantsColor = '#6d533b';
-    const shirtStripeColor = '#9abe6d';
-
-    const torsoWidth = pixelSize * 8;
-    const legWidth = pixelSize * 3;
+    const colors = {
+        hairColor: '#634b3a',
+        skinColor: '#d3a07c',
+        shirtColor: '#7b9c48',
+        pantsColor: '#6d533b',
+        shirtStripeColor: '#9abe6d'
+    };
 
     // Shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
@@ -414,48 +578,28 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.ellipse(centerX, y + tileSize - pixelSize * 2, pixelSize * 6, pixelSize * 2.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // --- Legs (drawn first) ---
-    ctx.fillStyle = pantsColor;
-    const legY = centerY + pixelSize * 2;
-    // Left Leg
-    const leftLegX = centerX - pixelSize * 4;
-    ctx.fillRect(leftLegX, legY + (isMoving && walkCycle === 1 ? pixelSize : 0), legWidth, pixelSize * 4);
-    // Right Leg
-    const rightLegX = centerX + pixelSize;
-    ctx.fillRect(rightLegX, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
+    ctx.save();
+    ctx.translate(centerX, centerY);
 
-    // --- Arms ---
-    ctx.fillStyle = skinColor;
-    const armY = centerY - pixelSize * 3;
-    const armHeight = pixelSize * 5;
-    // Left Arm
-    ctx.fillRect(centerX - torsoWidth / 2 - pixelSize * 2, armY + (isMoving && walkCycle === 1 ? pixelSize : 0), pixelSize * 2, armHeight);
-    // Right Arm
-    ctx.fillRect(centerX + torsoWidth / 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), pixelSize * 2, armHeight);
+    const direction = entity.direction || 'down';
 
+    switch (direction) {
+        case 'up':
+            drawPlayerFacingUp(ctx, pixelSize, walkCycle, isMoving, colors);
+            break;
+        case 'down':
+            drawPlayerFacingDown(ctx, pixelSize, walkCycle, isMoving, colors);
+            break;
+        case 'left':
+            ctx.scale(-1, 1); // Flip horizontally for left
+            reorderedDrawPlayerFacingSide(ctx, pixelSize, walkCycle, isMoving, colors);
+            break;
+        case 'right':
+            reorderedDrawPlayerFacingSide(ctx, pixelSize, walkCycle, isMoving, colors);
+            break;
+    }
 
-    // --- Torso ---
-    ctx.fillStyle = shirtColor;
-    ctx.fillRect(centerX - torsoWidth / 2, centerY - pixelSize * 4, torsoWidth, pixelSize * 6);
-    ctx.fillStyle = shirtStripeColor;
-    ctx.fillRect(centerX - torsoWidth / 2, centerY - pixelSize, torsoWidth, pixelSize * 2);
-
-    // --- Head ---
-    const headX = centerX - pixelSize * 4;
-    const headY = centerY - pixelSize * 9;
-    // Hair
-    ctx.fillStyle = hairColor;
-    ctx.fillRect(headX - pixelSize, headY + pixelSize, pixelSize * 10, pixelSize * 8);
-    // Face
-    ctx.fillStyle = skinColor;
-    ctx.fillRect(headX, headY + pixelSize * 4, pixelSize * 8, pixelSize * 4);
-    // Eyes
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(headX + pixelSize * 2, headY + pixelSize * 5, pixelSize, pixelSize * 2);
-    ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
-
-
-    // --- Equipment ---
+    // --- Equipment (drawn relative to the player) ---
     if (entity.id === state.getState().playerId) {
         const gear = state.getState().gear;
         const weaponItem = gear['weapon-slot'];
@@ -464,13 +608,25 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
             if (weaponDef && weaponDef.asset) {
                 const img = assetImages[weaponDef.asset];
                 if (img) {
-                    const wepX = centerX + torsoWidth / 2 - pixelSize;
+                    const armY = -pixelSize * 3;
                     const wepY = armY + (isMoving && walkCycle === 0 ? pixelSize : 0) + pixelSize;
-                    ctx.drawImage(img, wepX, wepY, tileSize * 0.75, tileSize * 0.75);
+                    let wepX = 0;
+
+                    if (direction === 'down') {
+                        wepX = pixelSize * 8 / 2 - pixelSize;
+                    } else if (direction === 'right' || direction === 'left') {
+                        wepX = -pixelSize;
+                    }
+
+                    if (direction !== 'up') { // Don't draw weapon when facing away
+                        ctx.drawImage(img, wepX, wepY, tileSize * 0.75, tileSize * 0.75);
+                    }
                 }
             }
         }
     }
+
+    ctx.restore();
 }
 
 function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: number, tailWag: number, colors: { [key: string]: string }) {
