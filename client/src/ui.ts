@@ -211,26 +211,151 @@ export function updateCraftingUI(): void {
 
     recipes.forEach(recipe => {
         const canCraft = Object.keys(recipe.req).every(itemId => counts[itemId] >= recipe.req[itemId]);
-        const recipeEl = document.createElement('div');
-        recipeEl.classList.add('crafting-recipe');
 
         const itemDef = itemDefinitions[recipe.item] || itemDefinitions['default'];
         
         const button = document.createElement('button');
         button.id = recipe.id;
+        button.classList.add('crafting-recipe');
         button.disabled = !canCraft;
         button.dataset.item = recipe.item; // Store the item to be crafted
 
         const iconEl = createIconElement(itemDef);
         button.appendChild(iconEl);
 
-        const textEl = document.createElement('div');
-        textEl.textContent = recipe.text;
-        button.appendChild(textEl);
+        button.addEventListener('mouseenter', () => showCraftingTooltip(button, recipe));
+        button.addEventListener('mouseleave', hideCraftingTooltip);
         
-        recipeEl.appendChild(button);
-        craftingView.appendChild(recipeEl);
+        craftingView.appendChild(button);
     });
+}
+
+function showCraftingTooltip(button: HTMLButtonElement, recipe: any) {
+    hideCraftingTooltip(); // Remove any existing tooltip
+    hideInventoryTooltip();
+    hideGearTooltip();
+
+    const tooltip = document.createElement('div');
+    tooltip.id = 'crafting-tooltip';
+    tooltip.classList.add('crafting-tooltip');
+
+    const rect = button.getBoundingClientRect();
+    tooltip.style.left = `${rect.left}px`;
+    tooltip.style.top = `${rect.bottom + 5}px`;
+
+    const craftedItemDef = itemDefinitions[recipe.item] || itemDefinitions['default'];
+
+    let content = `<div class="tooltip-title">Craft: ${craftedItemDef.text || recipe.item}</div>`;
+    content += '<hr>';
+
+    let hasCosts = Object.keys(recipe.req).length > 0;
+    if (hasCosts) {
+        content += '<h4>Costs:</h4>';
+        for (const itemId in recipe.req) {
+            const itemDef = itemDefinitions[itemId] || itemDefinitions['default'];
+            const requiredAmount = recipe.req[itemId];
+            content += `<div class="tooltip-item">
+                ${createIconElement(itemDef).outerHTML}
+                <span>${requiredAmount}x ${itemDef.text || itemId}</span>
+            </div>`;
+        }
+    }
+
+    if (recipe.item === 'cooked_rat_meat') {
+        if (hasCosts) {
+            content += '<hr>';
+        }
+        content += `<p class="special-req">Requires adjacent fire</p>`;
+    }
+
+    tooltip.innerHTML = content;
+    document.body.appendChild(tooltip);
+}
+
+function hideCraftingTooltip() {
+    const tooltip = document.getElementById('crafting-tooltip');
+    if (tooltip) {
+        tooltip.remove();
+    }
+}
+
+function showInventoryTooltip(slotEl: HTMLElement, item: any) {
+    hideCraftingTooltip();
+    hideInventoryTooltip(); // Remove any existing tooltip
+    hideGearTooltip();
+
+    const tooltip = document.createElement('div');
+    tooltip.id = 'inventory-tooltip';
+    tooltip.classList.add('inventory-tooltip'); // We'll need new styles for this
+
+    const rect = slotEl.getBoundingClientRect();
+    tooltip.style.left = `${rect.left}px`;
+    tooltip.style.top = `${rect.bottom + 5}px`;
+
+    const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
+    let content = `<div class="tooltip-title">${itemDef.text || item.id}</div>`;
+    
+    const edible = edibleDefs[item.id];
+    const equippable = itemDef.equippable;
+
+    if (edible || equippable) {
+        content += '<hr>';
+    }
+
+    if (equippable) {
+        content += `<p class="tooltip-action">Equip ${itemDef.text || item.id}</p>`;
+        if (equippable.damage) {
+            content += `<p class="tooltip-stat">+${equippable.damage} Damage</p>`;
+        }
+    }
+    
+    if (edible) {
+        content += `<p class="tooltip-action">Eat ${itemDef.text || item.id}</p>`;
+        content += `<p class="tooltip-stat">+${edible.healAmount} Health</p>`;
+    }
+
+    tooltip.innerHTML = content;
+    document.body.appendChild(tooltip);
+}
+
+function hideInventoryTooltip() {
+    const tooltip = document.getElementById('inventory-tooltip');
+    if (tooltip) {
+        tooltip.remove();
+    }
+}
+
+function showGearTooltip(slotEl: HTMLElement, item: any) {
+    hideCraftingTooltip();
+    hideInventoryTooltip();
+    hideGearTooltip();
+
+    const tooltip = document.createElement('div');
+    tooltip.id = 'gear-tooltip';
+    tooltip.classList.add('inventory-tooltip'); // Reuse styles
+
+    const rect = slotEl.getBoundingClientRect();
+    tooltip.style.left = `${rect.left}px`;
+    tooltip.style.top = `${rect.bottom + 5}px`;
+
+    const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
+    let content = `<div class="tooltip-title">${itemDef.text || item.id}</div>`;
+    content += '<hr>';
+    content += `<p class="tooltip-action">Unequip ${itemDef.text || item.id}</p>`;
+
+    if (itemDef.equippable?.damage) {
+        content += `<p class="tooltip-stat">+${itemDef.equippable.damage} Damage</p>`;
+    }
+    
+    tooltip.innerHTML = content;
+    document.body.appendChild(tooltip);
+}
+
+function hideGearTooltip() {
+    const tooltip = document.getElementById('gear-tooltip');
+    if (tooltip) {
+        tooltip.remove();
+    }
 }
 
 export function updateGearUI(): void {
@@ -248,11 +373,11 @@ export function updateGearUI(): void {
             const iconEl = createIconElement(itemDef);
             slotEl.appendChild(iconEl);
 
-            const unequipButton = document.createElement('button');
-            unequipButton.textContent = 'Unequip';
-            unequipButton.classList.add('unequip-button');
-            unequipButton.dataset.slot = slot;
-            slotEl.appendChild(unequipButton);
+            slotEl.classList.add('unequippable');
+            slotEl.dataset.slot = slot;
+
+            slotEl.addEventListener('mouseenter', () => showGearTooltip(slotEl, item));
+            slotEl.addEventListener('mouseleave', hideGearTooltip);
         } else {
             const nameEl = document.createElement('div');
             nameEl.classList.add('item-name');
@@ -286,21 +411,18 @@ export function updateInventoryUI(): void {
             
             const edible = edibleDefs[item.id];
             if (edible) {
-                const eatButton = document.createElement('button');
-                eatButton.textContent = `Eat`;
-                eatButton.classList.add('eat-button');
-                eatButton.dataset.item = item.id;
-                slotEl.appendChild(eatButton);
+                slotEl.classList.add('edible');
+                slotEl.dataset.item = item.id;
             }
 
             const itemDefForEquip = itemDefinitions[item.id];
             if (itemDefForEquip && itemDefForEquip.equippable) {
-                const equipButton = document.createElement('button');
-                equipButton.textContent = 'Equip';
-                equipButton.classList.add('equip-button');
-                equipButton.dataset.slot = slotKey;
-                slotEl.appendChild(equipButton);
+                slotEl.classList.add('equippable');
+                slotEl.dataset.slot = slotKey;
             }
+            
+            slotEl.addEventListener('mouseenter', () => showInventoryTooltip(slotEl, item));
+            slotEl.addEventListener('mouseleave', hideInventoryTooltip);
         } else {
             slotEl.innerHTML = `&nbsp;`; // Empty slot
         }

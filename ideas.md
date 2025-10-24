@@ -1,13 +1,14 @@
 Core Gameplay Loop Expansion (Months 1-2)
 Goal: Make the moment-to-moment gameplay engaging and give players short-term objectives.
 
-slime as drawing
-inventory icons generated, heart chat emoji
-health bar?
-ai gen all new better icons
-name the game. Improve the top bar with a image of the game title
-give player a random shirt color
-draw items that fall on the ground (or just use their icon probably)
+- [x] slime as drawing
+- [ ] inventory icons generated, heart chat emoji
+- [ ] health bar?
+- [ ] ai gen all new better icons
+- [ ] name the game. Improve the top bar with a image of the game title
+- [ ] give player a random shirt color
+- [ ] draw items that fall on the ground (or just use their icon probably)
+- [ ] show the player holding the axe
 
 quests
 what are the rewards?

@@ -217,7 +217,7 @@ body {
 #info-panel {
     position: absolute;
     bottom: 80px; /* Position above the action bar */
-    right: 0;
+    right: 20px;
     width: 400px;
     height: 150px;
     background-color: rgba(0, 0, 0, 0.4);
@@ -255,6 +255,17 @@ body {
     word-break: break-word;
 }
 
+.inventory-slot.equippable,
+.inventory-slot.edible {
+    cursor: pointer;
+}
+
+.inventory-slot.equippable:hover,
+.inventory-slot.edible:hover {
+    background-color: #555;
+    border-color: #888;
+}
+
 .item-icon {
     font-size: 1.8em;
     line-height: 1;
@@ -287,44 +298,153 @@ body {
 }
 
 .inventory-slot button {
-    font-size: 0.6em;
-    padding: 2px 4px;
+    font-size: 0.7em;
+    padding: 3px 6px;
     margin-top: 5px;
-    background-color: #3498db;
-    border: none;
-    border-radius: 3px;
+    background-color: #555;
+    border: 1px solid #777;
+    border-radius: 4px;
     color: white;
     cursor: pointer;
+    transition: background-color 0.2s;
+    max-width: 90%;
+    align-self: center;
+}
+
+.inventory-slot button:hover {
+    background-color: #666;
 }
 
 .crafting-recipe {
+    width: 60px;
+    height: 60px;
     background-color: #444;
     border: 1px solid #666;
     border-radius: 4px;
-    padding: 10px;
-}
-
-.crafting-recipe button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
-    cursor: pointer;
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    width: 80px;
-    height: 80px;
+    justify-content: center;
+    font-size: 1.2em;
+    padding: 5px;
     box-sizing: border-box;
+    text-align: center;
+    word-break: break-word;
+    color: white;
+    cursor: pointer;
+    gap: 5px;
 }
 
-.crafting-recipe button:disabled {
-    background-color: #555;
+.crafting-recipe .item-name {
+    font-size: 0.6em;
+}
+
+.crafting-recipe:disabled {
+    background-color: #333;
     cursor: not-allowed;
+    color: #888;
 }
 
+/* --- Inventory Tooltip --- */
+.inventory-tooltip {
+    position: absolute;
+    background-color: rgba(20, 20, 20, 0.9);
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 10px;
+    z-index: 100;
+    color: #f0f0f0;
+    font-size: 0.9em;
+    width: 180px;
+    pointer-events: none; /* So it doesn't interfere with mouse events */
+}
+
+.inventory-tooltip .tooltip-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+.inventory-tooltip hr {
+    border: none;
+    border-top: 1px solid #444;
+    margin: 8px 0;
+}
+
+.inventory-tooltip .tooltip-action {
+    color: #3498db; /* A nice blue for actions */
+    margin: 5px 0 0 0;
+    padding: 0;
+}
+
+.inventory-tooltip .tooltip-stat {
+    color: #2ecc71; /* Green for positive stats */
+    margin: 5px 0 0 0;
+    padding: 0;
+    font-size: 0.9em;
+}
+
+/* --- Crafting Tooltip --- */
+.crafting-tooltip {
+    position: absolute;
+    background-color: rgba(20, 20, 20, 0.9);
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 10px;
+    z-index: 100;
+    color: #f0f0f0;
+    font-size: 0.9em;
+    width: 180px;
+    pointer-events: none; /* So it doesn't interfere with mouse events */
+}
+
+.crafting-tooltip .tooltip-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+.crafting-tooltip hr {
+    border: none;
+    border-top: 1px solid #444;
+    margin: 8px 0;
+}
+
+.crafting-tooltip h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 1em;
+    color: #aaa;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+}
+
+.crafting-tooltip .tooltip-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.crafting-tooltip .tooltip-item .item-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1.5em; /* Adjust if using character icons */
+}
+.crafting-tooltip .tooltip-item img {
+    width: 100%;
+    height: 100%;
+}
+
+.crafting-tooltip .special-req {
+    color: #e67e22;
+    margin-top: 10px;
+    font-style: italic;
+    font-size: 0.85em;
+}
 
 /* --- Modal Styles --- */
 .modal {

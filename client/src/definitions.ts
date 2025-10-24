@@ -97,16 +97,17 @@ export function getTileProperties(type: string): TileProperties {
     return tileDefs[type] || tileDefs['void'];
 }
 
-export const itemDefinitions: { [key: string]: { icon?: string, character: string, color: string, asset?: string, equippable?: { slot: string, damage?: number } } } = {
-    'wood': { icon: '🌲', character: 'W', color: '#8B4513', asset: 'assets/wood-icon.png' },
-    'stone': { icon: '🪨', character: 'S', color: '#808080', asset: 'assets/stone-icon.png' },
-    'goop': { icon: '💧', character: 'G', color: '#90EE90' },
-    'rat_meat': { icon: '🍖', character: 'M', color: '#DC143C' },
-    'cooked_rat_meat': { icon: '🥩', character: 'M', color: '#A52A2A' },
-    'treasure_map': { icon: '🗺️', character: 'M', color: '#FFD700' },
-    'fire': { icon: '🔥', character: 'F', color: '#FF4500', asset: 'assets/fire-icon.png' },
-    'wooden_wall': { icon: '🧱', character: '#', color: '#A0522D', asset: 'assets/wooden-wall-icon.png' },
+export const itemDefinitions: { [key: string]: { text?: string, icon?: string, character: string, color: string, asset?: string, equippable?: { slot: string, damage?: number } } } = {
+    'wood': { text: 'Wood', icon: '🌲', character: 'W', color: '#8B4513', asset: 'assets/wood-icon.png' },
+    'stone': { text: 'Stone', icon: '🪨', character: 'S', color: '#808080', asset: 'assets/stone-icon.png' },
+    'goop': { text: 'Goop', icon: '💧', character: 'G', color: '#90EE90' },
+    'rat_meat': { text: 'Rat Meat', icon: '🍖', character: 'M', color: '#DC143C' },
+    'cooked_rat_meat': { text: 'Cooked Meat', icon: '🥩', character: 'M', color: '#A52A2A' },
+    'treasure_map': { text: 'Treasure Map', icon: '🗺️', character: 'M', color: '#FFD700' },
+    'fire': { text: 'Fire', icon: '🔥', character: 'F', color: '#FF4500', asset: 'assets/fire-icon.png' },
+    'wooden_wall': { text: 'Wooden Wall', icon: '🧱', character: '#', color: '#A0522D', asset: 'assets/wooden-wall-icon.png' },
     'crude_axe': {
+        text: 'Crude Axe',
         icon: '🪓',
         character: 'A',
         color: '#b5a642',
@@ -116,7 +117,7 @@ export const itemDefinitions: { [key: string]: { icon?: string, character: strin
             damage: 2,
         },
     },
-    'default': { icon: '❓', character: '?', color: '#FFFFFF' },
+    'default': { text: 'Unknown Item', icon: '❓', character: '?', color: '#FFFFFF' },
 };
 
 export const edibleDefs: { [key: string]: { healAmount: number } } = {

@@ -281,20 +281,20 @@ export function initializeInput() {
 
     inventoryView.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        const button = target.closest('button');
-        if (!button) return;
+        const slot = target.closest('.inventory-slot');
+        if (!slot) return;
 
-        if (button.classList.contains('eat-button')) {
+        if (slot.classList.contains('edible')) {
             if (!canPerformAction) return;
-            const itemToEat = button.dataset.item;
+            const itemToEat = (slot as HTMLElement).dataset.item;
             if (itemToEat) {
                 startActionCooldown(ACTION_COOLDOWN);
                 network.send({ type: 'eat', payload: { item: itemToEat } });
             }
         }
-        if (button.classList.contains('equip-button')) {
+        if (slot.classList.contains('equippable')) {
             if (!canPerformAction) return;
-            const inventorySlot = button.dataset.slot;
+            const inventorySlot = (slot as HTMLElement).dataset.slot;
             if (inventorySlot) {
                 startActionCooldown(ACTION_COOLDOWN);
                 network.send({ type: 'equip', payload: { inventorySlot } });
@@ -304,16 +304,14 @@ export function initializeInput() {
 
     gearView.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        const button = target.closest('button');
-        if (!button) return;
+        const slot = target.closest('.inventory-slot');
+        if (!slot || !slot.classList.contains('unequippable')) return;
 
-        if (button.classList.contains('unequip-button')) {
-            if (!canPerformAction) return;
-            const gearSlot = button.dataset.slot;
-            if (gearSlot) {
-                startActionCooldown(ACTION_COOLDOWN);
-                network.send({ type: 'unequip', payload: { gearSlot } });
-            }
+        if (!canPerformAction) return;
+        const gearSlot = (slot as HTMLElement).dataset.slot;
+        if (gearSlot) {
+            startActionCooldown(ACTION_COOLDOWN);
+            network.send({ type: 'unequip', payload: { gearSlot } });
         }
     });
 
