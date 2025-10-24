@@ -12,10 +12,11 @@ import {
     ResourceDamagedMessage, 
     ServerMessage, 
     StateCorrectionMessage, 
-    WorldUpdateMessage 
+    WorldUpdateMessage,
+    EntityAttackMessage
 } from './types';
 import * as state from './state';
-import { addChatMessage, promptForRegistration, updateInventoryUI, updatePlayerHealth, updatePlayerIdDisplay, updatePlayerNameDisplay } from './ui';
+import { addChatMessage, promptForRegistration, updateInventoryUI, updatePlayerHealth, updatePlayerNameDisplay } from './ui';
 import { showDamageIndicator } from './renderer';
 
 let ws: WebSocket;
@@ -63,7 +64,7 @@ function handleMessage(event: MessageEvent) {
         }
         case 'entity_moved': { 
             const moveMsg = msg as EntityMovedMessage;
-            state.setEntityPosition(moveMsg.entityId, moveMsg.x, moveMsg.y);
+            state.setEntityPosition(moveMsg.entityId, moveMsg.x, moveMsg.y, moveMsg.direction);
             onStateUpdate();
             break;
         }
@@ -115,6 +116,12 @@ function handleMessage(event: MessageEvent) {
         case 'resource_damaged': {
             const damageMsg = msg as ResourceDamagedMessage;
             state.setResourceHealth(damageMsg.x, damageMsg.y, damageMsg.newHealth);
+            onStateUpdate();
+            break;
+        }
+        case 'entity_attack': {
+            const attackMsg = msg as EntityAttackMessage;
+            state.setEntityAttack(attackMsg.attackerId, attackMsg.targetId);
             onStateUpdate();
             break;
         }

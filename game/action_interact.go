@@ -83,6 +83,8 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 		return nil, nil
 	}
 
+	UpdateEntityDirection(playerID, targetX, targetY)
+
 	tile.Health--
 	damageMsg := models.ResourceDamagedMessage{
 		Type:      string(ServerEventResourceDamaged), // Use ServerEventType constant

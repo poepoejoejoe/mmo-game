@@ -3,6 +3,16 @@ import { EntityState } from './types';
 import * as state from './state';
 import { itemDefinitions } from './definitions';
 
+function drawPath(ctx: CanvasRenderingContext2D, points: { x: number, y: number }[]) {
+    if (points.length === 0) return;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+}
+
 class SeededRandom {
     private seed: number;
 
@@ -61,34 +71,20 @@ export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number
 
         // Shadow
         ctx.fillStyle = `rgba(0, 0, 0, 0.3)`;
-        ctx.beginPath();
-        ctx.moveTo(shape[0].x + 2, shape[0].y + 2);
-        for (let j = 1; j < vertices; j++) {
-            ctx.lineTo(shape[j].x + 2, shape[j].y + 2);
-        }
-        ctx.closePath();
+        const shadowShape = shape.map(p => ({ x: p.x + 2, y: p.y + 2 }));
+        drawPath(ctx, shadowShape);
         ctx.fill();
 
         // Main rock body
         ctx.fillStyle = `rgb(${baseGray}, ${baseGray}, ${baseGray})`;
-        ctx.beginPath();
-        ctx.moveTo(shape[0].x, shape[0].y);
-        for (let j = 1; j < vertices; j++) {
-            ctx.lineTo(shape[j].x, shape[j].y);
-        }
-        ctx.closePath();
+        drawPath(ctx, shape);
         ctx.fill();
 
         // Highlight
         const highlightGray = baseGray + 40;
         ctx.fillStyle = `rgba(${highlightGray}, ${highlightGray}, ${highlightGray}, 0.7)`;
-        ctx.beginPath();
-        ctx.moveTo(shape[0].x - 1, shape[0].y - 1);
-        for (let j = 1; j < vertices; j++) {
-            // Jitter the highlight path a bit for texture
-            ctx.lineTo(shape[j].x - 1 + (rand.next() - 0.5), shape[j].y - 1 + (rand.next() - 0.5));
-        }
-        ctx.closePath();
+        const highlightShape = shape.map(p => ({ x: p.x - 1 + (rand.next() - 0.5), y: p.y - 1 + (rand.next() - 0.5) }));
+        drawPath(ctx, highlightShape);
         ctx.fill();
 
          // Cracks/Details
@@ -147,24 +143,15 @@ export function drawTree(ctx: CanvasRenderingContext2D, x: number, y: number, ti
 
     // 1. Shadow
     ctx.fillStyle = `rgba(0, 0, 0, 0.3)`;
-    ctx.beginPath();
-    ctx.moveTo(shape[0].x + 2, shape[0].y + 3);
-    for (let j = 1; j < vertices; j++) {
-        ctx.lineTo(shape[j].x + 2, shape[j].y + 3);
-    }
-    ctx.closePath();
+    const shadowCanopyShape = shape.map(p => ({ x: p.x + 2, y: p.y + 3 }));
+    drawPath(ctx, shadowCanopyShape);
     ctx.fill();
 
     // 2. Base Canopy Color (Darker)
     const baseGreen = 50 + rand.nextInt(0, 25);
     const baseColor = `rgb(${baseGreen - 20}, ${100 + rand.nextInt(0, 50)}, ${baseGreen - 20})`;
     ctx.fillStyle = baseColor;
-    ctx.beginPath();
-    ctx.moveTo(shape[0].x, shape[0].y);
-    for (let j = 1; j < vertices; j++) {
-        ctx.lineTo(shape[j].x, shape[j].y);
-    }
-    ctx.closePath();
+    drawPath(ctx, shape);
     ctx.fill();
 
     // 3. Leafy Texture
@@ -386,11 +373,10 @@ export function drawWaterGroup(ctx: CanvasRenderingContext2D, group: TileGroup, 
     ctx.restore();
 }
 
-export function drawWaterTile() { /* This function is now obsolete */ }
-
-function drawPlayerFacingDown(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
+function drawPlayerTorsoAndLimbs(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
     const torsoWidth = pixelSize * 8;
     const legWidth = pixelSize * 3;
+    const armHeight = pixelSize * 5;
 
     // --- Legs (drawn first) ---
     ctx.fillStyle = colors.pantsColor;
@@ -403,11 +389,9 @@ function drawPlayerFacingDown(ctx: CanvasRenderingContext2D, pixelSize: number, 
     // --- Arms ---
     ctx.fillStyle = colors.skinColor;
     const armY = -pixelSize * 3;
-    const armHeight = pixelSize * 5;
     // Left Arm
     ctx.fillRect(-torsoWidth / 2 - pixelSize * 2, armY + (isMoving && walkCycle === 1 ? pixelSize : 0), pixelSize * 2, armHeight);
-    // --- Right Arm 
-    ctx.fillStyle = colors.skinColor;
+    // Right Arm
     ctx.fillRect(torsoWidth / 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), pixelSize * 2, armHeight);
 
     // --- Torso ---
@@ -415,6 +399,10 @@ function drawPlayerFacingDown(ctx: CanvasRenderingContext2D, pixelSize: number, 
     ctx.fillRect(-torsoWidth / 2, -pixelSize * 4, torsoWidth, pixelSize * 6);
     ctx.fillStyle = colors.shirtStripeColor;
     ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
+}
+
+function drawPlayerFacingDown(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
+    drawPlayerTorsoAndLimbs(ctx, pixelSize, walkCycle, isMoving, colors);
 
     // --- Head ---
     const headX = -pixelSize * 4;
@@ -429,86 +417,16 @@ function drawPlayerFacingDown(ctx: CanvasRenderingContext2D, pixelSize: number, 
     ctx.fillStyle = '#000000';
     ctx.fillRect(headX + pixelSize * 2, headY + pixelSize * 5, pixelSize, pixelSize * 2);
     ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
-
-
 }
 
 function drawPlayerFacingUp(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
-    const torsoWidth = pixelSize * 8;
-    const legWidth = pixelSize * 3;
-
-    // --- Legs ---
-    ctx.fillStyle = colors.pantsColor;
-    const legY = pixelSize * 2;
-    ctx.fillRect(-pixelSize * 4, legY + (isMoving && walkCycle === 1 ? pixelSize : 0), legWidth, pixelSize * 4);
-    ctx.fillRect(pixelSize, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
-
-    // --- Arms ---
-    ctx.fillStyle = colors.skinColor;
-    const armY = -pixelSize * 3;
-    const armHeight = pixelSize * 5;
-    ctx.fillRect(-torsoWidth / 2 - pixelSize * 2, armY + (isMoving && walkCycle === 1 ? pixelSize : 0), pixelSize * 2, armHeight);
-    
-    // --- Right Arm ---
-    ctx.fillStyle = colors.skinColor;
-    ctx.fillRect(torsoWidth / 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), pixelSize * 2, armHeight);
-
-    // --- Torso ---
-    ctx.fillStyle = colors.shirtColor;
-    ctx.fillRect(-torsoWidth / 2, -pixelSize * 4, torsoWidth, pixelSize * 6);
-    ctx.fillStyle = colors.shirtStripeColor;
-    ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
+    drawPlayerTorsoAndLimbs(ctx, pixelSize, walkCycle, isMoving, colors);
 
     // --- Head (Back) ---
     const headX = -pixelSize * 4;
     const headY = -pixelSize * 9;
     ctx.fillStyle = colors.hairColor;
     ctx.fillRect(headX - pixelSize, headY + pixelSize, pixelSize * 10, pixelSize * 8); // Full hair, no face
-}
-
-function drawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
-    const torsoWidth = pixelSize * 4;
-    const legWidth = pixelSize * 3;
-    const armWidth = pixelSize * 2;
-
-    // --- Far Leg ---
-    ctx.fillStyle = colors.pantsColor;
-    const legY = pixelSize * 2;
-    ctx.fillRect(-pixelSize / 2, legY + (isMoving && walkCycle === 1 ? -pixelSize : 0), legWidth, pixelSize * 4);
-
-    // --- Far Arm ---
-    ctx.fillStyle = colors.skinColor;
-    const armY = -pixelSize * 3;
-    ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 1 ? -pixelSize : 0), armWidth, pixelSize * 4);
-
-    // --- Torso ---
-    ctx.fillStyle = colors.shirtColor;
-    ctx.fillRect(-torsoWidth / 2, -pixelSize * 4, torsoWidth, pixelSize * 6);
-    ctx.fillStyle = colors.shirtStripeColor;
-    ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
-
-    // --- Near Leg ---
-    ctx.fillStyle = colors.pantsColor;
-    ctx.fillRect(-pixelSize * 1.5, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
-
-    // --- Head ---
-    const headX = -pixelSize * 3;
-    const headY = -pixelSize * 9;
-    // Hair
-    ctx.fillStyle = colors.hairColor;
-    ctx.fillRect(headX, headY + pixelSize, pixelSize * 7, pixelSize * 8);
-    // Face
-    ctx.fillStyle = colors.skinColor;
-    ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 4, pixelSize * 2, pixelSize * 4);
-    // Eye
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
-
-    // --- Near Arm (drawn last to be on top of torso but behind head) ---
-    // This is the key change: we draw this arm AFTER the torso and leg, but BEFORE the head.
-    // Wait, that's not right. We need to draw it after torso but before head.
-    // Let's re-order.
-
 }
 
 function reorderedDrawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
@@ -561,7 +479,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     const centerX = x + tileSize / 2;
     const centerY = y + tileSize / 2;
 
-    const isMoving = entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200);
+    const isMoving = !!(entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200));
     const walkCycle = isMoving ? Math.floor(time / 200) % 2 : 0;
 
     const colors = {
@@ -718,7 +636,7 @@ export function drawRat(ctx: CanvasRenderingContext2D, x: number, y: number, til
     const centerX = x + tileSize / 2;
     const centerY = y + tileSize / 2;
 
-    const isMoving = entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200);
+    const isMoving = !!(entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200));
     const jiggle = isMoving ? Math.sin(time / 80) * pixelSize * 0.5 : 0;
     const tailWag = isMoving ? Math.sin(time / 150) * pixelSize * 4 : 0;
 

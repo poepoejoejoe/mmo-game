@@ -15,6 +15,8 @@ export interface EntityState {
     name?: string;
     lastMoveTime?: number;
     direction?: 'up' | 'down' | 'left' | 'right';
+    lastAttackTime?: number;
+    targetId?: string;
 }
 
 export interface WorldTile {
@@ -56,6 +58,7 @@ export interface EntityMovedMessage extends ServerMessage {
     entityId: string;
     x: number;
     y: number;
+    direction?: 'up' | 'down' | 'left' | 'right';
 }
 
 // --- RENAMED and UPDATED ---
@@ -106,6 +109,12 @@ export interface StateCorrectionMessage extends ServerMessage {
     type: 'state_correction';
     x: number;
     y: number;
+}
+
+export interface EntityAttackMessage extends ServerMessage {
+    type: 'entity_attack';
+    attackerId: string;
+    targetId: string;
 }
 
 export interface EntityDamagedMessage extends ServerMessage {

@@ -105,6 +105,7 @@ func processNPCAction(npcID string) {
 		log.Printf("target found. %s is attacking player %s", npcID, targetID)
 		// If adjacent, attack
 		if IsAdjacent(npcX, npcY, targetX, targetY) {
+			UpdateEntityDirection(npcID, targetX, targetY)
 			log.Printf("NPC %s is attacking player %s", npcID, targetID)
 			npcTypeStr, ok := npcData["npcType"]
 			if !ok {

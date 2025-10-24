@@ -41,6 +41,7 @@ type EntityState struct {
 	X         int    `json:"x"`
 	Y         int    `json:"y"`
 	Type      string `json:"type"`
+	Direction string `json:"direction,omitempty"`
 	Name      string `json:"name,omitempty"`
 	ItemID    string `json:"itemId,omitempty"`
 	Owner     string `json:"owner,omitempty"`

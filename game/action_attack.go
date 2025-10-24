@@ -39,6 +39,8 @@ func ProcessAttack(playerID string, targetEntityID string) *models.EntityDamaged
 		return nil
 	}
 
+	UpdateEntityDirection(playerID, targetX, targetY)
+
 	// For now, let's say every attack does 1 damage.
 	damage := 1
 

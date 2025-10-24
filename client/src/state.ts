@@ -45,26 +45,28 @@ export function setInitialState(
     clientState.gear = gear;
 }
 
-export function setEntityPosition(entityId: string, x: number, y: number) {
-    if (clientState.entities[entityId]) {
-        const oldX = clientState.entities[entityId].x;
-        const oldY = clientState.entities[entityId].y;
-        let direction = clientState.entities[entityId].direction || 'down';
+export function setEntityPosition(entityId: string, x: number, y: number, direction?: 'up' | 'down' | 'left' | 'right') {
+    const entity = clientState.entities[entityId];
+    if (entity) {
+        const positionChanged = entity.x !== x || entity.y !== y;
+        let newDirection = direction;
 
-        if (y > oldY) {
-            direction = 'down';
-        } else if (y < oldY) {
-            direction = 'up';
-        } else if (x > oldX) {
-            direction = 'right';
-        } else if (x < oldX) {
-            direction = 'left';
+        if (!newDirection && positionChanged) {
+            const dx = x - entity.x;
+            const dy = y - entity.y;
+            if (dx > 0) newDirection = 'right';
+            else if (dx < 0) newDirection = 'left';
+            else if (dy > 0) newDirection = 'down';
+            else if (dy < 0) newDirection = 'up';
         }
 
-        clientState.entities[entityId].x = x;
-        clientState.entities[entityId].y = y;
-        clientState.entities[entityId].lastMoveTime = Date.now();
-        clientState.entities[entityId].direction = direction;
+        clientState.entities[entityId] = {
+            ...entity,
+            x,
+            y,
+            direction: newDirection || entity.direction,
+            lastMoveTime: positionChanged ? Date.now() : entity.lastMoveTime
+        };
     }
 }
 
@@ -107,5 +109,12 @@ export function setEntityChat(entityId: string, message: string) {
     if (clientState.entities[entityId]) {
         clientState.entities[entityId].lastChatMessage = message;
         clientState.entities[entityId].lastChatTimestamp = Date.now();
+    }
+}
+
+export function setEntityAttack(attackerId: string, targetId: string) {
+    const entity = clientState.entities[attackerId];
+    if (entity) {
+        clientState.entities[attackerId] = { ...entity, lastAttackTime: Date.now(), targetId: targetId };
     }
 }

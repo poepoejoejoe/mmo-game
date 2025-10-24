@@ -300,3 +300,42 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+func UpdateEntityDirection(entityID string, targetX int, targetY int) {
+	_, entityData := CanEntityAct(entityID)
+	currentX, currentY := GetEntityPosition(entityData)
+
+	dx := targetX - currentX
+	dy := targetY - currentY
+
+	var direction MoveDirection
+	if Abs(dx) > Abs(dy) {
+		if dx > 0 {
+			direction = MoveDirectionRight
+		} else {
+			direction = MoveDirectionLeft
+		}
+	} else {
+		if dy > 0 {
+			direction = MoveDirectionDown
+		} else {
+			direction = MoveDirectionUp
+		}
+	}
+	rdb.HSet(ctx, entityID, "direction", string(direction))
+	updateMsg := map[string]interface{}{
+		"type":      string(ServerEventEntityMoved),
+		"entityId":  entityID,
+		"x":         currentX,
+		"y":         currentY,
+		"direction": string(direction),
+	}
+	PublishUpdate(updateMsg)
+}
+
+func Abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}

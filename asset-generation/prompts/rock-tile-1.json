@@ -1,8 +1,0 @@
-{
-  "asset_name": "rock-tile-1",
-  "asset_type": "texture",
-  "description": "A seamless, top-down, stylized rock texture.",
-  "output_format": "png",
-  "size_hint": "medium",
-  "llm_prompt": "A seamless and tileable texture of a rocky ground or cobblestone path. The rocks should be somewhat irregular and have a hand-painted feel, suitable for a fantasy game world."
-}
