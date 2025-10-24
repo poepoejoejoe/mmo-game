@@ -47,15 +47,30 @@ export function setInitialState(
 
 export function setEntityPosition(entityId: string, x: number, y: number) {
     if (clientState.entities[entityId]) {
+        const oldX = clientState.entities[entityId].x;
+        const oldY = clientState.entities[entityId].y;
+        let direction = clientState.entities[entityId].direction || 'down';
+
+        if (y > oldY) {
+            direction = 'down';
+        } else if (y < oldY) {
+            direction = 'up';
+        } else if (x > oldX) {
+            direction = 'right';
+        } else if (x < oldX) {
+            direction = 'left';
+        }
+
         clientState.entities[entityId].x = x;
         clientState.entities[entityId].y = y;
         clientState.entities[entityId].lastMoveTime = Date.now();
+        clientState.entities[entityId].direction = direction;
     }
 }
 
 // --- UPDATED ---
 export function addEntity(id: string, x: number, y: number, type: 'player' | 'npc' | 'item', name?: string, itemId?: string, owner?: string, createdAt?: number, publicAt?: number) {
-    clientState.entities[id] = { id, x, y, type, name, itemId, owner, createdAt, publicAt, lastMoveTime: 0 };
+    clientState.entities[id] = { id, x, y, type, name, itemId, owner, createdAt, publicAt, lastMoveTime: 0, direction: 'down' };
 }
 
 export function removeEntity(id: string) {

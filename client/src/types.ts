@@ -14,6 +14,7 @@ export interface EntityState {
     lastChatTimestamp?: number;
     name?: string;
     lastMoveTime?: number;
+    direction?: 'up' | 'down' | 'left' | 'right';
 }
 
 export interface WorldTile {

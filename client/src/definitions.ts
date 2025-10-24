@@ -1,6 +1,6 @@
 // This file is the single source of truth for all game object properties.
 
-import { drawRockTile, drawTree, drawPlayer } from './drawing';
+import { drawRockTile, drawTree, drawPlayer, drawRat } from './drawing';
 import { EntityState } from './types';
 
 export interface TileProperties {
@@ -148,7 +148,7 @@ export const entityDefs: Record<string, EntityProperties> = {
     'rat': {
         color: '#800080', // Purple
         isAttackable: true,
-        asset: 'assets/rat.png',
+        draw: drawRat,
     },
     'item': {
         color: 'transparent', // We'll render items with text instead
