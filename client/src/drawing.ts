@@ -504,6 +504,50 @@ function drawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize: number, 
     ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
 }
 
+function drawPlayerWeapon(ctx: CanvasRenderingContext2D, pixelSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }, tileSize: number) {
+    const isMoving = !!(entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200));
+    const walkCycle = isMoving ? Math.floor(time / 200) % 2 : 0;
+    const direction = entity.direction || 'down';
+
+    const gear = entity.gear;
+    if (!gear) return;
+
+    const weaponItem = gear['weapon-slot'];
+    if (!weaponItem) return;
+    
+    const weaponDef = itemDefinitions[weaponItem.id];
+    if (!weaponDef || direction === 'up') return;
+
+    const armY = -pixelSize * 3;
+    let wepX = 0;
+    let wepY = 0;
+
+    if (direction === 'down') {
+        wepX = -10 * pixelSize; // Player's right hand is on the left of the sprite
+        wepY = armY - 3 * pixelSize + (isMoving && walkCycle === 1 ? pixelSize : 0); // Sync with right arm
+    } else if (direction === 'right') {
+        // Player's right hand is the near arm
+        wepX = 8 * pixelSize;
+        wepY = armY + 2 * pixelSize + (isMoving && walkCycle === 1 ? pixelSize : 0); // Sync with near arm
+    } else if (direction === 'left') {
+        // On a flipped context, player's right hand is the far arm
+        wepX = 7 * pixelSize;
+        wepY = armY + 2 * pixelSize + (isMoving && walkCycle === 0 ? -pixelSize : 0); // Sync with far arm
+    }
+
+    if (weaponDef.draw) {
+        ctx.save();
+        ctx.translate(wepX, wepY);
+        weaponDef.draw(ctx, pixelSize, direction);
+        ctx.restore();
+    } else if (weaponDef.asset) {
+        const img = assetImages[weaponDef.asset];
+        if (img) {
+            ctx.drawImage(img, wepX, wepY, tileSize * 0.75, tileSize * 0.75);
+        }
+    }
+}
+
 
 export function drawCrudeAxe(ctx: CanvasRenderingContext2D, pixelSize: number, direction: string) {
     const handleColor = '#8B4513'; // Darker wood
@@ -514,8 +558,10 @@ export function drawCrudeAxe(ctx: CanvasRenderingContext2D, pixelSize: number, d
 
     ctx.save();
     
-    let rotation = Math.PI / 4.5;
+    let rotation = -Math.PI / 4.5;
     if (direction === 'right') {
+        rotation = Math.PI / 2.2;
+    } else if (direction === 'left') {
         rotation = Math.PI / 2.2;
     }
     ctx.rotate(rotation);
@@ -598,48 +644,17 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
             break;
         case 'down':
             drawPlayerFacingDown(ctx, pixelSize, walkCycle, isMoving, colors);
+            drawPlayerWeapon(ctx, pixelSize, entity, time, assetImages, tileSize);
             break;
         case 'left':
             ctx.scale(-1, 1); // Flip horizontally for left
+            drawPlayerWeapon(ctx, pixelSize, entity, time, assetImages, tileSize);
             drawPlayerFacingSide(ctx, pixelSize, walkCycle, isMoving, colors);
             break;
         case 'right':
             drawPlayerFacingSide(ctx, pixelSize, walkCycle, isMoving, colors);
+            drawPlayerWeapon(ctx, pixelSize, entity, time, assetImages, tileSize);
             break;
-    }
-
-    // --- Equipment (drawn relative to the player) ---
-    const gear = entity.gear;
-    if (gear) {
-        const weaponItem = gear['weapon-slot'];
-        if (weaponItem) {
-            const weaponDef = itemDefinitions[weaponItem.id];
-            if (weaponDef && (direction === 'down' || direction === 'right')) {
-                const armY = -pixelSize * 3;
-                let wepY = armY + (isMoving && walkCycle === 0 ? pixelSize : 0);
-                let wepX = 0;
-
-                if (direction === 'down') {
-                    wepX = 8 * pixelSize;
-                    wepY -= 3 * pixelSize;
-                } else if (direction === 'right') {
-                    wepX = 8 * pixelSize;
-                    wepY += 2 * pixelSize;
-                }
-
-                if (weaponDef.draw) {
-                    ctx.save();
-                    ctx.translate(wepX, wepY);
-                    weaponDef.draw(ctx, pixelSize, direction);
-                    ctx.restore();
-                } else if (weaponDef.asset) {
-                    const img = assetImages[weaponDef.asset];
-                    if (img) {
-                        ctx.drawImage(img, wepX, wepY, tileSize * 0.75, tileSize * 0.75);
-                    }
-                }
-            }
-        }
     }
 
     ctx.restore();
