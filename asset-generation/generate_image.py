@@ -61,7 +61,7 @@ def generate_image(prompt_file, theme_file):
     is_transparent = prompt_data.get("transparent", False)
     if is_transparent:
         # Ask for a solid, unnatural background color for easy removal
-        final_prompt = f"{final_prompt} The image should have a solid, pure green background that can be easily removed."
+        final_prompt = f"{final_prompt} The image should have a solid, pure black background that can be easily removed."
 
     negative_prompt = theme_data.get("negative_prompt", "")
     if negative_prompt:

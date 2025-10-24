@@ -1,0 +1,9 @@
+{
+  "asset_name": "rat-meat-icon",
+  "asset_type": "icon",
+  "description": "An icon for a piece of rat meat.",
+  "output_format": "png",
+  "size_hint": "small",
+  "transparent": true,
+  "llm_prompt": "A simple icon of a raw piece of meat, for a fantasy game UI. The icon should be easily understandable at a small size."
+}

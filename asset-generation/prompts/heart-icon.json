@@ -1,0 +1,9 @@
+{
+  "asset_name": "heart-icon",
+  "asset_type": "icon",
+  "description": "An icon representing health (HP).",
+  "output_format": "png",
+  "size_hint": "small",
+  "transparent": true,
+  "llm_prompt": "A simple, clear, and vibrant red heart icon for a fantasy game UI, representing player health (HP). The icon should be easily understandable at a small size."
+}
