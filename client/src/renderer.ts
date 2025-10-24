@@ -191,27 +191,14 @@ function drawEntities(startX: number, startY: number, time: number) {
         const screenX = (entity.x - startX) * TILE_SIZE;
         const screenY = (entity.y - startY) * TILE_SIZE;
 
-        if (entity.type === 'item' && entity.itemId) {
-            const itemDef = itemDefinitions[entity.itemId] || itemDefinitions['default'];
-            if (itemDef.asset && assetImages[itemDef.asset]) {
-                ctx.drawImage(assetImages[itemDef.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
-            } else {
-                ctx.fillStyle = itemDef.color;
-                ctx.font = `bold ${TILE_SIZE * 0.8}px 'Roboto', sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(itemDef.character, screenX + TILE_SIZE / 2, screenY + TILE_SIZE / 2);
-            }
+        const props = getEntityProperties(entity.type, entityId, myPlayerId);
+        if (props.draw) {
+            props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages);
+        } else if (props.asset && assetImages[props.asset]) {
+            ctx.drawImage(assetImages[props.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
         } else {
-            const props = getEntityProperties(entity.type, entityId, myPlayerId);
-            if (props.draw) {
-                props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages);
-            } else if (props.asset && assetImages[props.asset]) {
-                ctx.drawImage(assetImages[props.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
-            } else {
-                ctx.fillStyle = props.color;
-                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-            }
+            ctx.fillStyle = props.color;
+            ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
         }
 
         // --- NEW: Render Chat Message ---
@@ -291,9 +278,6 @@ function resizeCanvas() {
     const rect = mainContent.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
-
-    // We might need to re-render here if the aspect ratio changes significantly
-    // For now, the gameLoop will handle the continuous rendering.
 }
 
 export function initializeRenderer() {

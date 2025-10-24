@@ -1,6 +1,6 @@
 // This file is the single source of truth for all game object properties.
 
-import { drawPlayer, drawRat, drawRockTile, drawSlime, drawTree } from './drawing';
+import { drawPlayer, drawRat, drawRockTile, drawSlime, drawTree, drawItem } from './drawing';
 import { EntityState } from './types';
 
 export interface TileProperties {
@@ -100,10 +100,11 @@ export function getTileProperties(type: string): TileProperties {
 export const itemDefinitions: { [key: string]: { text?: string, icon?: string, character: string, color: string, asset?: string, equippable?: { slot: string, damage?: number } } } = {
     'wood': { text: 'Wood', icon: '🌲', character: 'W', color: '#8B4513', asset: 'assets/wood-icon.png' },
     'stone': { text: 'Stone', icon: '🪨', character: 'S', color: '#808080', asset: 'assets/stone-icon.png' },
-    'goop': { text: 'Goop', icon: '💧', character: 'G', color: '#90EE90' },
-    'rat_meat': { text: 'Rat Meat', icon: '🍖', character: 'M', color: '#DC143C' },
-    'cooked_rat_meat': { text: 'Cooked Meat', icon: '🥩', character: 'M', color: '#A52A2A' },
-    'treasure_map': { text: 'Treasure Map', icon: '🗺️', character: 'M', color: '#FFD700' },
+    'goop': { text: 'Goop', icon: '💧', character: 'G', color: '#90EE90', asset: 'assets/goop-icon.png' },
+    'rat_meat': { text: 'Rat Meat', icon: '🍖', character: 'M', color: '#DC143C', asset: 'assets/rat-meat-icon.png' },
+    'cooked_rat_meat': { text: 'Cooked Meat', icon: '🥩', character: 'M', color: '#A52A2A', asset: 'assets/cooked-meat-icon.png' },
+    'treasure_map': { text: 'Treasure Map', icon: '🗺️', character: 'M', color: '#FFD700', asset: 'assets/treasure-map-icon.png' },
+    'slice_of_pizza': { text: 'Slice of Pizza', icon: '🍕', character: 'P', color: '#FFD700', asset: 'assets/pizza-slice-icon.png' },
     'fire': { text: 'Fire', icon: '🔥', character: 'F', color: '#FF4500', asset: 'assets/fire-icon.png' },
     'wooden_wall': { text: 'Wooden Wall', icon: '🧱', character: '#', color: '#A0522D', asset: 'assets/wooden-wall-icon.png' },
     'crude_axe': {
@@ -153,6 +154,7 @@ export const entityDefs: Record<string, EntityProperties> = {
     },
     'item': {
         color: 'transparent', // We'll render items with text instead
+        draw: drawItem,
     },
     'default': {
         color: '#e74c3c', // Red (for other players/unknown)

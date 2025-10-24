@@ -144,16 +144,15 @@ function handleInteractionLogic() {
 
     const me = state.getMyEntity()!;
     const rect = gameCanvas.getBoundingClientRect();
-    const scaleX = gameCanvas.width / rect.width;
-    const scaleY = gameCanvas.height / rect.height;
-    const canvasX = (lastMouseEvent.clientX - rect.left) * scaleX;
-    const canvasY = (lastMouseEvent.clientY - rect.top) * scaleY;
+    const canvasX = lastMouseEvent.clientX - rect.left;
+    const canvasY = lastMouseEvent.clientY - rect.top;
+
     const tileGridX = Math.floor(canvasX / TILE_SIZE);
     const tileGridY = Math.floor(canvasY / TILE_SIZE);
     
-    // Dynamically calculate viewport dimensions
-    const viewportWidth = Math.ceil(gameCanvas.width / TILE_SIZE);
-    const viewportHeight = Math.ceil(gameCanvas.height / TILE_SIZE);
+    // Dynamically calculate viewport dimensions in CSS pixels
+    const viewportWidth = Math.ceil(rect.width / TILE_SIZE);
+    const viewportHeight = Math.ceil(rect.height / TILE_SIZE);
 
     const startX = me.x - Math.floor(viewportWidth / 2);
     const startY = me.y - Math.floor(viewportHeight / 2);

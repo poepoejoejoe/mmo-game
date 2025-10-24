@@ -472,8 +472,6 @@ function reorderedDrawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize:
 
 
 export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }) {
-    ctx.imageSmoothingEnabled = false;
-
     const pixelSize = Math.max(1, Math.floor(tileSize / 16));
 
     const centerX = x + tileSize / 2;
@@ -545,6 +543,30 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     }
 
     ctx.restore();
+}
+
+export function drawItem(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }) {
+    if (!entity.itemId) return;
+
+    const itemDef = itemDefinitions[entity.itemId] || itemDefinitions['default'];
+
+    if (itemDef.asset) {
+        const img = assetImages[itemDef.asset];
+        if (img) {
+            const size = tileSize * 1.25;
+            const xOffset = (size - tileSize) / 2;
+            const yOffset = (size - tileSize) / 2;
+            ctx.drawImage(img, x - xOffset, y - yOffset, size, size);
+            return;
+        }
+    }
+
+    // Fallback to drawing the character
+    ctx.fillStyle = itemDef.color;
+    ctx.font = `${tileSize * 0.8}px "Press Start 2P"`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(itemDef.character, x + tileSize / 2, y + tileSize / 2);
 }
 
 function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: number, tailWag: number, colors: { [key: string]: string }) {
@@ -630,8 +652,6 @@ function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: n
 }
 
 export function drawRat(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number) {
-    ctx.imageSmoothingEnabled = false;
-
     const pixelSize = Math.max(1, Math.floor(tileSize / 16));
     const centerX = x + tileSize / 2;
     const centerY = y + tileSize / 2;
@@ -666,8 +686,6 @@ export function drawRat(ctx: CanvasRenderingContext2D, x: number, y: number, til
 }
 
 export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number) {
-    ctx.imageSmoothingEnabled = false;
-
     const pixelSize = Math.max(1, Math.floor(tileSize / 16));
     const centerX = x + tileSize / 2;
     const centerY = y + tileSize / 2;

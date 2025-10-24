@@ -100,6 +100,7 @@ export function initializeUI() {
     inventoryButton.innerHTML = `<img src="assets/inventory-icon.png" alt="Inventory">`;
     craftingButton.innerHTML = `<img src="assets/crafting-icon.png" alt="Crafting">`;
     gearButton.innerHTML = `<img src="assets/gear-icon.png" alt="Gear">`;
+    chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
 }
 
 export function promptForRegistration() {
@@ -457,7 +458,7 @@ export function updatePlayerNameDisplay(name: string) {
 }
 
 export function updatePlayerHealth(health: number, maxHealth: number) {
-    healthText.textContent = `${health} / ${maxHealth}`;
+    healthText.innerHTML = `<img src="assets/heart-icon.png" alt="Health" class="hud-icon"> ${health} / ${maxHealth}`;
 }
 
 export function updatePlayerCoords(x: number, y: number) {

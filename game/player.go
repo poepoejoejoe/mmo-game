@@ -315,6 +315,15 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
 
+	// --- For Testing: Add items to the world ---
+	// If this is the first player, add some items nearby.
+	players, _ := rdb.Keys(ctx, string(RedisKeyPlayerPrefix)+"*").Result()
+	if len(players) <= 1 { // <= 1 because this player is already created
+		CreateWorldItem(1, 0, ItemTreasureMap, 1, "", 0)
+		CreateWorldItem(2, 0, ItemSliceOfPizza, 1, "", 0)
+	}
+	// --- End For Testing ---
+
 	// --- NEW: Initialize a 10-slot inventory ---
 	inventory := make(map[string]interface{})
 	// Slot 0: 100 Wood

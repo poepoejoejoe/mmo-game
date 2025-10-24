@@ -96,6 +96,7 @@ body {
     border: 2px solid #222;
     background-color: #5a8a5a;
     cursor: pointer;
+    image-rendering: crisp-edges;
     /* NEW: Make canvas fill container */
     width: 100%;
     height: 100%;
@@ -172,6 +173,11 @@ body {
     align-items: center;
     gap: 8px;
     font-size: 1.2em;
+}
+.hud-icon {
+    height: 1.2em; /* Match font size */
+    vertical-align: middle;
+    margin-right: 4px;
 }
 #player-name-display, #player-coords {
     font-weight: bold;
