@@ -400,6 +400,19 @@ function drawPlayerTorsoAndLimbs(ctx: CanvasRenderingContext2D, pixelSize: numbe
     // --- Legs (drawn first) ---
     ctx.fillStyle = colors.pantsColor;
     const legY = pixelSize * 2;
+
+    // Fill gap before drawing legs
+    if (isMoving) {
+        ctx.fillStyle = colors.shirtColor;
+        if (walkCycle === 1) { // Left leg moves down
+            ctx.fillRect(-pixelSize * 4, legY, legWidth, pixelSize);
+        }
+        if (walkCycle === 0) { // Right leg moves down
+            ctx.fillRect(pixelSize, legY, legWidth, pixelSize);
+        }
+        ctx.fillStyle = colors.pantsColor; // Reset for legs
+    }
+    
     // Left Leg
     ctx.fillRect(-pixelSize * 4, legY + (isMoving && walkCycle === 1 ? pixelSize : 0), legWidth, pixelSize * 4);
     // Right Leg
@@ -468,6 +481,10 @@ function drawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize: number, 
     ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
 
     // 3. Draw Near Limbs (in front of torso)
+    if (isMoving && walkCycle === 0) {
+        ctx.fillStyle = colors.shirtColor;
+        ctx.fillRect(-pixelSize * 1.5, legY, legWidth, pixelSize);
+    }
     ctx.fillStyle = colors.pantsColor;
     ctx.fillRect(-pixelSize * 1.5, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4); // Near Leg
     ctx.fillStyle = colors.skinColor;
