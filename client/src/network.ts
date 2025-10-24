@@ -70,17 +70,17 @@ function handleMessage(event: MessageEvent) {
         }
         case 'entity_joined': {
             const joinMsg = msg as EntityJoinedMessage;
-            state.addEntity(
-                joinMsg.entityId,
-                joinMsg.x,
-                joinMsg.y,
-                joinMsg.entityType,
-                joinMsg.name,
-                joinMsg.itemId,
-                joinMsg.owner,
-                joinMsg.createdAt,
-                joinMsg.publicAt,
-            );
+            state.addEntity({
+                id: joinMsg.id,
+                x: joinMsg.x,
+                y: joinMsg.y,
+                type: joinMsg.entityType,
+                name: joinMsg.name,
+                itemId: joinMsg.itemId,
+                owner: joinMsg.owner,
+                createdAt: joinMsg.createdAt,
+                publicAt: joinMsg.publicAt,
+            });
             onStateUpdate();
             break;
         }

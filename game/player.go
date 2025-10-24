@@ -196,13 +196,12 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 			x, _ := strconv.Atoi(playerEntityData["x"])
 			y, _ := strconv.Atoi(playerEntityData["y"])
 			entityState := models.EntityState{
-				X:    x,
-				Y:    y,
-				Type: playerEntityData["entityType"],
-				Name: playerEntityData["name"],
-			}
-			if shirtColor, ok := playerEntityData["shirtColor"]; ok {
-				entityState.ShirtColor = shirtColor
+				ID:         playerID,
+				X:          x,
+				Y:          y,
+				Type:       playerEntityData["entityType"],
+				Name:       playerEntityData["name"],
+				ShirtColor: playerEntityData["shirtColor"],
 			}
 			allEntitiesState[playerID] = entityState
 		}
@@ -352,8 +351,12 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	item4, _ := json.Marshal(models.Item{ID: string(ItemGoop), Quantity: 10})
 	inventory["slot_4"] = string(item4)
 
+	// crude axe for testing
+	item5, _ := json.Marshal(models.Item{ID: string(ItemCrudeAxe), Quantity: 1})
+	inventory["slot_5"] = string(item5)
+
 	// Initialize remaining slots as empty
-	for i := 5; i < 10; i++ {
+	for i := 6; i < 10; i++ {
 		inventory["slot_"+strconv.Itoa(i)] = "" // Empty string signifies an empty slot
 	}
 	pipe.HSet(ctx, inventoryKey, inventory)
@@ -370,6 +373,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	updateMsg := map[string]interface{}{
 		"type":       string(ServerEventEntityJoined),
 		"entityId":   playerID,
+		"id":         playerID,
 		"x":          spawnX,
 		"y":          spawnY,
 		"entityType": string(EntityTypePlayer), // Guests don't have a name yet

@@ -1,6 +1,6 @@
 // This file is the single source of truth for all game object properties.
 
-import { drawPlayer, drawRat, drawRockTile, drawSlime, drawTree, drawItem } from './drawing';
+import { drawCrudeAxe, drawPlayer, drawRat, drawRockTile, drawSlime, drawTree, drawItem } from './drawing';
 import { EntityState } from './types';
 
 export interface TileProperties {
@@ -97,7 +97,7 @@ export function getTileProperties(type: string): TileProperties {
     return tileDefs[type] || tileDefs['void'];
 }
 
-export const itemDefinitions: { [key: string]: { text?: string, icon?: string, character: string, color: string, asset?: string, equippable?: { slot: string, damage?: number } } } = {
+export const itemDefinitions: { [key: string]: { text?: string, icon?: string, character: string, color: string, asset?: string, equippable?: { slot: string, damage?: number }, draw?: (ctx: CanvasRenderingContext2D, pixelSize: number, direction: string) => void } } = {
     'wood': { text: 'Wood', icon: '🌲', character: 'W', color: '#8B4513', asset: 'assets/wood-icon.png' },
     'stone': { text: 'Stone', icon: '🪨', character: 'S', color: '#808080', asset: 'assets/stone-icon.png' },
     'goop': { text: 'Goop', icon: '💧', character: 'G', color: '#90EE90', asset: 'assets/goop-icon.png' },
@@ -112,7 +112,7 @@ export const itemDefinitions: { [key: string]: { text?: string, icon?: string, c
         icon: '🪓',
         character: 'A',
         color: '#b5a642',
-        asset: 'assets/crude-axe-icon.png',
+        draw: drawCrudeAxe,
         equippable: {
             slot: 'weapon-slot',
             damage: 2,

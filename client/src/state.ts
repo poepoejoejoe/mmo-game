@@ -39,7 +39,17 @@ export function setInitialState(
     gear: Record<string, InventoryItem>
 ) {
     clientState.playerId = playerId;
-    clientState.entities = entities; // Directly assign the map
+    
+    // Process entities to ensure their 'id' field is set from the map key
+    const processedEntities: Record<string, EntityState> = {};
+    for (const id in entities) {
+        processedEntities[id] = {
+            ...entities[id],
+            id: id 
+        };
+    }
+    clientState.entities = processedEntities;
+
     clientState.world = world;
     clientState.inventory = inventory;
     clientState.gear = gear;
@@ -71,8 +81,8 @@ export function setEntityPosition(entityId: string, x: number, y: number, direct
 }
 
 // --- UPDATED ---
-export function addEntity(id: string, x: number, y: number, type: 'player' | 'npc' | 'item', name?: string, itemId?: string, owner?: string, createdAt?: number, publicAt?: number) {
-    clientState.entities[id] = { id, x, y, type, name, itemId, owner, createdAt, publicAt, lastMoveTime: 0, direction: 'down' };
+export function addEntity(entity: EntityState) {
+    clientState.entities[entity.id!] = entity;
 }
 
 export function removeEntity(id: string) {

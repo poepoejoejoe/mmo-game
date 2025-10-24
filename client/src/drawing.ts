@@ -457,25 +457,25 @@ function reorderedDrawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize:
 
     // 1. Draw Far Limbs
     ctx.fillStyle = colors.pantsColor;
-    ctx.fillRect(-pixelSize / 2, legY + (isMoving && walkCycle === 1 ? -pixelSize : 0), legWidth, pixelSize * 4);
+    ctx.fillRect(-pixelSize / 2, legY + (isMoving && walkCycle === 1 ? -pixelSize : 0), legWidth, pixelSize * 4); // Far leg
     ctx.fillStyle = colors.skinColor;
-    ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 1 ? -pixelSize : 0), armWidth, pixelSize * 4);
+    ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 1 ? -pixelSize : 0), armWidth, pixelSize * 4); // Far arm
 
-    // 2. Draw Torso
+    // 2. Draw Near Arm (behind torso, in front of far limbs)
+    ctx.fillStyle = colors.skinColor;
+    ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), armWidth, pixelSize * 4); // Near arm
+
+    // 3. Draw Torso
     ctx.fillStyle = colors.shirtColor;
     ctx.fillRect(-torsoWidth / 2, -pixelSize * 4, torsoWidth, pixelSize * 6);
     ctx.fillStyle = colors.shirtStripeColor;
     ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
 
-    // 3. Draw Near Leg
+    // 4. Draw Near Leg
     ctx.fillStyle = colors.pantsColor;
     ctx.fillRect(-pixelSize * 1.5, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
 
-    // 4. Draw Near Arm (behind head)
-    ctx.fillStyle = colors.skinColor;
-    ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), armWidth, pixelSize * 4);
-
-    // 5. Draw Head (on top of near arm)
+    // 5. Draw Head
     const headX = -pixelSize * 3;
     const headY = -pixelSize * 9;
     // Hair
@@ -487,6 +487,64 @@ function reorderedDrawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize:
     // Eye
     ctx.fillStyle = '#000000';
     ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
+}
+
+
+export function drawCrudeAxe(ctx: CanvasRenderingContext2D, pixelSize: number, direction: string) {
+    const handleColor = '#8B4513'; // Darker wood
+    const woodGrainColor = '#A0522D'; // Lighter wood grain
+    const stoneColor = '#808080'; // Medium gray for the stone
+    const stoneHighlightColor = '#A9A9A9'; // Lighter gray for highlights
+    const strapColor = '#6d533b'; // Brown for the straps
+
+    ctx.save();
+    
+    let rotation = Math.PI / 4.5;
+    if (direction === 'right') {
+        rotation = Math.PI / 2.2;
+    }
+    ctx.rotate(rotation);
+
+    // --- Draw Handle ---
+    ctx.fillStyle = handleColor;
+    ctx.fillRect(0, 0, pixelSize * 2, pixelSize * 10);
+    // Wood grain detail
+    ctx.fillStyle = woodGrainColor;
+    ctx.fillRect(pixelSize / 2, 0, pixelSize, pixelSize * 10);
+    ctx.fillRect(0, pixelSize * 3, pixelSize * 2, pixelSize);
+    ctx.fillRect(0, pixelSize * 6, pixelSize * 2, pixelSize / 2);
+
+
+    // --- Draw Axe Head (Stone) ---
+    ctx.fillStyle = stoneColor;
+    ctx.beginPath();
+    ctx.moveTo(-pixelSize, -pixelSize * 2); // Top back point
+    ctx.lineTo(pixelSize * 3, -pixelSize * 3); // Top front point
+    ctx.lineTo(pixelSize * 5, pixelSize * 2);  // Blade edge point
+    ctx.lineTo(pixelSize * 3, pixelSize * 4);  // Bottom front point
+    ctx.lineTo(-pixelSize, pixelSize * 3);  // Bottom back point
+    ctx.closePath();
+    ctx.fill();
+    
+    // Stone Highlight
+    ctx.fillStyle = stoneHighlightColor;
+    ctx.beginPath();
+    ctx.moveTo(pixelSize * 3, -pixelSize * 3);
+    ctx.lineTo(pixelSize * 5, pixelSize * 2);
+    ctx.lineTo(pixelSize * 4, pixelSize * 2);
+    ctx.lineTo(pixelSize * 2.5, -pixelSize * 2);
+    ctx.closePath();
+    ctx.fill();
+
+
+    // --- Draw Straps ---
+    ctx.fillStyle = strapColor;
+    // Vertical strap part
+    ctx.fillRect(-pixelSize / 2, -pixelSize, pixelSize, pixelSize * 3);
+    // Horizontal strap part
+    ctx.fillRect(0, 0, pixelSize * 3, pixelSize);
+    
+    ctx.restore();
 }
 
 
@@ -538,24 +596,33 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     // --- Equipment (drawn relative to the player) ---
     if (entity.id === state.getState().playerId) {
         const gear = state.getState().gear;
-        const weaponItem = gear['weapon-slot'];
-        if (weaponItem) {
-            const weaponDef = itemDefinitions[weaponItem.id];
-            if (weaponDef && weaponDef.asset) {
-                const img = assetImages[weaponDef.asset];
-                if (img) {
+        if (gear) {
+            const weaponItem = gear['weapon-slot'];
+            if (weaponItem) {
+                const weaponDef = itemDefinitions[weaponItem.id];
+                if (weaponDef && (direction === 'down' || direction === 'right')) {
                     const armY = -pixelSize * 3;
-                    const wepY = armY + (isMoving && walkCycle === 0 ? pixelSize : 0) + pixelSize;
+                    let wepY = armY + (isMoving && walkCycle === 0 ? pixelSize : 0);
                     let wepX = 0;
 
                     if (direction === 'down') {
-                        wepX = pixelSize * 8 / 2 - pixelSize;
-                    } else if (direction === 'right' || direction === 'left') {
-                        wepX = -pixelSize;
+                        wepX = 8 * pixelSize;
+                        wepY -= 3 * pixelSize;
+                    } else if (direction === 'right') { 
+                        wepX = 8 * pixelSize;
+                        wepY += 2 * pixelSize;
                     }
-
-                    if (direction !== 'up') { // Don't draw weapon when facing away
-                        ctx.drawImage(img, wepX, wepY, tileSize * 0.75, tileSize * 0.75);
+                    
+                    if (weaponDef.draw) {
+                        ctx.save();
+                        ctx.translate(wepX, wepY);
+                        weaponDef.draw(ctx, pixelSize, direction);
+                        ctx.restore();
+                    } else if (weaponDef.asset) {
+                        const img = assetImages[weaponDef.asset];
+                        if (img) {
+                            ctx.drawImage(img, wepX, wepY, tileSize * 0.75, tileSize * 0.75);
+                        }
                     }
                 }
             }

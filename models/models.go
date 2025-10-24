@@ -38,6 +38,7 @@ type InteractPayload struct {
 // --- UPDATED ---
 // EntityState represents the position and type of any entity.
 type EntityState struct {
+	ID         string `json:"id,omitempty"`
 	X          int    `json:"x"`
 	Y          int    `json:"y"`
 	Type       string `json:"type"`

@@ -66,6 +66,7 @@ export interface EntityMovedMessage extends ServerMessage {
 export interface EntityJoinedMessage extends ServerMessage {
     type: 'entity_joined'; // <-- RENAMED
     entityId: string;    // <-- RENAMED
+    id: string;
     x: number;
     y: number;
     entityType: 'player' | 'npc' | 'item';

@@ -11,9 +11,10 @@
 - [x] Draw items that fall on the ground (or just use their icon probably)
 - [x] Health bar?
 - [x] Name the game. Improve the top bar with a image of the game title
+- [x] Give player a random shirt color
 
 ### Current
-- [ ] Give player a random shirt color
+- [ ] image generation needs to crop the transparent images after doing the transparency
 - [ ] Show the player holding the axe
 
 ### Backlog
