@@ -664,3 +664,84 @@ export function drawRat(ctx: CanvasRenderingContext2D, x: number, y: number, til
 
     ctx.restore();
 }
+
+export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number) {
+    ctx.imageSmoothingEnabled = false;
+
+    const pixelSize = Math.max(1, Math.floor(tileSize / 16));
+    const centerX = x + tileSize / 2;
+    const centerY = y + tileSize / 2;
+
+    const isMoving = !!(entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200));
+    const wobble = isMoving ? Math.sin(time / 150) * pixelSize * 1.5 : 0;
+    const stretch = isMoving ? Math.cos(time / 150) * pixelSize * 1.5 : 0;
+
+    const colors = {
+        bodyColor: `rgba(100, 220, 120, 0.8)`,
+        outlineColor: `rgba(40, 100, 50, 0.9)`,
+        eyeColor: '#FFFFFF',
+        pupilColor: '#000000',
+    };
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+
+    let rotation = 0;
+    switch (entity.direction) {
+        case 'up': rotation = 0; break;
+        case 'down': rotation = Math.PI; break;
+        case 'left': rotation = -Math.PI / 2; break;
+        case 'right': rotation = Math.PI / 2; break;
+    }
+    ctx.rotate(rotation);
+
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(
+        0,
+        -pixelSize * 2 + wobble, // Jiggle up and down
+        pixelSize * 6 + stretch, // Stretch horizontally
+        pixelSize * 6 - stretch, // Squash vertically
+        0, 0, Math.PI * 2
+    );
+
+    // Shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 5;
+
+    ctx.fillStyle = colors.bodyColor;
+    ctx.strokeStyle = colors.outlineColor;
+    ctx.lineWidth = pixelSize;
+    ctx.fill();
+    ctx.stroke();
+
+    // Reset shadow for other elements
+    ctx.shadowColor = 'transparent';
+
+    // Eyes
+    const eyeY = -pixelSize * 3 + wobble;
+    // Left Eye
+    ctx.fillStyle = colors.eyeColor;
+    ctx.beginPath();
+    ctx.arc(-pixelSize * 2, eyeY, pixelSize * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = colors.pupilColor;
+    ctx.beginPath();
+    ctx.arc(-pixelSize * 2.2, eyeY - pixelSize * 0.2, pixelSize * 0.75, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Right Eye
+    ctx.fillStyle = colors.eyeColor;
+    ctx.beginPath();
+    ctx.arc(pixelSize * 2, eyeY, pixelSize * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = colors.pupilColor;
+    ctx.beginPath();
+    ctx.arc(pixelSize * 1.8, eyeY - pixelSize * 0.2, pixelSize * 0.75, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
