@@ -80,19 +80,20 @@ const (
 type ServerEventType string
 
 const (
-	ServerEventInitialState      ServerEventType = "initial_state"
-	ServerEventStateCorrection   ServerEventType = "state_correction"
-	ServerEventWorldUpdate       ServerEventType = "world_update"
-	ServerEventInventoryUpdate   ServerEventType = "inventory_update"
-	ServerEventResourceDamaged   ServerEventType = "resource_damaged"
-	ServerEventEntityJoined      ServerEventType = "entity_joined" // <-- RENAMED
-	ServerEventEntityLeft        ServerEventType = "entity_left"   // <-- RENAMED
-	ServerEventEntityMoved       ServerEventType = "entity_moved"
-	ServerEventEntityDamaged     ServerEventType = "entity_damaged"
-	ServerEventPlayerStatsUpdate ServerEventType = "player_stats_update"
-	ServerEventItemDropped       ServerEventType = "item_dropped"
-	ServerEventGearUpdate        ServerEventType = "gear_update"
-	ServerEventRegistered        ServerEventType = "registered"
+	ServerEventInitialState            ServerEventType = "initial_state"
+	ServerEventStateCorrection         ServerEventType = "state_correction"
+	ServerEventWorldUpdate             ServerEventType = "world_update"
+	ServerEventInventoryUpdate         ServerEventType = "inventory_update"
+	ServerEventResourceDamaged         ServerEventType = "resource_damaged"
+	ServerEventEntityJoined            ServerEventType = "entity_joined" // <-- RENAMED
+	ServerEventEntityLeft              ServerEventType = "entity_left"   // <-- RENAMED
+	ServerEventEntityMoved             ServerEventType = "entity_moved"
+	ServerEventEntityDamaged           ServerEventType = "entity_damaged"
+	ServerEventPlayerStatsUpdate       ServerEventType = "player_stats_update"
+	ServerEventItemDropped             ServerEventType = "item_dropped"
+	ServerEventGearUpdate              ServerEventType = "gear_update"
+	ServerEventRegistered              ServerEventType = "registered"
+	ServerEventPlayerAppearanceChanged ServerEventType = "player_appearance_changed"
 )
 
 // MoveDirection defines the valid move directions.

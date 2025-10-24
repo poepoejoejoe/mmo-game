@@ -18,6 +18,7 @@ export interface EntityState {
     lastAttackTime?: number;
     targetId?: string;
     shirtColor?: string;
+    gear?: Record<string, InventoryItem>;
 }
 
 export interface WorldTile {
@@ -75,12 +76,20 @@ export interface EntityJoinedMessage extends ServerMessage {
     owner?: string;
     createdAt?: number;
     publicAt?: number;
+    shirtColor?: string;
+    gear?: Record<string, InventoryItem>;
 }
 
 // --- RENAMED and UPDATED ---
 export interface EntityLeftMessage extends ServerMessage {
     type: 'entity_left'; // <-- RENAMED
     entityId: string;  // <-- RENAMED
+}
+
+export interface PlayerAppearanceChangedMessage extends ServerMessage {
+    type: 'player_appearance_changed';
+    entityId: string;
+    gear: Record<string, InventoryItem>;
 }
 
 export interface ResourceDamagedMessage extends ServerMessage {

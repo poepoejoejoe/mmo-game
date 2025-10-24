@@ -38,16 +38,17 @@ type InteractPayload struct {
 // --- UPDATED ---
 // EntityState represents the position and type of any entity.
 type EntityState struct {
-	ID         string `json:"id,omitempty"`
-	X          int    `json:"x"`
-	Y          int    `json:"y"`
-	Type       string `json:"type"`
-	Direction  string `json:"direction,omitempty"`
-	Name       string `json:"name,omitempty"`
-	ItemID     string `json:"itemId,omitempty"`
-	Owner      string `json:"owner,omitempty"`
-	CreatedAt  int64  `json:"createdAt,omitempty"`
-	ShirtColor string `json:"shirtColor,omitempty"`
+	ID         string          `json:"id,omitempty"`
+	X          int             `json:"x"`
+	Y          int             `json:"y"`
+	Type       string          `json:"type"`
+	Direction  string          `json:"direction,omitempty"`
+	Name       string          `json:"name,omitempty"`
+	ItemID     string          `json:"itemId,omitempty"`
+	Owner      string          `json:"owner,omitempty"`
+	CreatedAt  int64           `json:"createdAt,omitempty"`
+	ShirtColor string          `json:"shirtColor,omitempty"`
+	Gear       map[string]Item `json:"gear,omitempty"`
 }
 
 // InitialStateMessage now sends a map of all entities.

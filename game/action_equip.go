@@ -70,6 +70,14 @@ func ProcessEquip(playerID string, payload json.RawMessage) (*models.InventoryUp
 
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 
+	// Announce the appearance change to the world
+	appearanceUpdateMsg := map[string]interface{}{
+		"type":     string(ServerEventPlayerAppearanceChanged),
+		"entityId": playerID,
+		"gear":     newGear,
+	}
+	PublishUpdate(appearanceUpdateMsg)
+
 	inventoryUpdate := &models.InventoryUpdateMessage{
 		Type:      string(ServerEventInventoryUpdate),
 		Inventory: newInventory,
@@ -137,6 +145,14 @@ func ProcessUnequip(playerID string, payload json.RawMessage) (*models.Inventory
 	newGear, _ := GetGear(playerID)
 
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+
+	// Announce the appearance change to the world
+	appearanceUpdateMsg := map[string]interface{}{
+		"type":     string(ServerEventPlayerAppearanceChanged),
+		"entityId": playerID,
+		"gear":     newGear,
+	}
+	PublishUpdate(appearanceUpdateMsg)
 
 	inventoryUpdate := &models.InventoryUpdateMessage{
 		Type:      string(ServerEventInventoryUpdate),

@@ -594,35 +594,33 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     }
 
     // --- Equipment (drawn relative to the player) ---
-    if (entity.id === state.getState().playerId) {
-        const gear = state.getState().gear;
-        if (gear) {
-            const weaponItem = gear['weapon-slot'];
-            if (weaponItem) {
-                const weaponDef = itemDefinitions[weaponItem.id];
-                if (weaponDef && (direction === 'down' || direction === 'right')) {
-                    const armY = -pixelSize * 3;
-                    let wepY = armY + (isMoving && walkCycle === 0 ? pixelSize : 0);
-                    let wepX = 0;
+    const gear = entity.gear;
+    if (gear) {
+        const weaponItem = gear['weapon-slot'];
+        if (weaponItem) {
+            const weaponDef = itemDefinitions[weaponItem.id];
+            if (weaponDef && (direction === 'down' || direction === 'right')) {
+                const armY = -pixelSize * 3;
+                let wepY = armY + (isMoving && walkCycle === 0 ? pixelSize : 0);
+                let wepX = 0;
 
-                    if (direction === 'down') {
-                        wepX = 8 * pixelSize;
-                        wepY -= 3 * pixelSize;
-                    } else if (direction === 'right') { 
-                        wepX = 8 * pixelSize;
-                        wepY += 2 * pixelSize;
-                    }
-                    
-                    if (weaponDef.draw) {
-                        ctx.save();
-                        ctx.translate(wepX, wepY);
-                        weaponDef.draw(ctx, pixelSize, direction);
-                        ctx.restore();
-                    } else if (weaponDef.asset) {
-                        const img = assetImages[weaponDef.asset];
-                        if (img) {
-                            ctx.drawImage(img, wepX, wepY, tileSize * 0.75, tileSize * 0.75);
-                        }
+                if (direction === 'down') {
+                    wepX = 8 * pixelSize;
+                    wepY -= 3 * pixelSize;
+                } else if (direction === 'right') {
+                    wepX = 8 * pixelSize;
+                    wepY += 2 * pixelSize;
+                }
+
+                if (weaponDef.draw) {
+                    ctx.save();
+                    ctx.translate(wepX, wepY);
+                    weaponDef.draw(ctx, pixelSize, direction);
+                    ctx.restore();
+                } else if (weaponDef.asset) {
+                    const img = assetImages[weaponDef.asset];
+                    if (img) {
+                        ctx.drawImage(img, wepX, wepY, tileSize * 0.75, tileSize * 0.75);
                     }
                 }
             }

@@ -115,6 +115,13 @@ export function setGear(gear: Record<string, InventoryItem>) {
     clientState.gear = gear;
 }
 
+export function setEntityGear(entityId: string, gear: Record<string, InventoryItem>) {
+    const entity = clientState.entities[entityId];
+    if (entity) {
+        entity.gear = gear;
+    }
+}
+
 export function setEntityChat(entityId: string, message: string) {
     if (clientState.entities[entityId]) {
         clientState.entities[entityId].lastChatMessage = message;

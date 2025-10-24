@@ -60,6 +60,8 @@ func LoginPlayer(secretKey string) (string, *models.InitialStateMessage) {
 				"y":          playerEntityState.Y,
 				"entityType": string(EntityTypePlayer),
 				"name":       playerEntityState.Name,
+				"shirtColor": playerEntityState.ShirtColor,
+				"gear":       playerEntityState.Gear,
 			}
 			PublishUpdate(updateMsg)
 
@@ -123,6 +125,8 @@ func RegisterPlayer(playerID string, name string) (*models.RegisteredMessage, *m
 		"x":          initialState.Entities[playerID].X,
 		"y":          initialState.Entities[playerID].Y,
 		"entityType": string(EntityTypePlayer),
+		"shirtColor": initialState.Entities[playerID].ShirtColor,
+		"gear":       initialState.Entities[playerID].Gear,
 	}
 	PublishUpdate(updateMsg)
 
@@ -184,6 +188,10 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 			entityState.Owner = entityData["owner"]
 			entityState.CreatedAt = createdAt
 		}
+		if entityType == string(EntityTypePlayer) {
+			gear, _ := GetGear(loc.Name)
+			entityState.Gear = gear
+		}
 		allEntitiesState[loc.Name] = entityState
 	}
 
@@ -203,6 +211,8 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 				Name:       playerEntityData["name"],
 				ShirtColor: playerEntityData["shirtColor"],
 			}
+			gear, _ := GetGear(playerID)
+			entityState.Gear = gear
 			allEntitiesState[playerID] = entityState
 		}
 	}
@@ -370,6 +380,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	}
 
 	// Announce the new player's arrival to everyone else
+	playerData, _ := rdb.HGetAll(ctx, playerID).Result()
 	updateMsg := map[string]interface{}{
 		"type":       string(ServerEventEntityJoined),
 		"entityId":   playerID,
@@ -377,6 +388,8 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"x":          spawnX,
 		"y":          spawnY,
 		"entityType": string(EntityTypePlayer), // Guests don't have a name yet
+		"shirtColor": playerData["shirtColor"],
+		"gear":       make(map[string]models.Item),
 	}
 	PublishUpdate(updateMsg)
 

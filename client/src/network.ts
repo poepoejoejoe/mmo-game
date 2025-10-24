@@ -6,6 +6,7 @@ import {
     EntityJoinedMessage,
     EntityLeftMessage,
     EntityMovedMessage,
+    PlayerAppearanceChangedMessage,
     PlayerChatMessage,
     PlayerStatsUpdateMessage,
     RegisteredMessage,
@@ -80,6 +81,8 @@ function handleMessage(event: MessageEvent) {
                 owner: joinMsg.owner,
                 createdAt: joinMsg.createdAt,
                 publicAt: joinMsg.publicAt,
+                shirtColor: joinMsg.shirtColor,
+                gear: joinMsg.gear,
             });
             onStateUpdate();
             break;
@@ -110,6 +113,12 @@ function handleMessage(event: MessageEvent) {
             state.setGear(gearMsg.gear);
             // We need to update both UI sections as equipping/unequipping affects both.
             updateInventoryUI(); 
+            onStateUpdate();
+            break;
+        }
+        case 'player_appearance_changed': {
+            const appearanceMsg = msg as PlayerAppearanceChangedMessage;
+            state.setEntityGear(appearanceMsg.entityId, appearanceMsg.gear);
             onStateUpdate();
             break;
         }
