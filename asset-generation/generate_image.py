@@ -63,6 +63,8 @@ def generate_image(prompt_file, theme_file):
         # Ask for a solid, unnatural background color for easy removal
         final_prompt = f"{final_prompt} The image should have a solid, pure black background that can be easily removed."
 
+    aspect_ratio = prompt_data.get("aspect_ratio")
+
     negative_prompt = theme_data.get("negative_prompt", "")
     if negative_prompt:
         final_prompt = f"{final_prompt} --no {negative_prompt}"
@@ -70,9 +72,14 @@ def generate_image(prompt_file, theme_file):
     print(f"Generating image with prompt: \"{final_prompt.strip()}\"")
     
     try:
+        generation_config = types.GenerateContentConfig()
+        if aspect_ratio:
+            generation_config.image_config = types.ImageConfig(aspect_ratio=aspect_ratio)
+
         response = client.models.generate_content(
             model='gemini-2.5-flash-image-preview',
             contents=[final_prompt.strip()],
+            config=generation_config,
         )
 
         image = None
@@ -133,3 +140,35 @@ if __name__ == "__main__":
         generate_image(args.path, args.theme)
     else:
         print(f"Error: The path '{args.path}' is not a valid file or directory.")
+
+
+# Aspect ratios api info
+# The model defaults to matching the output image size to that of your input image, or otherwise generates 1:1 squares. You can control the aspect ratio of the output image using the aspect_ratio field under image_config in the response request, shown here:
+
+# Python
+# JavaScript
+# Go
+# REST
+
+# response = client.models.generate_content(
+#     model="gemini-2.5-flash-image",
+#     contents=[prompt],
+#     config=types.GenerateContentConfig(
+#         image_config=types.ImageConfig(
+#             aspect_ratio="16:9",
+#         )
+#     )
+# )
+# The different ratios available and the size of the image generated are listed in this table:
+
+# Aspect ratio	Resolution	Tokens
+# 1:1	1024x1024	1290
+# 2:3	832x1248	1290
+# 3:2	1248x832	1290
+# 3:4	864x1184	1290
+# 4:3	1184x864	1290
+# 4:5	896x1152	1290
+# 5:4	1152x896	1290
+# 9:16	768x1344	1290
+# 16:9	1344x768	1290
+# 21:9	1536x672	1290

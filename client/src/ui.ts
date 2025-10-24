@@ -31,7 +31,8 @@ let gameCanvas: HTMLElement;
 
 // Bottom Bar
 let playerCoordsEl: HTMLElement;
-let healthText: HTMLElement;
+let healthBar: HTMLElement;
+let healthBarText: HTMLElement;
 let playerNameDisplayEl: HTMLElement;
 export let inventoryView: HTMLElement;
 export let craftingView: HTMLElement;
@@ -61,7 +62,8 @@ export function initializeUI() {
 
     // Bottom Bar
     playerCoordsEl = document.getElementById('player-coords')!;
-    healthText = document.getElementById('health-text')!;
+    healthBar = document.getElementById('health-bar')!;
+    healthBarText = document.getElementById('health-bar-text')!;
     playerNameDisplayEl = document.getElementById('player-name-display')!;
     inventoryView = document.getElementById('inventory-view')!;
     craftingView = document.getElementById('crafting-view')!;
@@ -458,7 +460,21 @@ export function updatePlayerNameDisplay(name: string) {
 }
 
 export function updatePlayerHealth(health: number, maxHealth: number) {
-    healthText.innerHTML = `<img src="assets/heart-icon.png" alt="Health" class="hud-icon"> ${health} / ${maxHealth}`;
+    const healthPercentage = maxHealth > 0 ? (health / maxHealth) * 100 : 0;
+
+    healthBar.style.width = `${healthPercentage}%`;
+
+    // Simple color transition from green to red
+    const green = [76, 175, 80];
+    const red = [211, 47, 47];
+
+    const r = red[0] + (green[0] - red[0]) * (healthPercentage / 100);
+    const g = red[1] + (green[1] - red[1]) * (healthPercentage / 100);
+    const b = red[2] + (green[2] - red[2]) * (healthPercentage / 100);
+
+    healthBar.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+
+    healthBarText.textContent = `${health} / ${maxHealth}`;
 }
 
 export function updatePlayerCoords(x: number, y: number) {

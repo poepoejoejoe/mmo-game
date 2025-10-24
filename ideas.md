@@ -2,14 +2,17 @@ Core Gameplay Loop Expansion (Months 1-2)
 Goal: Make the moment-to-moment gameplay engaging and give players short-term objectives.
 
 - [x] slime as drawing
-- [ ] inventory icons generated, heart chat emoji
-- [ ] health bar?
-- [ ] ai gen all new better icons
-- [ ] name the game. Improve the top bar with a image of the game title
+- [x] inventory icons generated, heart chat emoji
+- [x] ai gen all new better icons
+- [x] draw items that fall on the ground (or just use their icon probably)
+- [x] health bar?
+- [x] name the game. Improve the top bar with a image of the game title
+
+-- Current
 - [ ] give player a random shirt color
-- [ ] draw items that fall on the ground (or just use their icon probably)
 - [ ] show the player holding the axe
 
+-- Backlog
 quests
 what are the rewards?
 - armor
@@ -33,6 +36,8 @@ echos?
 - echos are based on xp what they do? or is it on events?
 - echos could just be based on talents?
 
+
+-- Ice box
 pvp?
 - needs contested zones?
 
@@ -108,15 +113,3 @@ Implement Scalable Zoning:
 Action: This is the key to your architecture. Refine your Go backend so that you can run multiple Go server instances, with each instance responsible for one or more zones (e.g., Server 1 handles Zone 0, Server 2 handles Zone 1). When a player walks from Zone 0 to Zone 1, their WebSocket connection is seamlessly handed off from Server 1 to Server 2.
 
 Why: This is how you horizontally scale to an "insane" number of players. Your Redis database acts as the single source of truth, and you can just spin up more Go instances as your population grows.
-
-
-Loot Drop Ideas
-Slimes:
-- Common: Slime Gel (crafting), Water Crystal (magic)
-- Uncommon: Colored Slime Gel (potions), Slime Core (magic)
-- Rare: Solidified Slime (rubbery gear), Tiny Living Slime (pet)
-
-Rats:
-- Common: Rat Pelt (crafting), Rat Meat (cooking), Bone (crafting)
-- Uncommon: Rat Tail (quest item), Diseased Claw (poison crafting)
-- Rare: Rat Skull (crafting/decoration), Simple Treasure Map (treasure hunt)

@@ -11,7 +11,7 @@
     <div class="game-container">
         <!-- Top Info bar -->
         <div class="top-info">
-            <span class="game-title">MMO Grid World</span>
+            <img src="assets/game-title.png" id="game-title-logo" alt="Game Title">
             <!-- Registration will be shown here if needed -->
             <div id="welcome-message"></div>
             <button class="help-button" id="help-button">?</button>
@@ -40,7 +40,11 @@
             <div id="player-hud-bottom">
                 <div id="player-name-display"></div>
                 <div class="hp-display">
-                    <span id="health-text"></span>
+                    <img src="assets/heart-icon.png" alt="Health" class="hud-icon">
+                    <div id="health-bar-container">
+                        <div id="health-bar"></div>
+                        <span id="health-bar-text"></span>
+                    </div>
                 </div>
                 <div id="player-coords"></div>
             </div>
