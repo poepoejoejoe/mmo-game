@@ -112,6 +112,7 @@ export const itemDefinitions: { [key: string]: { text?: string, icon?: string, c
         icon: '🪓',
         character: 'A',
         color: '#b5a642',
+        asset: 'assets/crude-axe-icon.png',
         draw: drawCrudeAxe,
         equippable: {
             slot: 'weapon-slot',
