@@ -130,6 +130,30 @@ export function initializeUI() {
     chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
 }
 
+export function showCraftSuccess(itemId: string) {
+    const itemDef = itemDefinitions[itemId] || itemDefinitions.default;
+    if (!itemDef || !itemDef.asset) return;
+
+    const container = document.getElementById('effect-container');
+    if (!container) return;
+
+    const icon = document.createElement('img');
+    icon.src = itemDef.asset;
+    icon.className = 'floating-icon';
+
+    const rect = inventoryButton.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    icon.style.left = `${rect.left - containerRect.left + (rect.width / 2)}px`;
+    icon.style.top = `${rect.top - containerRect.top}px`;
+
+    container.appendChild(icon);
+
+    icon.addEventListener('animationend', () => {
+        icon.remove();
+    });
+}
+
 export function promptForRegistration() {
     if (!localStorage.getItem('secretKey')) {
         registrationContainer.style.display = 'flex';

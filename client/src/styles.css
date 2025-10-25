@@ -90,6 +90,36 @@ body {
     overflow: hidden;
     width: 100%;
     margin-top: clamp(60px, 10vh, 100px); /* space for top bar */
+    position: relative;
+}
+
+#effect-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.floating-icon {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    transform: translateX(-50%);
+    animation: floatUp 1.5s ease-out forwards;
+}
+
+@keyframes floatUp {
+    from {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+    to {
+        transform: translate(-50%, -80px);
+        opacity: 0;
+    }
 }
 
 #game-canvas {

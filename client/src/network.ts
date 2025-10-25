@@ -1,4 +1,5 @@
 import { 
+    CraftSuccessMessage,
     EntityDamagedMessage,
     GearUpdateMessage,
     InitialStateMessage, 
@@ -22,6 +23,7 @@ import * as state from './state';
 import { 
     addChatMessage, 
     promptForRegistration, 
+    showCraftSuccess, 
     showDialog, 
     updateInventoryUI, 
     updatePlayerHealth, 
@@ -136,6 +138,11 @@ function handleMessage(event: MessageEvent) {
             // We need to update both UI sections as equipping/unequipping affects both.
             updateInventoryUI(); 
             onStateUpdate();
+            break;
+        }
+        case 'craft_success': {
+            const craftMsg = msg as CraftSuccessMessage;
+            showCraftSuccess(craftMsg.itemId);
             break;
         }
         case 'player_appearance_changed': {

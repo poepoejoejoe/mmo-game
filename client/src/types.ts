@@ -138,6 +138,11 @@ export interface GearUpdateMessage extends ServerMessage {
     gear: Record<string, InventoryItem>;
 }
 
+export interface CraftSuccessMessage extends ServerMessage {
+    type: 'craft_success';
+    itemId: string;
+}
+
 export interface StateCorrectionMessage extends ServerMessage {
     type: 'state_correction';
     x: number;

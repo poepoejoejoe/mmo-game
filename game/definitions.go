@@ -93,6 +93,7 @@ const (
 	ServerEventPlayerStatsUpdate       ServerEventType = "player_stats_update"
 	ServerEventItemDropped             ServerEventType = "item_dropped"
 	ServerEventGearUpdate              ServerEventType = "gear_update"
+	ServerEventCraftSuccess            ServerEventType = "craft_success"
 	ServerEventRegistered              ServerEventType = "registered"
 	ServerEventPlayerAppearanceChanged ServerEventType = "player_appearance_changed"
 	ServerEventNotification            ServerEventType = "notification"

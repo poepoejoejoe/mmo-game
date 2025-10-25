@@ -156,7 +156,7 @@ func (c *Client) readPump() {
 					c.send <- gearJSON
 				}
 			case game.ClientEventCraft:
-				inventoryUpdate, correctionMsg := game.ProcessCraft(c.id, msg.Payload)
+				inventoryUpdate, correctionMsg, craftSuccessMsg := game.ProcessCraft(c.id, msg.Payload)
 				if correctionMsg != nil {
 					correctionJSON, _ := json.Marshal(correctionMsg)
 					c.send <- correctionJSON
@@ -164,6 +164,10 @@ func (c *Client) readPump() {
 				if inventoryUpdate != nil {
 					inventoryJSON, _ := json.Marshal(inventoryUpdate)
 					c.send <- inventoryJSON
+				}
+				if craftSuccessMsg != nil {
+					craftSuccessJSON, _ := json.Marshal(craftSuccessMsg)
+					c.send <- craftSuccessJSON
 				}
 			case game.ClientEventPlaceItem:
 				correctionMsg, inventoryMsg := game.ProcessPlaceItem(c.id, msg.Payload)

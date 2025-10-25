@@ -8,21 +8,21 @@ import (
 	"time"
 )
 
-func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUpdateMessage, *models.StateCorrectionMessage) {
+func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUpdateMessage, *models.StateCorrectionMessage, *models.CraftSuccessMessage) {
 	var craftData models.CraftPayload
 	if err := json.Unmarshal(payload, &craftData); err != nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	canAct, playerData := CanEntityAct(playerID)
 	if !canAct {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	recipe, ok := RecipeDefs[ItemID(craftData.Item)]
 	if !ok {
 		log.Printf("Player %s tried to craft unknown item: %s", playerID, craftData.Item)
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// --- NEW: Special crafting conditions ---
@@ -53,7 +53,7 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 
 		if !isNextToFire {
 			log.Printf("Player %s failed to craft %s: not next to a fire.", playerID, craftData.Item)
-			return nil, nil // Or send a specific "requires fire" message
+			return nil, nil, nil // Or send a specific "requires fire" message
 		}
 	}
 	// --- END NEW ---
@@ -61,7 +61,7 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 	inventoryKey := string(RedisKeyPlayerInventory) + playerID
 	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
 	if err != nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// Tally up available ingredients
@@ -81,7 +81,7 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 	for ingredient, required := range recipe.Ingredients {
 		if available[ingredient] < required {
 			log.Printf("Player %s failed to craft %s: not enough %s.", playerID, craftData.Item, ingredient)
-			return nil, nil
+			return nil, nil, nil
 		}
 	}
 
@@ -115,7 +115,7 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Redis error during crafting (ingredient consumption) for player %s: %v", playerID, err)
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// Add crafted item
@@ -124,7 +124,7 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 		log.Printf("Redis error during crafting (adding item) for player %s: %v", playerID, err)
 		// Note: This could leave the inventory in an inconsistent state.
 		// A more robust solution would use Lua scripting for atomicity.
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// --- NEW: Quest Completion Check ---
@@ -143,7 +143,12 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 		Inventory: finalInventory,
 	}
 
+	craftSuccessMsg := &models.CraftSuccessMessage{
+		Type:   string(ServerEventCraftSuccess),
+		ItemID: craftData.Item,
+	}
+
 	log.Printf("Player %s successfully crafted %d %s.", playerID, recipe.Yield, craftData.Item)
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
-	return inventoryUpdateMsg, nil
+	return inventoryUpdateMsg, nil, craftSuccessMsg
 }

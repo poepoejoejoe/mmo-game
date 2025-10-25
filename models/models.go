@@ -94,6 +94,11 @@ type GearUpdateMessage struct {
 	Gear map[string]Item `json:"gear"`
 }
 
+type CraftSuccessMessage struct {
+	Type   string `json:"type"`
+	ItemID string `json:"itemId"`
+}
+
 type PlaceItemPayload struct {
 	Item string `json:"item"`
 	X    int    `json:"x"`
