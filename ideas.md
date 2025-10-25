@@ -13,9 +13,10 @@
 - [x] Name the game. Improve the top bar with a image of the game title
 - [x] Give player a random shirt color
 - [x] Show the player holding the axe
+- [x] image generation needs to crop the transparent images after doing the transparency
 
 ### Current
-- [ ] image generation needs to crop the transparent images after doing the transparency
+
 
 
 ### Backlog

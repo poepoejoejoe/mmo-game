@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	targetSlimeCount     = 5
-	targetRatCount       = 7
+	targetSlimeCount     = 0
+	targetRatCount       = 1
 	spawnerCheckInterval = 30 * time.Second
 )
 
@@ -36,17 +36,25 @@ func checkAndSpawnNPCs() {
 		return
 	}
 
+	// Spawner needs to know about wizards too.
 	currentSlimeCount := 0
 	currentRatCount := 0
+	currentWizardCount := 0
 	for _, entityID := range entityIDs {
 		if strings.HasPrefix(entityID, string(NPCSlimePrefix)) {
 			currentSlimeCount++
 		} else if strings.HasPrefix(entityID, string(NPCRatPrefix)) {
 			currentRatCount++
+		} else if strings.HasPrefix(entityID, string(NPCWizardPrefix)) {
+			currentWizardCount++
 		}
 	}
 
 	log.Printf("Spawner check: Slimes=%d/%d, Rats=%d/%d", currentSlimeCount, targetSlimeCount, currentRatCount, targetRatCount)
+
+	if currentWizardCount == 0 {
+		spawnWizard()
+	}
 
 	// Spawn missing slimes
 	for i := currentSlimeCount; i < targetSlimeCount; i++ {

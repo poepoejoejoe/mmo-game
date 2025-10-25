@@ -66,3 +66,8 @@ func spawnRat() {
 	spawnX, spawnY := FindOpenSpawnPoint(entityID)
 	SpawnNPC(entityID, spawnX, spawnY, NPCTypeRat)
 }
+
+func spawnWizard() {
+	entityID := string(NPCWizardPrefix) + utils.GenerateUniqueID()
+	SpawnNPC(entityID, 2, 0, NPCTypeWizard)
+}

@@ -692,6 +692,57 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.restore();
 }
 
+export function drawWizard(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }) {
+    const pixelSize = Math.max(1, Math.floor(tileSize / 16));
+
+    const centerX = x + tileSize / 2;
+    const centerY = y + tileSize / 2;
+
+    const isMoving = false; // Wizards don't move
+    const walkCycle = 0;
+
+    const shirtColor = '#3498db'; // A nice blue for the wizard's robe
+    const colors = {
+        hairColor: '#bdc3c7', // Gray hair for an old wizard
+        skinColor: '#d3a07c',
+        shirtColor: shirtColor,
+        pantsColor: '#2c3e50', // Dark pants
+        shirtStripeColor: lightenColor(shirtColor, 20)
+    };
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.beginPath();
+    ctx.ellipse(centerX, y + tileSize - pixelSize * 2, pixelSize * 6, pixelSize * 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+
+    const direction = 'down'; // Always facing down
+
+    drawPlayerFacingDown(ctx, pixelSize, walkCycle, isMoving, colors);
+
+    // Wizard Hat
+    const headX = -pixelSize * 4;
+    const headY = -pixelSize * 9;
+
+    // Brim
+    ctx.fillStyle = colors.shirtStripeColor;
+    ctx.fillRect(headX - pixelSize, headY + pixelSize * 2, pixelSize * 10, pixelSize * 2);
+
+    // Pointy part
+    ctx.fillStyle = colors.shirtColor;
+    ctx.beginPath();
+    ctx.moveTo(headX, headY + pixelSize * 2); // Left base
+    ctx.lineTo(headX + pixelSize * 8, headY + pixelSize * 2); // Right base
+    ctx.lineTo(headX + pixelSize * 4, headY - pixelSize * 6); // Tip
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+}
+
 export function drawItem(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, _time: number, assetImages: { [key: string]: HTMLImageElement }) {
     if (!entity.itemId) return;
 
@@ -700,7 +751,7 @@ export function drawItem(ctx: CanvasRenderingContext2D, x: number, y: number, ti
     if (itemDef.asset) {
         const img = assetImages[itemDef.asset];
         if (img) {
-            const size = tileSize * 1.25;
+            const size = tileSize * 1.00;
             const xOffset = (size - tileSize) / 2;
             const yOffset = (size - tileSize) / 2;
             ctx.drawImage(img, x - xOffset, y - yOffset, size, size);

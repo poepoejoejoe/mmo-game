@@ -120,6 +120,7 @@ const (
 	RedisKeyLockWorldObject RedisKey = "world_object"
 	NPCSlimePrefix          RedisKey = "npc:slime:" // <-- NEW
 	NPCRatPrefix            RedisKey = "npc:rat:"   // <-- NEW
+	NPCWizardPrefix         RedisKey = "npc:wizard:"
 	ItemPrefix              RedisKey = "item:"
 	RedisKeySecretPrefix    RedisKey = "secret:"
 )
@@ -151,8 +152,9 @@ type TileProperties struct {
 type NPCType string
 
 const (
-	NPCTypeSlime NPCType = "slime"
-	NPCTypeRat   NPCType = "rat"
+	NPCTypeSlime  NPCType = "slime"
+	NPCTypeRat    NPCType = "rat"
+	NPCTypeWizard NPCType = "wizard"
 )
 
 // NPCProperties defines the behavioral attributes of an NPC.
@@ -227,6 +229,10 @@ func init() {
 	NPCDefs[NPCTypeRat] = NPCProperties{
 		Health: 2,
 		Damage: 2,
+	}
+	NPCDefs[NPCTypeWizard] = NPCProperties{
+		Health: 100,
+		Damage: 0,
 	}
 	// --- END NEW ---
 

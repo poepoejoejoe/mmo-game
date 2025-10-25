@@ -52,6 +52,16 @@ func processNPCAction(npcID string) {
 		return // NPC is on cooldown
 	}
 
+	npcTypeStr, ok := npcData["npcType"]
+	if !ok {
+		log.Printf("[AI Error] NPC %s has no npcType field. Skipping.", npcID)
+		return
+	}
+	npcType := NPCType(npcTypeStr)
+	if npcType == NPCTypeWizard {
+		return // Wizards are friendly and do not move
+	}
+
 	npcX, npcY := GetEntityPosition(npcData)
 
 	// --- REVERTED: Use GeoRadius with explicit coordinates for reliability ---
