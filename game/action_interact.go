@@ -32,6 +32,10 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 
 		// --- NPC Interaction ---
 		if entityType == string(EntityTypeNPC) {
+			targetX, _ := strconv.Atoi(targetData["x"])
+			targetY, _ := strconv.Atoi(targetData["y"])
+			UpdateEntityDirection(playerID, targetX, targetY)
+
 			npcType := NPCType(targetData["npcType"])
 			if npcType == NPCTypeWizard {
 				dialog := GetWizardDialog(playerID)
