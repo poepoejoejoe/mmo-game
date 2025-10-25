@@ -16,7 +16,11 @@
 - [x] image generation needs to crop the transparent images after doing the transparency
 
 ### Current
-
+- Fix the way the ui panels in bottom left work.
+- Now I want to make a second quest that is only available after the player finishes the first quest. In this quest the wizard asks the player to make cooked rat meat after slaying a rat. The wizard comes up for a good reason for this.
+- quest indicator when quest is avail. quest complete turn in indicator?
+- xp? 
+- echos?
 
 
 ### Backlog

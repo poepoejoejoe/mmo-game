@@ -38,7 +38,6 @@ export let inventoryView: HTMLElement;
 export let craftingView: HTMLElement;
 export let gearView: HTMLElement;
 export let questView: HTMLElement;
-let infoPanel: HTMLElement;
 let inventoryButton: HTMLButtonElement;
 let craftingButton: HTMLButtonElement;
 let gearButton: HTMLButtonElement;
@@ -56,7 +55,7 @@ let dialogCloseButton: HTMLElement;
 let dialogOverlay: HTMLElement;
 
 
-let currentPanel: 'inventory' | 'crafting' | 'gear' | 'quest' | null = 'inventory';
+const openPanels = new Set<'inventory' | 'crafting' | 'gear' | 'quest'>();
 let isChatOpen = true;
 
 export function initializeUI() {
@@ -80,7 +79,6 @@ export function initializeUI() {
     craftingView = document.getElementById('crafting-view')!;
     gearView = document.getElementById('gear-view')!;
     questView = document.getElementById('quest-view')!;
-    infoPanel = document.getElementById('info-panel')!;
     inventoryButton = document.getElementById('inventory-button') as HTMLButtonElement;
     craftingButton = document.getElementById('crafting-button') as HTMLButtonElement;
     gearButton = document.getElementById('gear-button') as HTMLButtonElement;
@@ -119,7 +117,7 @@ export function initializeUI() {
     chatButton.addEventListener('click', toggleChat);
     
     // Set initial state on load
-    updateButtonSelection();
+    updateButtonAndPanelSelection();
     toggleChat(); // to set initial state
     toggleChat(); // toggle back to open, but apply style
 
@@ -171,43 +169,39 @@ function toggleChat() {
 }
 
 function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest') {
-    if (panelType === currentPanel) {
-        currentPanel = null;
+    if (openPanels.has(panelType)) {
+        openPanels.delete(panelType);
     } else {
-        currentPanel = panelType;
+        openPanels.add(panelType);
+
+        const panelMap = {
+            inventory: inventoryView,
+            crafting: craftingView,
+            gear: gearView,
+            quest: questView,
+        };
+
+        const panelElement = panelMap[panelType];
+        if (panelElement && panelElement.parentElement) {
+            panelElement.parentElement.prepend(panelElement);
+        }
     }
-    updateButtonSelection();
+    updateButtonAndPanelSelection();
     updateInventoryUI(); // Re-render to show/hide views
 }
 
-function updateButtonSelection() {
-    inventoryButton.classList.remove('selected');
-    craftingButton.classList.remove('selected');
-    gearButton.classList.remove('selected');
-    questButton.classList.remove('selected');
-    inventoryView.style.display = 'none';
-    craftingView.style.display = 'none';
-    gearView.style.display = 'none';
-    questView.style.display = 'none';
-    infoPanel.style.display = 'none';
+function updateButtonAndPanelSelection() {
+    // Buttons
+    inventoryButton.classList.toggle('selected', openPanels.has('inventory'));
+    craftingButton.classList.toggle('selected', openPanels.has('crafting'));
+    gearButton.classList.toggle('selected', openPanels.has('gear'));
+    questButton.classList.toggle('selected', openPanels.has('quest'));
 
-    if (currentPanel === 'inventory') {
-        inventoryButton.classList.add('selected');
-        inventoryView.style.display = 'flex';
-        infoPanel.style.display = 'flex';
-    } else if (currentPanel === 'crafting') {
-        craftingButton.classList.add('selected');
-        craftingView.style.display = 'flex';
-        infoPanel.style.display = 'flex';
-    } else if (currentPanel === 'gear') {
-        gearButton.classList.add('selected');
-        gearView.style.display = 'flex';
-        infoPanel.style.display = 'flex';
-    } else if (currentPanel === 'quest') {
-        questButton.classList.add('selected');
-        questView.style.display = 'flex';
-        infoPanel.style.display = 'flex';
-    }
+    // Views
+    inventoryView.style.display = openPanels.has('inventory') ? 'flex' : 'none';
+    craftingView.style.display = openPanels.has('crafting') ? 'flex' : 'none';
+    gearView.style.display = openPanels.has('gear') ? 'flex' : 'none';
+    questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
 }
 
 function toggleModal(modalId: string, show: boolean) {
@@ -289,7 +283,7 @@ export function startCooldown(duration: number): void {
 
 export function updateCraftingUI(): void {
     const inventory = state.getState().inventory;
-    craftingView.innerHTML = ''; // Clear existing recipes
+    craftingView.innerHTML = '<h2>Crafting</h2>';
 
     // Define a type for recipe requirements
     type RecipeRequirements = { [key: string]: number };
@@ -487,9 +481,11 @@ export function updateQuestUI(): void {
 
 export function updateGearUI(): void {
     const gear = state.getState().gear;
-    gearView.innerHTML = ''; // Clear existing slots
+    gearView.innerHTML = '<h2>Gear</h2>';
 
+    let hasSlots = false;
     for (const slot in gear) {
+        hasSlots = true;
         const item = gear[slot];
 
         const slotEl = document.createElement('div');
@@ -513,11 +509,17 @@ export function updateGearUI(): void {
         }
         gearView.appendChild(slotEl);
     }
+
+    if (!hasSlots) {
+        const p = document.createElement('p');
+        p.textContent = 'No gear slots available.';
+        gearView.appendChild(p);
+    }
 }
 
 export function updateInventoryUI(): void {
     const inventory = state.getState().inventory;
-    inventoryView.innerHTML = ''; // Clear existing slots
+    inventoryView.innerHTML = '<h2>Inventory</h2>';
 
     for (let i = 0; i < 10; i++) {
         const slotKey = `slot_${i}`;

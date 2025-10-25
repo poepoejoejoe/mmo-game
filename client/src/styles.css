@@ -248,6 +248,7 @@ body {
     display: flex;
     align-items: flex-end;
     gap: 10px;
+    flex-direction: column;
 }
 
 .action-bar {
@@ -280,22 +281,46 @@ body {
     object-fit: contain;
 }
 
-/* --- Center Info Panel --- */
-#info-panel {
-    position: absolute;
-    bottom: 80px; /* Position above the action bar */
-    right: 20px;
-    width: 400px;
-    height: 150px;
-    background-color: rgba(0, 0, 0, 0.4);
+/* --- Info Panels --- */
+.info-panel {
+    width: clamp(320px, 25vw, 420px) !important;
+    height: 15vh;
+    overflow-y: auto;
+    background-color: rgba(0, 0, 0, 0.6);
     border-radius: 10px;
     border: 1px solid #444;
     padding: 10px;
     display: flex;
     align-items: flex-start;
-    justify-content: flex-start; /* Content will start from the left */
+    justify-content: flex-start;
     overflow-x: hidden;
     flex-wrap: wrap;
+    scrollbar-width: thin;
+    scrollbar-color: #888 #333;
+}
+
+.info-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.info-panel::-webkit-scrollbar-track {
+    background: #333;
+    border-radius: 4px;
+}
+
+.info-panel::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+    border: 2px solid #333;
+}
+
+.info-panel h2 {
+    width: 100%;
+    margin: 0 0 10px 0;
+    padding-bottom: 5px;
+    font-size: 1.2em;
+    color: #fff;
+    border-bottom: 1px solid #555;
 }
 
 #inventory-view, #crafting-view, #gear-view {
@@ -661,21 +686,6 @@ body {
 .mobile-controls { display: none; }
 
 
-@media (max-width: 1200px) {
-    #info-panel {
-        display: none; /* Hide the middle panel on smaller screens */
-    }
-}
-
-@media (max-width: 900px) {
-    #chat-container {
-        display: none;
-    }
-    #info-panel {
-        display: none; /* Hide the middle panel on smaller screens */
-    }
-}
-
 @media (max-width: 768px) {
     .bottom-ui {
         flex-wrap: wrap;
@@ -696,9 +706,15 @@ body {
     }
     .right-hud-container {
         order: 3;
+        width: 100%;
+        align-items: center;
     }
     .right-hud-container {
         bottom: 80px;
+    }
+    .info-panel {
+        width: 90vw;
+        max-height: 40vh;
     }
     .mobile-controls {
         display: block;
