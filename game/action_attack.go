@@ -105,6 +105,17 @@ func cleanupAndDropLoot(npcID string, npcData map[string]string) {
 	rdb.Del(ctx, damageDealtKey)
 
 	npcType := NPCType(npcData["npcType"])
+
+	if npcType == NPCTypeRat && ownerID != "" {
+		playerQuests, err := GetPlayerQuests(ownerID)
+		if err == nil {
+			if _, ok := playerQuests.Quests[models.QuestRatProblem]; ok {
+				UpdateObjective(playerQuests, models.QuestRatProblem, "slay_rat", ownerID)
+				SavePlayerQuests(ownerID, playerQuests)
+			}
+		}
+	}
+
 	loot := generateLoot(npcType)
 
 	if len(loot) > 0 {

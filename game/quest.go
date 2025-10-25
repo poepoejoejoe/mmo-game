@@ -17,6 +17,15 @@ var QuestDefs = map[models.QuestID]models.Quest{
 		},
 		IsComplete: false,
 	},
+	models.QuestRatProblem: {
+		ID:    models.QuestRatProblem,
+		Title: "A Culinary Conundrum",
+		Objectives: []models.QuestObjective{
+			{ID: "slay_rat", Description: "Slay a giant rat", Completed: false},
+			{ID: "cook_rat_meat", Description: "Cook the rat meat", Completed: false},
+		},
+		IsComplete: false,
+	},
 }
 
 func GetPlayerQuests(playerID string) (*models.PlayerQuests, error) {

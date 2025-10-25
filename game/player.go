@@ -391,6 +391,16 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	}
 	pipe.HSet(ctx, inventoryKey, inventory)
 	pipe.HSet(ctx, gearKey, map[string]interface{}{"weapon-slot": ""})
+
+	// For testing: complete the first quest
+	playerQuests := &models.PlayerQuests{
+		Quests:          make(map[models.QuestID]*models.Quest),
+		CompletedQuests: make(map[models.QuestID]bool),
+	}
+	playerQuests.CompletedQuests[models.QuestBuildAWall] = true
+	questsJSON, _ := json.Marshal(playerQuests)
+	pipe.HSet(ctx, playerID, "quests", questsJSON)
+
 	// --- END NEW ---
 
 	_, err = pipe.Exec(ctx)

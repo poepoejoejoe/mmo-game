@@ -137,6 +137,66 @@ func AddItemToInventory(playerID string, itemID ItemID, quantity int) (map[strin
 	return finalInventory, nil
 }
 
+func RemoveItemFromInventory(playerID string, itemID ItemID, quantity int) (map[string]models.Item, error) {
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
+	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	inventory := make(map[string]models.Item)
+	slots := make(map[string]*models.Item)
+
+	// Deserialize inventory
+	for i := 0; i < 10; i++ {
+		slotKey := "slot_" + strconv.Itoa(i)
+		if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
+			var item models.Item
+			json.Unmarshal([]byte(itemJSON), &item)
+			inventory[slotKey] = item
+			slots[slotKey] = &item
+		}
+	}
+
+	remainingToRemove := quantity
+
+	// Find and remove items
+	for _, item := range slots {
+		if item != nil && item.ID == string(itemID) {
+			removeAmount := min(remainingToRemove, item.Quantity)
+			item.Quantity -= removeAmount
+			remainingToRemove -= removeAmount
+
+			if remainingToRemove == 0 {
+				break
+			}
+		}
+	}
+
+	// Update Redis and build the final inventory map
+	pipe := rdb.Pipeline()
+	finalInventory := make(map[string]models.Item)
+	for i := 0; i < 10; i++ {
+		slotKey := "slot_" + strconv.Itoa(i)
+		if item, ok := slots[slotKey]; ok && item != nil {
+			if item.Quantity > 0 {
+				itemJSON, _ := json.Marshal(*item)
+				pipe.HSet(ctx, inventoryKey, slotKey, string(itemJSON))
+				finalInventory[slotKey] = *item
+			} else {
+				pipe.HSet(ctx, inventoryKey, slotKey, "")
+			}
+		}
+	}
+
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return finalInventory, nil
+}
+
 func HasItemInInventory(playerID string, itemID ItemID, quantity int) bool {
 	inventory, err := GetInventory(playerID)
 	if err != nil {

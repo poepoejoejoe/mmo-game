@@ -192,6 +192,7 @@ type QuestID string
 
 const (
 	QuestBuildAWall QuestID = "build_a_wall"
+	QuestRatProblem QuestID = "rat_problem"
 )
 
 type QuestObjective struct {

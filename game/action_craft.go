@@ -135,6 +135,12 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 			UpdateObjective(playerQuests, models.QuestBuildAWall, "craft_wall", playerID)
 			SavePlayerQuests(playerID, playerQuests)
 		}
+
+		ratProblemQuest := playerQuests.Quests[models.QuestRatProblem]
+		if ratProblemQuest != nil && !ratProblemQuest.IsComplete && ItemID(craftData.Item) == ItemCookedRatMeat {
+			UpdateObjective(playerQuests, models.QuestRatProblem, "cook_rat_meat", playerID)
+			SavePlayerQuests(playerID, playerQuests)
+		}
 	}
 	// --- END NEW ---
 
