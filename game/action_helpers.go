@@ -134,27 +134,22 @@ func AddItemToInventory(playerID string, itemID ItemID, quantity int) (map[strin
 		return nil, err
 	}
 
-	// --- NEW: Quest Objective Check ---
-	playerQuests, err := GetPlayerQuests(playerID)
-	if err == nil {
-		buildWallQuest := playerQuests.Quests[QuestBuildAWall]
-		if buildWallQuest != nil && !buildWallQuest.IsComplete {
-			// Check wood gathering objective
-			totalWood := 0
-			for _, item := range finalInventory {
-				if item.ID == string(ItemWood) {
-					totalWood += item.Quantity
-				}
-			}
-			if totalWood >= 10 {
-				playerQuests.UpdateObjective(QuestBuildAWall, "gather_wood", playerID)
-				SavePlayerQuests(playerID, playerQuests)
-			}
+	return finalInventory, nil
+}
+
+func HasItemInInventory(playerID string, itemID ItemID, quantity int) bool {
+	inventory, err := GetInventory(playerID)
+	if err != nil {
+		return false
+	}
+
+	total := 0
+	for _, item := range inventory {
+		if item.ID == string(itemID) {
+			total += item.Quantity
 		}
 	}
-	// --- END NEW ---
-
-	return finalInventory, nil
+	return total >= quantity
 }
 
 // IsAdjacent checks if (x1, y1) is cardinally adjacent to (x2, y2).

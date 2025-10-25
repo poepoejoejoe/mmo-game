@@ -37,10 +37,12 @@ let playerNameDisplayEl: HTMLElement;
 export let inventoryView: HTMLElement;
 export let craftingView: HTMLElement;
 export let gearView: HTMLElement;
+export let questView: HTMLElement;
 let infoPanel: HTMLElement;
 let inventoryButton: HTMLButtonElement;
 let craftingButton: HTMLButtonElement;
 let gearButton: HTMLButtonElement;
+let questButton: HTMLButtonElement;
 let chatMessagesEl: HTMLElement;
 let chatButton: HTMLButtonElement;
 let chatContainer: HTMLElement;
@@ -54,7 +56,7 @@ let dialogCloseButton: HTMLElement;
 let dialogOverlay: HTMLElement;
 
 
-let currentPanel: 'inventory' | 'crafting' | 'gear' | null = 'inventory';
+let currentPanel: 'inventory' | 'crafting' | 'gear' | 'quest' | null = 'inventory';
 let isChatOpen = true;
 
 export function initializeUI() {
@@ -77,10 +79,12 @@ export function initializeUI() {
     inventoryView = document.getElementById('inventory-view')!;
     craftingView = document.getElementById('crafting-view')!;
     gearView = document.getElementById('gear-view')!;
+    questView = document.getElementById('quest-view')!;
     infoPanel = document.getElementById('info-panel')!;
     inventoryButton = document.getElementById('inventory-button') as HTMLButtonElement;
     craftingButton = document.getElementById('crafting-button') as HTMLButtonElement;
     gearButton = document.getElementById('gear-button') as HTMLButtonElement;
+    questButton = document.getElementById('quest-button') as HTMLButtonElement;
     chatMessagesEl = document.getElementById('chat-messages')!;
     chatButton = document.getElementById('chat-button') as HTMLButtonElement;
     chatContainer = document.getElementById('chat-container')!;
@@ -107,6 +111,7 @@ export function initializeUI() {
     inventoryButton.addEventListener('click', () => toggleInfoPanel('inventory'));
     craftingButton.addEventListener('click', () => toggleInfoPanel('crafting'));
     gearButton.addEventListener('click', () => toggleInfoPanel('gear'));
+    questButton.addEventListener('click', () => toggleInfoPanel('quest'));
     helpButton.addEventListener('click', () => toggleModal('help-modal', true));
     helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
     dialogCloseButton.addEventListener('click', hideDialog);
@@ -121,6 +126,7 @@ export function initializeUI() {
     inventoryButton.innerHTML = `<img src="assets/inventory-icon.png" alt="Inventory">`;
     craftingButton.innerHTML = `<img src="assets/crafting-icon.png" alt="Crafting">`;
     gearButton.innerHTML = `<img src="assets/gear-icon.png" alt="Gear">`;
+    questButton.innerHTML = `<img src="assets/quest-icon.png" alt="Quests">`;
     chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
 }
 
@@ -140,7 +146,7 @@ function toggleChat() {
     }
 }
 
-function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear') {
+function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest') {
     if (panelType === currentPanel) {
         currentPanel = null;
     } else {
@@ -154,9 +160,11 @@ function updateButtonSelection() {
     inventoryButton.classList.remove('selected');
     craftingButton.classList.remove('selected');
     gearButton.classList.remove('selected');
+    questButton.classList.remove('selected');
     inventoryView.style.display = 'none';
     craftingView.style.display = 'none';
     gearView.style.display = 'none';
+    questView.style.display = 'none';
     infoPanel.style.display = 'none';
 
     if (currentPanel === 'inventory') {
@@ -170,6 +178,10 @@ function updateButtonSelection() {
     } else if (currentPanel === 'gear') {
         gearButton.classList.add('selected');
         gearView.style.display = 'flex';
+        infoPanel.style.display = 'flex';
+    } else if (currentPanel === 'quest') {
+        questButton.classList.add('selected');
+        questView.style.display = 'flex';
         infoPanel.style.display = 'flex';
     }
 }
@@ -422,6 +434,33 @@ function hideGearTooltip() {
     }
 }
 
+export function updateQuestUI(): void {
+    const quests = state.getState().quests;
+    const allQuests = Object.values(quests);
+
+    if (allQuests.length === 0) {
+        questView.innerHTML = '<h2>Quests</h2><p>No active quests.</p>';
+        return;
+    }
+
+    let content = '<h2>Quests</h2>';
+    for (const quest of allQuests) {
+        content += `<div class="quest">`;
+        if (quest.is_complete) {
+            content += `<h3>${quest.title} <span class="quest-complete">(Completed)</span></h3>`;
+        } else {
+            content += `<h3>${quest.title}</h3>`;
+        }
+        content += `<ul class="quest-objectives">`;
+        quest.objectives.forEach(obj => {
+            content += `<li class="${obj.completed ? 'completed' : ''}">${obj.description}</li>`;
+        });
+        content += `</ul>`;
+        content += `</div>`;
+    }
+    questView.innerHTML = content;
+}
+
 export function updateGearUI(): void {
     const gear = state.getState().gear;
     gearView.innerHTML = ''; // Clear existing slots
@@ -495,6 +534,7 @@ export function updateInventoryUI(): void {
 
     updateCraftingUI();
     updateGearUI();
+    updateQuestUI();
 }
 
 export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {

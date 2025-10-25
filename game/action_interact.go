@@ -123,6 +123,22 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 				Type:      string(ServerEventInventoryUpdate),
 				Inventory: newInventory,
 			}
+
+			// --- NEW: Quest Completion Check for Gathering ---
+			if props.GatherResource == ItemWood {
+				playerQuests, err := GetPlayerQuests(playerID)
+				if err == nil {
+					buildWallQuest := playerQuests.Quests[models.QuestBuildAWall]
+					if buildWallQuest != nil && !buildWallQuest.IsComplete {
+						// Check if player has enough wood now
+						if HasItemInInventory(playerID, ItemWood, 10) {
+							UpdateObjective(playerQuests, models.QuestBuildAWall, "gather_wood", playerID)
+							SavePlayerQuests(playerID, playerQuests)
+						}
+					}
+				}
+			}
+			// --- END NEW ---
 		}
 	}
 
@@ -243,9 +259,9 @@ func handlePlaceWoodenWall(playerID string, currentX, currentY, targetX, targetY
 	// --- NEW: Quest Completion Check ---
 	playerQuests, err := GetPlayerQuests(playerID)
 	if err == nil {
-		buildWallQuest := playerQuests.Quests[QuestBuildAWall]
+		buildWallQuest := playerQuests.Quests[models.QuestBuildAWall]
 		if buildWallQuest != nil && !buildWallQuest.IsComplete {
-			playerQuests.UpdateObjective(QuestBuildAWall, "place_wall", playerID)
+			UpdateObjective(playerQuests, models.QuestBuildAWall, "place_wall", playerID)
 			SavePlayerQuests(playerID, playerQuests)
 		}
 	}

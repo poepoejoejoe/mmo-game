@@ -31,12 +31,26 @@ export interface InventoryItem {
     quantity: number;
 }
 
+export interface QuestObjective {
+    id: string;
+    description: string;
+    completed: boolean;
+}
+
+export interface Quest {
+    id: string;
+    title: string;
+    objectives: QuestObjective[];
+    is_complete: boolean;
+}
+
 export interface ClientState {
     playerId: string | null;
     entities: Record<string, EntityState>; // Already renamed
     world: Record<string, WorldTile>;
     inventory: Record<string, InventoryItem>; // e.g. "slot_0": { id: "wood", quantity: 50 }
     gear: Record<string, InventoryItem>; // e.g. "weapon-slot": { id: "crude_axe", quantity: 1 }
+    quests: Record<string, Quest>;
     lastInteractionPosition: { x: number, y: number } | null;
     activeNpcId: string | null;
 }
@@ -55,6 +69,12 @@ export interface InitialStateMessage extends ServerMessage {
     world: Record<string, WorldTile>;
     inventory: Record<string, InventoryItem>;
     gear: Record<string, InventoryItem>;
+    quests: Record<string, Quest>;
+}
+
+export interface QuestUpdateMessage extends ServerMessage {
+    type: 'quest_update';
+    quests: Record<string, Quest>;
 }
 
 export interface EntityMovedMessage extends ServerMessage {

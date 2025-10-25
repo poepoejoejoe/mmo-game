@@ -15,7 +15,8 @@ import {
     StateCorrectionMessage, 
     WorldUpdateMessage,
     EntityAttackMessage,
-    DialogMessage
+    DialogMessage,
+    QuestUpdateMessage
 } from './types';
 import * as state from './state';
 import { 
@@ -53,7 +54,7 @@ function handleMessage(event: MessageEvent) {
         case 'initial_state': {
             const stateMsg = msg as InitialStateMessage;
             // state.setInitialState now receives the full entity map
-            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory, stateMsg.gear);
+            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory, stateMsg.gear, stateMsg.quests);
             updateInventoryUI();
             const myEntity = state.getMyEntity();
             if (myEntity && myEntity.name) {
@@ -62,6 +63,13 @@ function handleMessage(event: MessageEvent) {
                 // If we logged in but don't have a name, show the registration prompt.
                 promptForRegistration();
             }
+            onStateUpdate();
+            break;
+        }
+        case 'quest_update': {
+            const questMsg = msg as QuestUpdateMessage;
+            state.setQuests(questMsg.quests);
+            updateInventoryUI(); // This will trigger a quest UI update
             onStateUpdate();
             break;
         }

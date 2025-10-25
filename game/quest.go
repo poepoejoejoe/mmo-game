@@ -6,34 +6,11 @@ import (
 	"mmo-game/models"
 )
 
-type QuestID string
-
-const (
-	QuestBuildAWall QuestID = "build_a_wall"
-)
-
-type QuestObjective struct {
-	ID          string `json:"id"`
-	Description string `json:"description"`
-	Completed   bool   `json:"completed"`
-}
-
-type Quest struct {
-	ID         QuestID          `json:"id"`
-	Title      string           `json:"title"`
-	Objectives []QuestObjective `json:"objectives"`
-	IsComplete bool             `json:"is_complete"`
-}
-
-type PlayerQuests struct {
-	Quests map[QuestID]*Quest `json:"quests"`
-}
-
-var QuestDefs = map[QuestID]Quest{
-	QuestBuildAWall: {
-		ID:    QuestBuildAWall,
+var QuestDefs = map[models.QuestID]models.Quest{
+	models.QuestBuildAWall: {
+		ID:    models.QuestBuildAWall,
 		Title: "A Sturdy Defense",
-		Objectives: []QuestObjective{
+		Objectives: []models.QuestObjective{
 			{ID: "gather_wood", Description: "Gather 10 wood", Completed: false},
 			{ID: "craft_wall", Description: "Craft a Wooden Wall", Completed: false},
 			{ID: "place_wall", Description: "Place the Wooden Wall", Completed: false},
@@ -42,38 +19,55 @@ var QuestDefs = map[QuestID]Quest{
 	},
 }
 
-func GetPlayerQuests(playerID string) (*PlayerQuests, error) {
+func GetPlayerQuests(playerID string) (*models.PlayerQuests, error) {
 	questsJSON, err := rdb.HGet(ctx, playerID, "quests").Result()
 	if err != nil {
 		// If the key doesn't exist, create a new empty quest state
 		if err.Error() == "redis: nil" {
-			return &PlayerQuests{Quests: make(map[QuestID]*Quest)}, nil
+			return &models.PlayerQuests{
+				Quests:          make(map[models.QuestID]*models.Quest),
+				CompletedQuests: make(map[models.QuestID]bool),
+			}, nil
 		}
 		return nil, err
 	}
 
-	var playerQuests PlayerQuests
+	var playerQuests models.PlayerQuests
 	if err := json.Unmarshal([]byte(questsJSON), &playerQuests); err != nil {
 		return nil, err
+	}
+	if playerQuests.Quests == nil {
+		playerQuests.Quests = make(map[models.QuestID]*models.Quest)
+	}
+	if playerQuests.CompletedQuests == nil {
+		playerQuests.CompletedQuests = make(map[models.QuestID]bool)
 	}
 	return &playerQuests, nil
 }
 
-func SavePlayerQuests(playerID string, quests *PlayerQuests) error {
+func SavePlayerQuests(playerID string, quests *models.PlayerQuests) error {
 	questsJSON, err := json.Marshal(quests)
 	if err != nil {
 		return err
 	}
+
+	questUpdateMsg := models.QuestUpdateMessage{
+		Type:   string(ServerEventQuestUpdate),
+		Quests: quests.Quests,
+	}
+	questUpdateJSON, _ := json.Marshal(questUpdateMsg)
+	sendDirectMessage(playerID, questUpdateJSON)
+
 	return rdb.HSet(ctx, playerID, "quests", string(questsJSON)).Err()
 }
 
-func (pq *PlayerQuests) StartQuest(questID QuestID) {
+func StartQuest(pq *models.PlayerQuests, questID models.QuestID) {
 	if _, exists := pq.Quests[questID]; !exists {
 		questDefinition := QuestDefs[questID]
-		newQuest := &Quest{
+		newQuest := &models.Quest{
 			ID:         questDefinition.ID,
 			Title:      questDefinition.Title,
-			Objectives: make([]QuestObjective, len(questDefinition.Objectives)),
+			Objectives: make([]models.QuestObjective, len(questDefinition.Objectives)),
 			IsComplete: false,
 		}
 		// Copy objectives to avoid modifying the definition
@@ -83,7 +77,7 @@ func (pq *PlayerQuests) StartQuest(questID QuestID) {
 	}
 }
 
-func (pq *PlayerQuests) UpdateObjective(questID QuestID, objectiveID string, playerID string) {
+func UpdateObjective(pq *models.PlayerQuests, questID models.QuestID, objectiveID string, playerID string) {
 	if quest, ok := pq.Quests[questID]; ok && !quest.IsComplete {
 		objectiveCompleted := false
 		for i, obj := range quest.Objectives {
@@ -115,10 +109,16 @@ func (pq *PlayerQuests) UpdateObjective(questID QuestID, objectiveID string, pla
 				}
 				notificationJSON, _ := json.Marshal(notification)
 				sendDirectMessage(playerID, notificationJSON)
-
-				// Give reward
-				AddItemToInventory(playerID, ItemSliceOfPizza, 1)
 			}
 		}
 	}
+}
+
+func MarkQuestAsCompleted(pq *models.PlayerQuests, questID models.QuestID) {
+	delete(pq.Quests, questID)
+	if pq.CompletedQuests == nil {
+		pq.CompletedQuests = make(map[models.QuestID]bool)
+	}
+	pq.CompletedQuests[questID] = true
+	log.Printf("Quest '%s' marked as completed for a player.", questID)
 }

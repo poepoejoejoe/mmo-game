@@ -8,7 +8,7 @@ import (
 
 func GetWizardDialog(playerID string) models.DialogMessage {
 	playerQuests, _ := GetPlayerQuests(playerID)
-	buildWallQuest := playerQuests.Quests[QuestBuildAWall]
+	buildWallQuest := playerQuests.Quests[models.QuestBuildAWall]
 
 	if buildWallQuest != nil && buildWallQuest.IsComplete {
 		return models.DialogMessage{
@@ -16,7 +16,7 @@ func GetWizardDialog(playerID string) models.DialogMessage {
 			NpcName: "Wizard",
 			Text:    "You've done it! You're a natural builder. Here, take this slice of pizza for your efforts! Perhaps you could help me with something else?",
 			Options: []models.DialogOption{
-				{Text: "I'm ready for another quest!", Action: "accept_quest_2"}, // Placeholder
+				{Text: "Thank you!", Action: "turn_in_build_a_wall"},
 				{Text: "Not right now.", Action: "close_dialog"},
 			},
 		}
@@ -30,6 +30,17 @@ func GetWizardDialog(playerID string) models.DialogMessage {
 			},
 		}
 	} else {
+		if _, completed := playerQuests.CompletedQuests[models.QuestBuildAWall]; completed {
+			return models.DialogMessage{
+				Type:    string(ServerEventShowDialog),
+				NpcName: "Wizard",
+				Text:    "Thank you again for your help with the wall!",
+				Options: []models.DialogOption{
+					{Text: "You're welcome.", Action: "close_dialog"},
+				},
+			}
+		}
+
 		return models.DialogMessage{
 			Type:    string(ServerEventShowDialog),
 			NpcName: "Wizard",
@@ -60,7 +71,7 @@ func HandleWizardDialogAction(playerID string, action string) *models.DialogMess
 			log.Printf("Error getting player quests: %v", err)
 			return nil
 		}
-		playerQuests.StartQuest(QuestBuildAWall)
+		StartQuest(playerQuests, models.QuestBuildAWall)
 		SavePlayerQuests(playerID, playerQuests)
 
 		notification := models.NotificationMessage{
@@ -69,6 +80,27 @@ func HandleWizardDialogAction(playerID string, action string) *models.DialogMess
 		}
 		notificationJSON, _ := json.Marshal(notification)
 		sendDirectMessage(playerID, notificationJSON)
+	case "turn_in_build_a_wall":
+		playerQuests, err := GetPlayerQuests(playerID)
+		if err != nil {
+			log.Printf("Error getting player quests: %v", err)
+			return nil
+		}
+		// Give reward
+		newInventory, _ := AddItemToInventory(playerID, ItemSliceOfPizza, 1)
+
+		// Remove quest from player data
+		MarkQuestAsCompleted(playerQuests, models.QuestBuildAWall)
+		// Save the quest changes, which also sends a quest update to the client
+		SavePlayerQuests(playerID, playerQuests)
+
+		// After all server-side changes, send the final inventory state to the client
+		inventoryUpdateMsg := models.InventoryUpdateMessage{
+			Type:      string(ServerEventInventoryUpdate),
+			Inventory: newInventory,
+		}
+		inventoryUpdateJSON, _ := json.Marshal(inventoryUpdateMsg)
+		sendDirectMessage(playerID, inventoryUpdateJSON)
 	}
 	return nil
 }

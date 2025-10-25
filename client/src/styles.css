@@ -270,8 +270,49 @@ body {
 
 #inventory-view, #crafting-view, #gear-view {
     display: flex;
+    flex-direction: row;
     gap: 10px;
     flex-wrap: wrap;
+    width: 100%;
+}
+
+#quest-view {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.quest {
+    margin-bottom: 10px;
+}
+
+.quest h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.1em;
+    color: #fff;
+}
+
+.quest-complete {
+    color: #2ecc71;
+    font-style: italic;
+}
+
+.quest-objectives {
+    list-style: none;
+    padding-left: 15px;
+    margin: 0;
+}
+
+.quest-objectives li {
+    color: #ccc;
+    margin-bottom: 3px;
+    text-decoration: none;
+}
+
+.quest-objectives li.completed {
+    color: #2ecc71;
+    text-decoration: line-through;
 }
 
 .inventory-slot {

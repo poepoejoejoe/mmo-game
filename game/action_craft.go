@@ -130,9 +130,9 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 	// --- NEW: Quest Completion Check ---
 	playerQuests, err := GetPlayerQuests(playerID)
 	if err == nil {
-		buildWallQuest := playerQuests.Quests[QuestBuildAWall]
+		buildWallQuest := playerQuests.Quests[models.QuestBuildAWall]
 		if buildWallQuest != nil && !buildWallQuest.IsComplete && ItemID(craftData.Item) == ItemWoodenWall {
-			playerQuests.UpdateObjective(QuestBuildAWall, "craft_wall", playerID)
+			UpdateObjective(playerQuests, models.QuestBuildAWall, "craft_wall", playerID)
 			SavePlayerQuests(playerID, playerQuests)
 		}
 	}

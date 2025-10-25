@@ -97,6 +97,7 @@ const (
 	ServerEventPlayerAppearanceChanged ServerEventType = "player_appearance_changed"
 	ServerEventNotification            ServerEventType = "notification"
 	ServerEventShowDialog              ServerEventType = "show_dialog"
+	ServerEventQuestUpdate             ServerEventType = "quest_update"
 )
 
 // MoveDirection defines the valid move directions.

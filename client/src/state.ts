@@ -1,4 +1,4 @@
-import { ClientState, WorldTile, EntityState, InventoryItem } from './types';
+import { ClientState, WorldTile, EntityState, InventoryItem, Quest } from './types';
 
 // The global client state object. It is private to this module.
 const clientState: ClientState = {
@@ -7,6 +7,7 @@ const clientState: ClientState = {
     world: {},
     inventory: {},
     gear: {},
+    quests: {},
     lastInteractionPosition: null,
     activeNpcId: null,
 };
@@ -46,7 +47,8 @@ export function setInitialState(
     entities: Record<string, EntityState>, // This map now includes 'type'
     world: Record<string, WorldTile>, 
     inventory: Record<string, InventoryItem>,
-    gear: Record<string, InventoryItem>
+    gear: Record<string, InventoryItem>,
+    quests: Record<string, Quest>
 ) {
     clientState.playerId = playerId;
     
@@ -63,6 +65,7 @@ export function setInitialState(
     clientState.world = world;
     clientState.inventory = inventory;
     clientState.gear = gear;
+    clientState.quests = quests;
 }
 
 export function setEntityPosition(entityId: string, x: number, y: number, direction?: 'up' | 'down' | 'left' | 'right') {
@@ -119,6 +122,10 @@ export function setResourceHealth(x: number, y: number, health: number) {
 
 export function setInventory(inventory: Record<string, InventoryItem>) {
     clientState.inventory = inventory;
+}
+
+export function setQuests(quests: Record<string, Quest>) {
+    clientState.quests = quests;
 }
 
 export function setGear(gear: Record<string, InventoryItem>) {

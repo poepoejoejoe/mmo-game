@@ -59,6 +59,12 @@ type InitialStateMessage struct {
 	World     map[string]WorldTile   `json:"world"`
 	Inventory map[string]Item        `json:"inventory"`
 	Gear      map[string]Item        `json:"gear"`
+	Quests    map[QuestID]*Quest     `json:"quests"`
+}
+
+type QuestUpdateMessage struct {
+	Type   string             `json:"type"`
+	Quests map[QuestID]*Quest `json:"quests"`
 }
 
 // (Other models remain the same)
@@ -175,4 +181,28 @@ type DialogOption struct {
 
 type DialogActionPayload struct {
 	Action string `json:"action"`
+}
+
+type QuestID string
+
+const (
+	QuestBuildAWall QuestID = "build_a_wall"
+)
+
+type QuestObjective struct {
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	Completed   bool   `json:"completed"`
+}
+
+type Quest struct {
+	ID         QuestID          `json:"id"`
+	Title      string           `json:"title"`
+	Objectives []QuestObjective `json:"objectives"`
+	IsComplete bool             `json:"is_complete"`
+}
+
+type PlayerQuests struct {
+	Quests          map[QuestID]*Quest `json:"quests"`
+	CompletedQuests map[QuestID]bool   `json:"completed_quests"`
 }

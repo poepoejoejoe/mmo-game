@@ -248,6 +248,12 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		gearDataTyped[slot] = item
 	}
 
+	quests, err := GetPlayerQuests(playerID)
+	if err != nil {
+		log.Printf("Error getting quests for player %s: %v", playerID, err)
+		quests = &models.PlayerQuests{Quests: make(map[models.QuestID]*models.Quest)}
+	}
+
 	initialState := &models.InitialStateMessage{
 		Type:      string(ServerEventInitialState),
 		PlayerId:  playerID,
@@ -255,6 +261,7 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		World:     worldDataTyped,
 		Inventory: inventoryDataTyped,
 		Gear:      gearDataTyped,
+		Quests:    quests.Quests,
 	}
 
 	playerHealth, _ := strconv.Atoi(playerData["health"])
