@@ -5,5 +5,6 @@
   "output_format": "png",
   "size_hint": "small",
   "transparent": true,
-  "llm_prompt": "A simple icon of a cooked piece of meat, like a pork chop or steak, for a fantasy game UI. The icon should be easily understandable at a small size."
+  "image_dependency": "rat-meat-icon",
+  "llm_prompt": "a cooked version of this raw meat"
 }

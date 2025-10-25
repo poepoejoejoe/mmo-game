@@ -20,6 +20,20 @@ def process_background_removal(input_image):
         print(f"An error occurred during background removal: {e}")
         return input_image
 
+def crop_transparent_space(image):
+    """
+    Crops the transparent space around the content of a PIL Image.
+    """
+    if image.mode != "RGBA":
+        return image  # No transparency to crop
+
+    bbox = image.getbbox()
+    if bbox:
+        return image.crop(bbox)
+    else:
+        # If the image is completely transparent, return it as is
+        return image
+
 def generate_image(prompt_file, theme_file):
     """
     Generates an image based on a prompt file and a theme file using the Gemini API.
@@ -44,6 +58,7 @@ def generate_image(prompt_file, theme_file):
     base_prompt = prompt_data.get("llm_prompt", "")
     style_suffix = theme_data.get("base_prompt_suffix", "")
     asset_type = prompt_data.get("asset_type")
+    image_dependency = prompt_data.get("image_dependency")
 
     # Build a more detailed prompt
     style_modifiers = theme_data.get("style_modifiers", {})
@@ -76,9 +91,35 @@ def generate_image(prompt_file, theme_file):
         if aspect_ratio:
             generation_config.image_config = types.ImageConfig(aspect_ratio=aspect_ratio)
 
+        contents = []
+        
+        if image_dependency:
+            output_dir = os.path.join(os.path.dirname(__file__), '..', 'client', 'public', 'assets')
+            dependency_file_name = f'{image_dependency}.png' # Assuming png for now
+            dependency_path = os.path.join(output_dir, dependency_file_name)
+
+            if not os.path.exists(dependency_path):
+                print(f"Dependency image {dependency_path} not found. Generating it now...")
+                dependency_prompt_file = os.path.join(os.path.dirname(prompt_file), f'{image_dependency}.json')
+                if os.path.exists(dependency_prompt_file):
+                    generate_image(dependency_prompt_file, theme_file)
+                else:
+                    print(f"Could not find prompt file for dependency: {dependency_prompt_file}")
+                    return
+
+            if os.path.exists(dependency_path):
+                dependency_image = Image.open(dependency_path)
+                contents.append(final_prompt.strip())
+                contents.append(dependency_image)
+            else:
+                print(f"Failed to generate or find dependency image: {dependency_path}")
+                return
+        else:
+            contents.append(final_prompt.strip())
+
         response = client.models.generate_content(
             model='gemini-2.5-flash-image-preview',
-            contents=[final_prompt.strip()],
+            contents=contents,
             config=generation_config,
         )
 
@@ -93,6 +134,7 @@ def generate_image(prompt_file, theme_file):
         if image:
             if is_transparent:
                 image = process_background_removal(image)
+                image = crop_transparent_space(image)
 
             output_dir = os.path.join(os.path.dirname(__file__), '..', 'client', 'public', 'assets')
             if not os.path.exists(output_dir):

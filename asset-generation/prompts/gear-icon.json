@@ -1,6 +1,6 @@
 {
   "asset_name": "gear-icon",
-  "asset_type": "icon",
+  "asset_type": "menu_icon",
   "description": "An icon for player equipment (armor and weapons).",
   "output_format": "png",
   "size_hint": "small",

@@ -1,6 +1,6 @@
 {
   "asset_name": "chat-icon",
-  "asset_type": "icon",
+  "asset_type": "menu_icon",
   "description": "An icon for the chat window.",
   "output_format": "png",
   "size_hint": "small",

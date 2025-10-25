@@ -3,6 +3,7 @@
   "style_modifiers": {
     "global": "bright saturated colors, simple shapes, 2D, top-down perspective, cute, cartoonish",
     "icon": "clear silhouette, high contrast, easily recognizable, simple design",
+    "menu_icon": "use a consistent color palette of metallic grays, leathery browns, and a single vibrant accent color for highlights",
     "sprite": "smooth rounded shapes, cute and chubby appearance, soft shadows, minimal detail",
     "texture": "simple, flat color, minimal detail, seamless, tileable"
   },

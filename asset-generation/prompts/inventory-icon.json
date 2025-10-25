@@ -1,6 +1,6 @@
 {
   "asset_name": "inventory-icon",
-  "asset_type": "icon",
+  "asset_type": "menu_icon",
   "description": "An icon for the player's inventory.",
   "output_format": "png",
   "size_hint": "small",
