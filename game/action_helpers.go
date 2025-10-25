@@ -252,6 +252,16 @@ func PublishToPlayer(playerID string, message []byte) {
 	PublishUpdate(wrappedMessage)
 }
 
+// PublishPrivately sends a message to a single player.
+func PublishPrivately(playerID string, message interface{}) {
+	jsonMsg, err := json.Marshal(message)
+	if err != nil {
+		log.Printf("Error marshalling private message for publish: %v", err)
+		return
+	}
+	PublishToPlayer(playerID, jsonMsg)
+}
+
 // TilesToKilometers converts a distance in game tiles to the approximate
 // kilometer equivalent for use in Redis Geo queries.
 func TilesToKilometers(tiles int) float64 {

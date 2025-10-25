@@ -165,19 +165,19 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 			}
 		}
 
-		if npcType, ok := entityData["npcType"]; ok && entityType == string(EntityTypeNPC) {
-			entityType = npcType
-		}
-
 		entityState := models.EntityState{
 			X:    int(loc.Longitude),
 			Y:    int(loc.Latitude),
 			Type: entityType,
 		}
 
-		if name, ok := entityData["name"]; ok {
+		if npcType, ok := entityData["npcType"]; ok && entityType == string(EntityTypeNPC) {
+			entityState.Type = string(EntityTypeNPC)
+			entityState.Name = npcType
+		} else if name, ok := entityData["name"]; ok {
 			entityState.Name = name
 		}
+
 		if shirtColor, ok := entityData["shirtColor"]; ok {
 			entityState.ShirtColor = shirtColor
 		}

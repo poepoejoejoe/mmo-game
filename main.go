@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"mmo-game/game"
+	"mmo-game/game/utils"
 	"net/http"
 	"os"
 	"os/signal"
@@ -120,8 +121,11 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	game.GenerateWorld()
 	game.InitializeNPCs() // <-- NEW: Spawn NPCs
-	game.SpawnNPC(1, 2, game.NPCTypeSlime)
-	game.SpawnNPC(-2, -3, game.NPCTypeRat)
+	// --- For Testing: Spawn some NPCs ---
+	game.SpawnNPC("npc:slime:"+utils.GenerateUniqueID(), 1, 2, game.NPCTypeSlime)
+	game.SpawnNPC("npc:rat:"+utils.GenerateUniqueID(), -2, -3, game.NPCTypeRat)
+
+	// Start the game loops
 	go game.StartAILoop() // <-- NEW: Start the NPC AI loop
 	go game.StartSpawnerLoop()
 	go game.StartDamageSystem()

@@ -155,3 +155,8 @@ type RegisteredMessage struct {
 	PlayerID  string `json:"playerId"`
 	Name      string `json:"name"`
 }
+
+type NotificationMessage struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+}

@@ -26,7 +26,6 @@ func ProcessAttack(playerID string, targetEntityID string) *models.EntityDamaged
 
 	// Ensure the target is an NPC
 	if targetData["entityType"] != string(EntityTypeNPC) {
-		log.Printf("Player %s tried to attack non-npc entity %s.", playerID, targetEntityID)
 		return nil
 	}
 
@@ -34,7 +33,6 @@ func ProcessAttack(playerID string, targetEntityID string) *models.EntityDamaged
 	targetX, targetY := GetEntityPosition(targetData)
 
 	if !IsAdjacent(playerX, playerY, targetX, targetY) {
-		log.Printf("Player %s is not adjacent to target %s to attack.", playerID, targetEntityID)
 		// Silently fail, client-side check should prevent this.
 		return nil
 	}
@@ -130,7 +128,11 @@ func cleanupAndDropLoot(npcID string, npcData map[string]string) {
 				"createdAt":  createdAt,
 				"publicAt":   publicAt,
 			}
-			PublishUpdate(itemUpdate)
+			if ownerID != "" {
+				PublishPrivately(ownerID, itemUpdate)
+			} else {
+				PublishUpdate(itemUpdate)
+			}
 		}
 	}
 }

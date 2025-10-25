@@ -39,7 +39,6 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 		publicAt, _ := strconv.ParseInt(targetData["publicAt"], 10, 64)
 
 		isPublic := owner == "" || (publicAt > 0 && time.Now().UnixMilli() >= publicAt)
-
 		if owner == playerID || isPublic {
 			itemID := ItemID(targetData["itemId"])
 			quantity, _ := strconv.Atoi(targetData["quantity"])
@@ -59,8 +58,14 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 			}
 			rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 			return nil, inventoryUpdateMsg
+		} else {
+			// Player cannot pick up the item, send a notification.
+			notification := models.NotificationMessage{
+				Type:    string(ServerEventNotification),
+				Message: "You cannot pick up this item yet.",
+			}
+			PublishPrivately(playerID, notification)
 		}
-		return nil, nil // Not allowed to pick up yet
 	}
 
 	// --- Existing Resource Interaction ---

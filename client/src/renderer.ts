@@ -191,7 +191,7 @@ function drawEntities(startX: number, startY: number, time: number) {
         const screenX = (entity.x - startX) * TILE_SIZE;
         const screenY = (entity.y - startY) * TILE_SIZE;
 
-        const props = getEntityProperties(entity.type, entityId, myPlayerId);
+        const props = getEntityProperties(entity.type, entity, myPlayerId);
         if (props.draw) {
             props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages);
         } else if (props.asset && assetImages[props.asset]) {

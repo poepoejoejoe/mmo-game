@@ -164,11 +164,14 @@ export const entityDefs: Record<string, EntityProperties> = {
 /**
  * Helper function to safely get entity properties.
  */
-export function getEntityProperties(type: string, entityId: string, myPlayerId: string | null): EntityProperties {
-    if (entityId === myPlayerId) {
+export function getEntityProperties(type: string, entity: EntityState, myPlayerId: string | null): EntityProperties {
+    if (entity.id === myPlayerId) {
         return entityDefs['player'];
     }
-    // This is wrong, it needs to check the type
+    // For NPCs, we use their name (e.g., "slime", "rat") as the key.
+    if (type === 'npc' && entity.name && entityDefs[entity.name]) {
+        return entityDefs[entity.name];
+    }
     if (entityDefs[type]) {
         return entityDefs[type];
     }

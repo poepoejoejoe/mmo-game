@@ -191,7 +191,8 @@ function handleInteractionLogic() {
             } else {
                 const myPlayerId = state.getState().playerId;
                 if(myPlayerId) {
-                    const props = getEntityProperties(e.type, id, myPlayerId);
+                    const props = getEntityProperties(e.type, e, myPlayerId);
+                    console.log(`[Debug] Checking entity ${id} at (${tileX}, ${tileY}). Type: ${e.type}, Name: ${e.name}, Props:`, props);
                     if (props.isAttackable) {
                         attackableEntityId = id;
                     }

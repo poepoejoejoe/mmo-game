@@ -72,7 +72,7 @@ function handleMessage(event: MessageEvent) {
         case 'entity_joined': {
             const joinMsg = msg as EntityJoinedMessage;
             state.addEntity({
-                id: joinMsg.id,
+                id: joinMsg.entityId,
                 x: joinMsg.x,
                 y: joinMsg.y,
                 type: joinMsg.entityType,

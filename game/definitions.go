@@ -94,6 +94,7 @@ const (
 	ServerEventGearUpdate              ServerEventType = "gear_update"
 	ServerEventRegistered              ServerEventType = "registered"
 	ServerEventPlayerAppearanceChanged ServerEventType = "player_appearance_changed"
+	ServerEventNotification            ServerEventType = "notification"
 )
 
 // MoveDirection defines the valid move directions.

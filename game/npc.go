@@ -17,18 +17,7 @@ func InitializeNPCs() {
 }
 
 // SpawnNPC creates a new NPC of a given type at a specific location.
-func SpawnNPC(x, y int, npcType NPCType) {
-	var entityID string
-	switch npcType {
-	case NPCTypeSlime:
-		entityID = string(NPCSlimePrefix) + utils.GenerateUniqueID()
-	case NPCTypeRat:
-		entityID = string(NPCRatPrefix) + utils.GenerateUniqueID()
-	default:
-		log.Printf("Attempted to spawn unknown NPC type: %s", npcType)
-		return
-	}
-
+func SpawnNPC(entityID string, x, y int, npcType NPCType) {
 	props := NPCDefs[npcType]
 
 	pipe := rdb.Pipeline()
@@ -53,14 +42,13 @@ func SpawnNPC(x, y int, npcType NPCType) {
 		return
 	}
 
-	log.Printf("Spawned %s %s at (%d, %d)", npcType, entityID, x, y)
-
 	joinMsg := map[string]interface{}{
 		"type":       string(ServerEventEntityJoined),
 		"entityId":   entityID,
 		"x":          x,
 		"y":          y,
-		"entityType": string(npcType),
+		"entityType": string(EntityTypeNPC),
+		"name":       string(npcType),
 	}
 	PublishUpdate(joinMsg)
 }
@@ -68,93 +56,13 @@ func SpawnNPC(x, y int, npcType NPCType) {
 // spawnSlime creates a new slime entity in the world.
 func spawnSlime() {
 	entityID := string(NPCSlimePrefix) + utils.GenerateUniqueID()
-	npcType := NPCTypeSlime
-
-	// No need to check for existence with unique IDs
-
 	spawnX, spawnY := FindOpenSpawnPoint(entityID)
-	props := NPCDefs[npcType]
-
-	pipe := rdb.Pipeline()
-	// Set the NPC's core data
-	pipe.HSet(ctx, entityID,
-		"x", spawnX,
-		"y", spawnY,
-		"entityType", string(EntityTypeNPC), // Internal type
-		"npcType", string(npcType), // Specific type
-		"health", props.Health,
-		"nextActionAt", time.Now().UnixMilli(),
-		"moveCooldown", 750, // 750ms move cooldown
-	)
-	// Add it to the geospatial index
-	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
-		Name:      entityID,
-		Longitude: float64(spawnX),
-		Latitude:  float64(spawnY),
-	})
-
-	_, err := pipe.Exec(ctx)
-	if err != nil {
-		log.Printf("Failed to spawn slime %s: %v", entityID, err)
-		return
-	}
-
-	log.Printf("Spawned slime %s at (%d, %d)", entityID, spawnX, spawnY)
-
-	// Announce the new entity's arrival
-	joinMsg := map[string]interface{}{
-		"type":       string(ServerEventEntityJoined),
-		"entityId":   entityID,
-		"x":          spawnX,
-		"y":          spawnY,
-		"entityType": string(npcType), // <-- NEW: Send the specific type
-	}
-	PublishUpdate(joinMsg)
+	SpawnNPC(entityID, spawnX, spawnY, NPCTypeSlime)
 }
 
 // spawnRat creates a new rat entity in the world.
 func spawnRat() {
 	entityID := string(NPCRatPrefix) + utils.GenerateUniqueID()
-	npcType := NPCTypeRat
-
-	// No need to check for existence with unique IDs
-
 	spawnX, spawnY := FindOpenSpawnPoint(entityID)
-	props := NPCDefs[npcType]
-
-	pipe := rdb.Pipeline()
-	// Set the NPC's core data
-	pipe.HSet(ctx, entityID,
-		"x", spawnX,
-		"y", spawnY,
-		"entityType", string(EntityTypeNPC), // Internal type
-		"npcType", string(npcType), // Specific type
-		"health", props.Health,
-		"nextActionAt", time.Now().UnixMilli(),
-		"moveCooldown", 750, // 750ms move cooldown
-	)
-	// Add it to the geospatial index
-	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
-		Name:      entityID,
-		Longitude: float64(spawnX),
-		Latitude:  float64(spawnY),
-	})
-
-	_, err := pipe.Exec(ctx)
-	if err != nil {
-		log.Printf("Failed to spawn rat %s: %v", entityID, err)
-		return
-	}
-
-	log.Printf("Spawned rat %s at (%d, %d)", entityID, spawnX, spawnY)
-
-	// Announce the new entity's arrival
-	joinMsg := map[string]interface{}{
-		"type":       string(ServerEventEntityJoined),
-		"entityId":   entityID,
-		"x":          spawnX,
-		"y":          spawnY,
-		"entityType": string(npcType), // <-- NEW: Send the specific type
-	}
-	PublishUpdate(joinMsg)
+	SpawnNPC(entityID, spawnX, spawnY, NPCTypeRat)
 }

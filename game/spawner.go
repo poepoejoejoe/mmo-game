@@ -16,6 +16,10 @@ const (
 // StartSpawnerLoop begins the loop for checking and spawning NPCs.
 func StartSpawnerLoop() {
 	log.Println("Starting NPC spawner loop...")
+
+	// Run the spawner once immediately on startup
+	go checkAndSpawnNPCs()
+
 	ticker := time.NewTicker(spawnerCheckInterval)
 	defer ticker.Stop()
 
