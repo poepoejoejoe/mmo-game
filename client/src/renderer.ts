@@ -3,7 +3,7 @@ import { TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
 // --- UPDATED ---
 import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
 import { findTileGroups } from './grouper';
-import { drawWaterGroup } from './drawing';
+import { drawWaterGroup, crackImages } from './drawing';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -135,6 +135,15 @@ function drawWorld(startX: number, startY: number, viewportWidth: number, viewpo
                     const img = assetImages[assetPath];
                     if (img) {
                         ctx.drawImage(img, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+
+                    if (tileProps.isDestructible && tileProps.maxHealth > 0 && tileData.health < tileProps.maxHealth) {
+                        const damageRatio = 1 - (tileData.health / tileProps.maxHealth);
+                        const crackIndex = Math.min(Math.floor(damageRatio * crackImages.length), crackImages.length - 1);
+                        const crackImg = crackImages[crackIndex];
+                        if (crackImg) {
+                            ctx.drawImage(crackImg, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        }
                     }
                 } else {
                     ctx.fillStyle = tileProps.color;
