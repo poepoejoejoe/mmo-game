@@ -392,10 +392,8 @@ export function drawWaterGroup(ctx: CanvasRenderingContext2D, group: TileGroup, 
     ctx.restore();
 }
 
-function drawPlayerTorsoAndLimbs(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
-    const torsoWidth = pixelSize * 8;
+function drawPlayerLegs(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
     const legWidth = pixelSize * 3;
-    const armHeight = pixelSize * 5;
 
     // --- Legs (drawn first) ---
     ctx.fillStyle = colors.pantsColor;
@@ -417,7 +415,11 @@ function drawPlayerTorsoAndLimbs(ctx: CanvasRenderingContext2D, pixelSize: numbe
     ctx.fillRect(-pixelSize * 4, legY + (isMoving && walkCycle === 1 ? pixelSize : 0), legWidth, pixelSize * 4);
     // Right Leg
     ctx.fillRect(pixelSize, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4);
+}
 
+function drawPlayerArms(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
+    const torsoWidth = pixelSize * 8;
+    const armHeight = pixelSize * 5;
     // --- Arms ---
     ctx.fillStyle = colors.skinColor;
     const armY = -pixelSize * 3;
@@ -425,8 +427,10 @@ function drawPlayerTorsoAndLimbs(ctx: CanvasRenderingContext2D, pixelSize: numbe
     ctx.fillRect(-torsoWidth / 2 - pixelSize * 2, armY + (isMoving && walkCycle === 0 ? pixelSize : 0), pixelSize * 2, armHeight);
     // Right Arm
     ctx.fillRect(torsoWidth / 2, armY + (isMoving && walkCycle === 1 ? pixelSize : 0), pixelSize * 2, armHeight);
+}
 
-    // --- Torso ---
+function drawPlayerTorso(ctx: CanvasRenderingContext2D, pixelSize: number, colors: { [key: string]: string }) {
+    const torsoWidth = pixelSize * 8;
     ctx.fillStyle = colors.shirtColor;
     ctx.fillRect(-torsoWidth / 2, -pixelSize * 4, torsoWidth, pixelSize * 6);
     ctx.fillStyle = colors.shirtStripeColor;
@@ -434,7 +438,9 @@ function drawPlayerTorsoAndLimbs(ctx: CanvasRenderingContext2D, pixelSize: numbe
 }
 
 function drawPlayerFacingDown(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
-    drawPlayerTorsoAndLimbs(ctx, pixelSize, walkCycle, isMoving, colors);
+    drawPlayerLegs(ctx, pixelSize, walkCycle, isMoving, colors);
+    drawPlayerArms(ctx, pixelSize, walkCycle, isMoving, colors);
+    drawPlayerTorso(ctx, pixelSize, colors);
 
     // --- Head ---
     const headX = -pixelSize * 4;
@@ -451,8 +457,11 @@ function drawPlayerFacingDown(ctx: CanvasRenderingContext2D, pixelSize: number, 
     ctx.fillRect(headX + pixelSize * 5, headY + pixelSize * 5, pixelSize, pixelSize * 2);
 }
 
-function drawPlayerFacingUp(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
-    drawPlayerTorsoAndLimbs(ctx, pixelSize, walkCycle, isMoving, colors);
+function drawPlayerFacingUp(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }, tileSize: number) {
+    drawPlayerLegs(ctx, pixelSize, walkCycle, isMoving, colors);
+    drawPlayerTorso(ctx, pixelSize, colors);
+    drawPlayerArms(ctx, pixelSize, walkCycle, isMoving, colors);
+    drawPlayerWeapon(ctx, pixelSize, entity, time, assetImages, tileSize);
 
     // --- Head (Back) ---
     const headX = -pixelSize * 4;
@@ -516,9 +525,24 @@ function drawPlayerWeapon(ctx: CanvasRenderingContext2D, pixelSize: number, enti
     if (!weaponItem) return;
     
     const weaponDef = itemDefinitions[weaponItem.id];
-    if (!weaponDef || direction === 'up') return;
+    if (!weaponDef) return;
 
     const armY = -pixelSize * 3;
+
+    if (direction === 'up') {
+        if (weaponItem.id === 'crude_axe') {
+            const armHeight = pixelSize * 5;
+            const handleColor = '#8B4513';
+            ctx.fillStyle = handleColor;
+            const handleX = pixelSize * 4;
+            const handleY = armY + armHeight - pixelSize + (isMoving && walkCycle === 1 ? pixelSize : 0);
+            const handleWidth = pixelSize * 2;
+            const handleHeight = pixelSize * 2;
+            ctx.fillRect(handleX, handleY, handleWidth, handleHeight);
+        }
+        return;
+    }
+
     let wepX = 0;
     let wepY = 0;
 
@@ -646,7 +670,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
 
     switch (direction) {
         case 'up':
-            drawPlayerFacingUp(ctx, pixelSize, walkCycle, isMoving, colors);
+            drawPlayerFacingUp(ctx, pixelSize, walkCycle, isMoving, colors, entity, time, assetImages, tileSize);
             break;
         case 'down':
             drawPlayerFacingDown(ctx, pixelSize, walkCycle, isMoving, colors);
@@ -656,6 +680,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
             ctx.scale(-1, 1); // Flip horizontally for left
             drawPlayerWeapon(ctx, pixelSize, entity, time, assetImages, tileSize);
             drawPlayerFacingSide(ctx, pixelSize, walkCycle, isMoving, colors);
+            
             break;
         case 'right':
             drawPlayerFacingSide(ctx, pixelSize, walkCycle, isMoving, colors);
