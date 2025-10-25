@@ -134,6 +134,26 @@ func AddItemToInventory(playerID string, itemID ItemID, quantity int) (map[strin
 		return nil, err
 	}
 
+	// --- NEW: Quest Objective Check ---
+	playerQuests, err := GetPlayerQuests(playerID)
+	if err == nil {
+		buildWallQuest := playerQuests.Quests[QuestBuildAWall]
+		if buildWallQuest != nil && !buildWallQuest.IsComplete {
+			// Check wood gathering objective
+			totalWood := 0
+			for _, item := range finalInventory {
+				if item.ID == string(ItemWood) {
+					totalWood += item.Quantity
+				}
+			}
+			if totalWood >= 10 {
+				playerQuests.UpdateObjective(QuestBuildAWall, "gather_wood", playerID)
+				SavePlayerQuests(playerID, playerQuests)
+			}
+		}
+	}
+	// --- END NEW ---
+
 	return finalInventory, nil
 }
 

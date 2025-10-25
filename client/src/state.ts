@@ -7,6 +7,8 @@ const clientState: ClientState = {
     world: {},
     inventory: {},
     gear: {},
+    lastInteractionPosition: null,
+    activeNpcId: null,
 };
 
 // --- State Accessors (Getters) ---
@@ -30,6 +32,14 @@ export function getTileData(x: number, y: number): WorldTile {
 }
 
 // --- State Mutators (Setters) ---
+
+export function setLastInteractionPosition(x: number, y: number) {
+    clientState.lastInteractionPosition = { x, y };
+}
+
+export function setActiveNpcId(npcId: string | null) {
+    clientState.activeNpcId = npcId;
+}
 
 export function setInitialState(
     playerId: string, 

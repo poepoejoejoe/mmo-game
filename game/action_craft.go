@@ -127,6 +127,17 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 		return nil, nil
 	}
 
+	// --- NEW: Quest Completion Check ---
+	playerQuests, err := GetPlayerQuests(playerID)
+	if err == nil {
+		buildWallQuest := playerQuests.Quests[QuestBuildAWall]
+		if buildWallQuest != nil && !buildWallQuest.IsComplete && ItemID(craftData.Item) == ItemWoodenWall {
+			playerQuests.UpdateObjective(QuestBuildAWall, "craft_wall", playerID)
+			SavePlayerQuests(playerID, playerQuests)
+		}
+	}
+	// --- END NEW ---
+
 	inventoryUpdateMsg := &models.InventoryUpdateMessage{
 		Type:      string(ServerEventInventoryUpdate),
 		Inventory: finalInventory,

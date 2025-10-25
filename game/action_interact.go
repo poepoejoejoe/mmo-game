@@ -21,50 +21,66 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 
 	currentX, currentY := GetEntityPosition(playerData)
 
-	// --- NEW: Handle Item Pickup ---
+	// --- NEW: Handle Entity Interaction ---
 	if interactData.EntityID != "" {
 		targetData, err := rdb.HGetAll(ctx, interactData.EntityID).Result()
-		if err != nil || len(targetData) == 0 || targetData["entityType"] != string(EntityTypeItem) {
+		if err != nil || len(targetData) == 0 {
 			return nil, nil // Invalid target
 		}
 
-		targetX, _ := strconv.Atoi(targetData["x"])
-		targetY, _ := strconv.Atoi(targetData["y"])
+		entityType := targetData["entityType"]
 
-		if !IsWithinPickupRange(currentX, currentY, targetX, targetY) {
-			return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
+		// --- NPC Interaction ---
+		if entityType == string(EntityTypeNPC) {
+			npcType := NPCType(targetData["npcType"])
+			if npcType == NPCTypeWizard {
+				dialog := GetWizardDialog(playerID)
+				dialogJSON, _ := json.Marshal(dialog)
+				sendDirectMessage(playerID, dialogJSON)
+			}
+			return nil, nil // End interaction after talking
 		}
 
-		owner := targetData["owner"]
-		publicAt, _ := strconv.ParseInt(targetData["publicAt"], 10, 64)
+		// --- Item Pickup ---
+		if entityType == string(EntityTypeItem) {
+			targetX, _ := strconv.Atoi(targetData["x"])
+			targetY, _ := strconv.Atoi(targetData["y"])
 
-		isPublic := owner == "" || (publicAt > 0 && time.Now().UnixMilli() >= publicAt)
-		if owner == playerID || isPublic {
-			itemID := ItemID(targetData["itemId"])
-			quantity, _ := strconv.Atoi(targetData["quantity"])
-
-			newInventory, err := AddItemToInventory(playerID, itemID, quantity)
-			if err != nil {
-				log.Printf("could not add item to inventory: %v", err)
-				return nil, nil
+			if !IsWithinPickupRange(currentX, currentY, targetX, targetY) {
+				return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
 			}
 
-			// Remove item from world
-			CleanupEntity(interactData.EntityID, targetData)
+			owner := targetData["owner"]
+			publicAt, _ := strconv.ParseInt(targetData["publicAt"], 10, 64)
 
-			inventoryUpdateMsg := &models.InventoryUpdateMessage{
-				Type:      string(ServerEventInventoryUpdate),
-				Inventory: newInventory,
+			isPublic := owner == "" || (publicAt > 0 && time.Now().UnixMilli() >= publicAt)
+			if owner == playerID || isPublic {
+				itemID := ItemID(targetData["itemId"])
+				quantity, _ := strconv.Atoi(targetData["quantity"])
+
+				newInventory, err := AddItemToInventory(playerID, itemID, quantity)
+				if err != nil {
+					log.Printf("could not add item to inventory: %v", err)
+					return nil, nil
+				}
+
+				// Remove item from world
+				CleanupEntity(interactData.EntityID, targetData)
+
+				inventoryUpdateMsg := &models.InventoryUpdateMessage{
+					Type:      string(ServerEventInventoryUpdate),
+					Inventory: newInventory,
+				}
+				rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+				return nil, inventoryUpdateMsg
+			} else {
+				// Player cannot pick up the item, send a notification.
+				notification := models.NotificationMessage{
+					Type:    string(ServerEventNotification),
+					Message: "You cannot pick up this item yet.",
+				}
+				PublishPrivately(playerID, notification)
 			}
-			rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
-			return nil, inventoryUpdateMsg
-		} else {
-			// Player cannot pick up the item, send a notification.
-			notification := models.NotificationMessage{
-				Type:    string(ServerEventNotification),
-				Message: "You cannot pick up this item yet.",
-			}
-			PublishPrivately(playerID, notification)
 		}
 	}
 
@@ -223,6 +239,17 @@ func handlePlaceWoodenWall(playerID string, currentX, currentY, targetX, targetY
 		Tile: newWallTile,
 	}
 	PublishUpdate(worldUpdateMsg)
+
+	// --- NEW: Quest Completion Check ---
+	playerQuests, err := GetPlayerQuests(playerID)
+	if err == nil {
+		buildWallQuest := playerQuests.Quests[QuestBuildAWall]
+		if buildWallQuest != nil && !buildWallQuest.IsComplete {
+			playerQuests.UpdateObjective(QuestBuildAWall, "place_wall", playerID)
+			SavePlayerQuests(playerID, playerQuests)
+		}
+	}
+	// --- END NEW ---
 
 	inventoryUpdateMsg := getInventoryUpdateMessage(inventoryKey)
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())

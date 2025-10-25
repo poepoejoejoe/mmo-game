@@ -1,6 +1,6 @@
 import * as state from './state';
 import * as network from './network';
-import { setBuildModeActive, startCooldown, gearView, inventoryView, craftingView } from './ui';
+import { setBuildModeActive, startCooldown, gearView, inventoryView, craftingView, hideDialog } from './ui';
 import { ACTION_COOLDOWN, TILE_SIZE, WATER_PENALTY } from './constants';
 import { getEntityProperties, getTileProperties } from './definitions';
 
@@ -39,6 +39,19 @@ function sendMoveCommand(dx: number, dy: number) {
     };
     const dirKey = `${dx},${dy}`;
     network.send({ type: 'move', payload: { direction: directionMap[dirKey] } });
+
+    // --- NEW: Check distance to active NPC ---
+    const s = state.getState();
+    if (s.activeNpcId) {
+        const npc = s.entities[s.activeNpcId];
+        const me = state.getMyEntity();
+        if (npc && me) {
+            const distance = Math.max(Math.abs(me.x - npc.x), Math.abs(me.y - npc.y));
+            if (distance > 3) {
+                hideDialog();
+            }
+        }
+    }
 }
 
 
@@ -182,6 +195,7 @@ function handleInteractionLogic() {
     const entities = state.getState().entities;
     let attackableEntityId: string | undefined;
     let itemOnTileId: string | undefined;
+    let friendlyNpcId: string | undefined;
 
     for (const id in entities) {
         const e = entities[id];
@@ -190,18 +204,36 @@ function handleInteractionLogic() {
                 itemOnTileId = id;
             } else {
                 const myPlayerId = state.getState().playerId;
-                if(myPlayerId) {
+                if(myPlayerId && id !== myPlayerId) {
                     const props = getEntityProperties(e.type, e, myPlayerId);
                     console.log(`[Debug] Checking entity ${id} at (${tileX}, ${tileY}). Type: ${e.type}, Name: ${e.name}, Props:`, props);
                     if (props.isAttackable) {
                         attackableEntityId = id;
+                    } else if (e.type === 'npc') {
+                        friendlyNpcId = id;
                     }
                 }
             }
         }
     }
     
-    // Priority 1: Attack
+    // Priority 1: Interact with friendly NPC
+    if (friendlyNpcId) {
+        if (Math.max(Math.abs(me.x - tileX), Math.abs(me.y - tileY)) > 2) return; // a bit more range for talking
+        state.setLastInteractionPosition(lastMouseEvent!.clientX, lastMouseEvent!.clientY);
+        state.setActiveNpcId(friendlyNpcId);
+        network.send({ type: 'interact', payload: { entityId: friendlyNpcId } });
+
+        // Stop the continuous interaction when a dialog is initiated.
+        if (interactionInterval) {
+            clearInterval(interactionInterval);
+            interactionInterval = null;
+        }
+        
+        return;
+    }
+
+    // Priority 2: Attack
     if (attackableEntityId) {
         if (Math.abs(me.x - tileX) + Math.abs(me.y - tileY) !== 1) return;
         startActionCooldown(ACTION_COOLDOWN);
@@ -209,7 +241,7 @@ function handleInteractionLogic() {
         return;
     }
 
-    // Priority 2: Pick up item
+    // Priority 3: Pick up item
     if (itemOnTileId) {
         if (Math.max(Math.abs(me.x - tileX), Math.abs(me.y - tileY)) > 1) return;
         startActionCooldown(ACTION_COOLDOWN);
@@ -217,7 +249,7 @@ function handleInteractionLogic() {
         return;
     }
 
-    // Priority 3: Gather resource
+    // Priority 4: Gather resource
     const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
     if (targetTileProps.isGatherable || targetTileProps.isDestructible) {
         if (Math.abs(me.x - tileX) + Math.abs(me.y - tileY) !== 1) return;
@@ -329,4 +361,5 @@ export function initializeInput() {
         }
     });
 }
+
 

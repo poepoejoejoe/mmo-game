@@ -483,6 +483,67 @@ body {
     font-size: 0.85em;
 }
 
+/* --- Dialog Styles --- */
+#dialog-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    z-index: 99;
+}
+
+#dialog-overlay.active {
+    display: block;
+}
+
+.dialog-popup {
+    display: none;
+    position: absolute;
+    background-color: #2a2a2a;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 400px;
+    border-radius: 10px;
+    z-index: 100;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    transform: translate(-50%, -110%); /* Position above the click point */
+}
+
+.dialog-popup.active {
+    display: block;
+}
+
+#dialog-text {
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+#dialog-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#dialog-options button {
+    padding: 10px 15px;
+    border: 1px solid #7f8c8d;
+    background-color: #34495e;
+    color: #ecf0f1;
+    border-radius: 3px;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+
+#dialog-options button:hover {
+    background-color: #4a627a;
+}
+
+
 /* --- Modal Styles --- */
 .modal {
     display: none;

@@ -189,6 +189,8 @@ func (c *Client) readPump() {
 				game.ProcessEat(c.id, msg.Payload)
 			case game.ClientEventSendChat:
 				game.ProcessSendChat(c.id, msg.Payload)
+			case game.ClientEventDialogAction:
+				game.ProcessDialogAction(c.id, msg.Payload)
 			}
 		}
 	}

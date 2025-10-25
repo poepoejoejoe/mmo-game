@@ -21,13 +21,14 @@ func HandlePlayerDeath(playerID string) {
 	} else {
 		currentX, _ := strconv.Atoi(playerData["x"])
 		currentY, _ := strconv.Atoi(playerData["y"])
-		currentTileKey := string(RedisKeyLockTile) + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
-		// Release the tile lock
-		releaseLockScript.Run(ctx, rdb, []string{currentTileKey}, playerID)
+		UnlockTileForEntity(playerID, currentX, currentY)
 	}
 
 	// Find a new spawn point for the player
 	spawnX, spawnY := FindOpenSpawnPoint(playerID)
+
+	// Lock the new spawn tile
+	LockTileForEntity(playerID, spawnX, spawnY)
 
 	// Reset health and set new position in Redis
 	pipe := rdb.Pipeline()

@@ -63,17 +63,18 @@ type EquippableProperties struct {
 type ClientEventType string
 
 const (
-	ClientEventMove      ClientEventType = "move"
-	ClientEventInteract  ClientEventType = "interact"
-	ClientEventEquip     ClientEventType = "equip"
-	ClientEventUnequip   ClientEventType = "unequip"
-	ClientEventCraft     ClientEventType = "craft"
-	ClientEventPlaceItem ClientEventType = "place_item"
-	ClientEventAttack    ClientEventType = "attack"
-	ClientEventEat       ClientEventType = "eat"
-	ClientEventSendChat  ClientEventType = "send_chat"
-	ClientEventLogin     ClientEventType = "login"
-	ClientEventRegister  ClientEventType = "register"
+	ClientEventMove         ClientEventType = "move"
+	ClientEventInteract     ClientEventType = "interact"
+	ClientEventEquip        ClientEventType = "equip"
+	ClientEventUnequip      ClientEventType = "unequip"
+	ClientEventCraft        ClientEventType = "craft"
+	ClientEventPlaceItem    ClientEventType = "place_item"
+	ClientEventAttack       ClientEventType = "attack"
+	ClientEventEat          ClientEventType = "eat"
+	ClientEventSendChat     ClientEventType = "send_chat"
+	ClientEventLogin        ClientEventType = "login"
+	ClientEventRegister     ClientEventType = "register"
+	ClientEventDialogAction ClientEventType = "dialog_action"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -95,6 +96,7 @@ const (
 	ServerEventRegistered              ServerEventType = "registered"
 	ServerEventPlayerAppearanceChanged ServerEventType = "player_appearance_changed"
 	ServerEventNotification            ServerEventType = "notification"
+	ServerEventShowDialog              ServerEventType = "show_dialog"
 )
 
 // MoveDirection defines the valid move directions.

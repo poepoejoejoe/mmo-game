@@ -43,11 +43,8 @@ func ProcessMove(entityID string, direction MoveDirection) *models.StateCorrecti
 		return nil // Ran into a wall
 	}
 
-	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
-	// Use RedisKey constant
-	targetTileKey := string(RedisKeyLockTile) + targetCoordKey
 	// Lock the tile for the entity
-	wasSet, err := rdb.SetNX(ctx, targetTileKey, entityID, 0).Result()
+	wasSet, err := LockTileForEntity(entityID, targetX, targetY)
 	if err != nil || !wasSet {
 		// Tile is locked, send state correction
 		// Use ServerEventType constant
@@ -84,16 +81,14 @@ func ProcessMove(entityID string, direction MoveDirection) *models.StateCorrecti
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {
-		log.Printf("Error updating entity state, rolling back lock for tile %s", targetCoordKey)
-		releaseLockScript.Run(ctx, rdb, []string{targetTileKey}, entityID)
+		log.Printf("Error updating entity state, rolling back lock for tile %d,%d", targetX, targetY)
+		UnlockTileForEntity(entityID, targetX, targetY)
 		// Use ServerEventType constant
 		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}
 	}
 
-	// Use RedisKey constant
-	currentTileKey := string(RedisKeyLockTile) + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
 	// Release the lock using the entity's ID
-	releaseLockScript.Run(ctx, rdb, []string{currentTileKey}, entityID)
+	UnlockTileForEntity(entityID, currentX, currentY)
 
 	// --- UPDATED MESSAGE ---
 	// Use new ServerEventType constant and generic "entityId"

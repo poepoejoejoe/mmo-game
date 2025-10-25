@@ -45,6 +45,15 @@ let chatMessagesEl: HTMLElement;
 let chatButton: HTMLButtonElement;
 let chatContainer: HTMLElement;
 
+// --- NEW: Dialog UI Elements ---
+let dialogModal: HTMLElement;
+let dialogNpcName: HTMLElement;
+let dialogText: HTMLElement;
+let dialogOptions: HTMLElement;
+let dialogCloseButton: HTMLElement;
+let dialogOverlay: HTMLElement;
+
+
 let currentPanel: 'inventory' | 'crafting' | 'gear' | null = 'inventory';
 let isChatOpen = true;
 
@@ -76,6 +85,14 @@ export function initializeUI() {
     chatButton = document.getElementById('chat-button') as HTMLButtonElement;
     chatContainer = document.getElementById('chat-container')!;
 
+    // Dialog
+    dialogModal = document.getElementById('dialog-modal')!;
+    dialogNpcName = document.getElementById('dialog-npc-name')!;
+    dialogText = document.getElementById('dialog-text')!;
+    dialogOptions = document.getElementById('dialog-options')!;
+    dialogCloseButton = document.getElementById('dialog-close-button')!;
+    dialogOverlay = document.getElementById('dialog-overlay')!;
+
     registerButton.addEventListener('click', () => {
         const name = nameInput.value.trim();
         if (name) {
@@ -92,6 +109,8 @@ export function initializeUI() {
     gearButton.addEventListener('click', () => toggleInfoPanel('gear'));
     helpButton.addEventListener('click', () => toggleModal('help-modal', true));
     helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
+    dialogCloseButton.addEventListener('click', hideDialog);
+    dialogOverlay.addEventListener('click', hideDialog);
     chatButton.addEventListener('click', toggleChat);
     
     // Set initial state on load
@@ -164,6 +183,48 @@ function toggleModal(modalId: string, show: boolean) {
             modal.classList.remove('active');
         }
     }
+}
+
+export function showDialog(npcName: string, text: string, options: { text: string, action: string }[], position: {x: number, y: number} | null) {
+    dialogNpcName.textContent = npcName;
+    dialogText.innerHTML = `<p>${text.replace(/\n/g, '</p><p>')}</p>`; // Support newlines
+    dialogOptions.innerHTML = '';
+
+    options.forEach(option => {
+        const button = document.createElement('button');
+        button.textContent = option.text;
+        button.dataset.action = option.action;
+        button.addEventListener('click', () => {
+            if (option.action !== 'close_dialog') {
+                send({
+                    type: 'dialog_action',
+                    payload: { action: option.action }
+                });
+            }
+            hideDialog(); // Close dialog after choosing
+        });
+        dialogOptions.appendChild(button);
+    });
+
+    if (position) {
+        dialogModal.style.left = `${position.x}px`;
+        dialogModal.style.top = `${position.y}px`;
+        dialogModal.style.transform = 'translate(-50%, -110%)'; // Reset transform if it was changed
+    } else {
+        // Fallback to center if no position is given
+        dialogModal.style.left = '50%';
+        dialogModal.style.top = '50%';
+        dialogModal.style.transform = 'translate(-50%, -50%)';
+    }
+
+    dialogOverlay.classList.add('active');
+    toggleModal('dialog-modal', true);
+}
+
+export function hideDialog() {
+    dialogOverlay.classList.remove('active');
+    toggleModal('dialog-modal', false);
+    state.setActiveNpcId(null);
 }
 
 

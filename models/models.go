@@ -160,3 +160,19 @@ type NotificationMessage struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
 }
+
+type DialogMessage struct {
+	Type    string         `json:"type"`
+	NpcName string         `json:"npcName"`
+	Text    string         `json:"text"`
+	Options []DialogOption `json:"options"`
+}
+
+type DialogOption struct {
+	Text   string `json:"text"`
+	Action string `json:"action"`
+}
+
+type DialogActionPayload struct {
+	Action string `json:"action"`
+}

@@ -291,10 +291,12 @@ func FindOpenSpawnPoint(entityID string) (int, int) {
 	for i := 0; i < (WorldSize * 2); i++ {
 		for j := 0; j < (i/2 + 1); j++ {
 			tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
-			wasSet, _ := rdb.SetNX(ctx, tileKey, entityID, 0).Result()
-			if wasSet {
+			// Check if the tile is already locked.
+			lockExists, _ := rdb.Exists(ctx, tileKey).Result()
+			if lockExists == 0 {
 				tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), strconv.Itoa(x)+","+strconv.Itoa(y)).Result()
 				if err != nil {
+					// This tile doesn't exist in the world data, skip.
 					continue
 				}
 				var tile models.WorldTile
@@ -302,6 +304,7 @@ func FindOpenSpawnPoint(entityID string) (int, int) {
 				props := TileDefs[TileType(tile.Type)]
 				if !props.IsCollidable {
 					log.Printf("Found open spawn for %s at (%d, %d)", entityID, x, y)
+					// Don't lock it here, just return the coordinates.
 					return x, y
 				}
 			}
@@ -316,6 +319,16 @@ func FindOpenSpawnPoint(entityID string) (int, int) {
 func InitializePlayer(playerID string) *models.InitialStateMessage {
 	log.Printf("Initializing player %s.", playerID)
 	spawnX, spawnY := FindOpenSpawnPoint(playerID)
+
+	// Lock the spawn tile for the player
+	locked, err := LockTileForEntity(playerID, spawnX, spawnY)
+	if err != nil || !locked {
+		log.Printf("Failed to lock spawn tile for player %s at %d,%d. Retrying.", playerID, spawnX, spawnY)
+		// Simple retry logic, could be improved
+		time.Sleep(100 * time.Millisecond)
+		return InitializePlayer(playerID)
+	}
+
 	inventoryKey := string(RedisKeyPlayerInventory) + playerID
 	gearKey := string(RedisKeyPlayerGear) + playerID
 
@@ -373,7 +386,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	pipe.HSet(ctx, gearKey, map[string]interface{}{"weapon-slot": ""})
 	// --- END NEW ---
 
-	_, err := pipe.Exec(ctx)
+	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Println("Error initializing player in Redis:", err)
 		return nil
@@ -408,8 +421,9 @@ func CleanupPlayer(playerID string) {
 	} else {
 		if xStr, ok := playerData["x"]; ok {
 			if yStr, ok := playerData["y"]; ok {
-				tileKey := string(RedisKeyLockTile) + xStr + "," + yStr
-				rdb.Del(ctx, tileKey)
+				x, _ := strconv.Atoi(xStr)
+				y, _ := strconv.Atoi(yStr)
+				UnlockTileForEntity(playerID, x, y)
 				log.Printf("Removed tile lock for player %s at %s,%s", playerID, xStr, yStr)
 			}
 		}

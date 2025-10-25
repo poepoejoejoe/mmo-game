@@ -18,6 +18,13 @@ func InitializeNPCs() {
 
 // SpawnNPC creates a new NPC of a given type at a specific location.
 func SpawnNPC(entityID string, x, y int, npcType NPCType) {
+	// Lock the tile for the NPC before creating it
+	locked, err := LockTileForEntity(entityID, x, y)
+	if err != nil || !locked {
+		log.Printf("Failed to lock spawn tile for NPC %s at %d,%d. Aborting spawn.", entityID, x, y)
+		return
+	}
+
 	props := NPCDefs[npcType]
 
 	pipe := rdb.Pipeline()
@@ -36,9 +43,11 @@ func SpawnNPC(entityID string, x, y int, npcType NPCType) {
 		Latitude:  float64(y),
 	})
 
-	_, err := pipe.Exec(ctx)
+	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Failed to spawn %s %s: %v", npcType, entityID, err)
+		// If spawning fails, unlock the tile
+		UnlockTileForEntity(entityID, x, y)
 		return
 	}
 

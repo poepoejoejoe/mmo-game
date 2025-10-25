@@ -37,6 +37,8 @@ export interface ClientState {
     world: Record<string, WorldTile>;
     inventory: Record<string, InventoryItem>; // e.g. "slot_0": { id: "wood", quantity: 50 }
     gear: Record<string, InventoryItem>; // e.g. "weapon-slot": { id: "crude_axe", quantity: 1 }
+    lastInteractionPosition: { x: number, y: number } | null;
+    activeNpcId: string | null;
 }
 
 // --- WebSocket Message Types ---
@@ -171,4 +173,16 @@ export interface RegisteredMessage extends ServerMessage {
     secretKey: string;
     playerId: string;
     name: string;
+}
+
+export interface DialogMessage extends ServerMessage {
+    type: 'show_dialog';
+    npcName: string;
+    text: string;
+    options: DialogOption[];
+}
+
+export interface DialogOption {
+    text: string;
+    action: string;
 }

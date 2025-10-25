@@ -14,10 +14,18 @@ import {
     ServerMessage, 
     StateCorrectionMessage, 
     WorldUpdateMessage,
-    EntityAttackMessage
+    EntityAttackMessage,
+    DialogMessage
 } from './types';
 import * as state from './state';
-import { addChatMessage, promptForRegistration, updateInventoryUI, updatePlayerHealth, updatePlayerNameDisplay } from './ui';
+import { 
+    addChatMessage, 
+    promptForRegistration, 
+    showDialog, 
+    updateInventoryUI, 
+    updatePlayerHealth, 
+    updatePlayerNameDisplay 
+} from './ui';
 import { showDamageIndicator } from './renderer';
 
 let ws: WebSocket;
@@ -55,6 +63,12 @@ function handleMessage(event: MessageEvent) {
                 promptForRegistration();
             }
             onStateUpdate();
+            break;
+        }
+        case 'show_dialog': {
+            const dialogMsg = msg as DialogMessage;
+            const pos = state.getState().lastInteractionPosition;
+            showDialog(dialogMsg.npcName, dialogMsg.text, dialogMsg.options, pos);
             break;
         }
         case 'state_correction': {

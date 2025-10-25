@@ -16,9 +16,7 @@ func CleanupEntity(entityID string, entityData map[string]string) {
 	if entityData != nil {
 		currentX, _ := strconv.Atoi(entityData["x"])
 		currentY, _ := strconv.Atoi(entityData["y"])
-		currentTileKey := string(RedisKeyLockTile) + strconv.Itoa(currentX) + "," + strconv.Itoa(currentY)
-		// Release the tile lock
-		releaseLockScript.Run(ctx, rdb, []string{currentTileKey}, entityID)
+		UnlockTileForEntity(entityID, currentX, currentY)
 	}
 
 	// Remove the entity's main hash
