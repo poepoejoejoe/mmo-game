@@ -229,10 +229,12 @@ const (
 )
 
 type QuestObjective struct {
-	Type        ObjectiveType `json:"type"`
-	Target      string        `json:"target"`
-	Description string        `json:"description"`
-	Completed   bool          `json:"completed"`
+	Type          ObjectiveType `json:"type"`
+	Target        string        `json:"target"`
+	RequiredCount int           `json:"requiredCount,omitempty"`
+	Count         int           `json:"count,omitempty"`
+	Description   string        `json:"description"`
+	Completed     bool          `json:"completed"`
 }
 
 type Quest struct {

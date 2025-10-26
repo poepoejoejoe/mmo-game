@@ -11,7 +11,7 @@ var QuestDefs = map[models.QuestID]models.Quest{
 		ID:    models.QuestBuildAWall,
 		Title: "A Sturdy Defense",
 		Objectives: []models.QuestObjective{
-			{Type: models.ObjectiveGather, Target: string(ItemWood), Description: "Gather 10 wood"},
+			{Type: models.ObjectiveGather, Target: string(ItemWood), Description: "Gather 10 wood", RequiredCount: 10},
 			{Type: models.ObjectiveCraft, Target: string(ItemWoodenWall), Description: "Craft a Wooden Wall"},
 			{Type: models.ObjectivePlace, Target: string(ItemWoodenWall), Description: "Place the Wooden Wall"},
 		},
@@ -95,68 +95,6 @@ func StartQuest(pq *models.PlayerQuests, questID models.QuestID) {
 	}
 }
 
-func UpdateObjective(pq *models.PlayerQuests, questID models.QuestID, objectiveID string, playerID string) {
-	if quest, ok := pq.Quests[questID]; ok && !quest.IsComplete {
-		objectiveCompleted := false
-		for i, obj := range quest.Objectives {
-			// This is a temporary way to keep the old system working.
-			// Ideally, all objective checks would move to the new data-driven system.
-			// We'll use the description as a pseudo-ID for now.
-			var pseudoID string
-			switch obj.Type {
-			case models.ObjectiveCraft:
-				if obj.Target == string(ItemWoodenWall) {
-					pseudoID = "craft_wall"
-				}
-			case models.ObjectivePlace:
-				if obj.Target == string(ItemWoodenWall) {
-					pseudoID = "place_wall"
-				}
-			}
-
-			if pseudoID == objectiveID && !obj.Completed {
-				quest.Objectives[i].Completed = true
-				objectiveCompleted = true
-				log.Printf("Objective '%s' for quest '%s' completed for player %s.", objectiveID, questID, playerID)
-				break
-			}
-		}
-
-		if objectiveCompleted {
-			// Check if all objectives are now complete
-			allComplete := true
-			for _, obj := range quest.Objectives {
-				if !obj.Completed {
-					allComplete = false
-					break
-				}
-			}
-
-			if allComplete {
-				quest.IsComplete = true
-				log.Printf("Quest '%s' completed for player %s.", questID, playerID)
-
-				// Send a notification to the player
-				notification := models.NotificationMessage{
-					Type:    string(ServerEventNotification),
-					Message: "Quest Complete: " + quest.Title,
-				}
-				notificationJSON, _ := json.Marshal(notification)
-				sendDirectMessage(playerID, notificationJSON)
-
-				// Also update the NPC's quest state indicator for the player
-				npcUpdateMsg := models.NpcQuestStateUpdateMessage{
-					Type:       string(ServerEventNpcQuestStateUpdate),
-					NpcName:    "wizard", // For now, this is the only quest giver
-					QuestState: "turn-in-ready",
-				}
-				npcUpdateJSON, _ := json.Marshal(npcUpdateMsg)
-				sendDirectMessage(playerID, npcUpdateJSON)
-			}
-		}
-	}
-}
-
 func MarkQuestAsCompleted(pq *models.PlayerQuests, questID models.QuestID) {
 	delete(pq.Quests, questID)
 	if pq.CompletedQuests == nil {
@@ -181,9 +119,17 @@ func CheckObjectives(playerID string, objectiveType models.ObjectiveType, target
 		objectiveCompleted := false
 		for i, obj := range quest.Objectives {
 			if !obj.Completed && obj.Type == objectiveType && obj.Target == target {
-				quest.Objectives[i].Completed = true
-				objectiveCompleted = true
-				log.Printf("Objective '%s %s' for quest '%s' completed for player %s.", objectiveType, target, questID, playerID)
+				if obj.RequiredCount > 0 {
+					quest.Objectives[i].Count++
+					if quest.Objectives[i].Count >= obj.RequiredCount {
+						quest.Objectives[i].Completed = true
+						objectiveCompleted = true
+					}
+				} else {
+					quest.Objectives[i].Completed = true
+					objectiveCompleted = true
+				}
+				log.Printf("Objective '%s %s' for quest '%s' updated for player %s. Progress: %d/%d", objectiveType, target, questID, playerID, quest.Objectives[i].Count, obj.RequiredCount)
 			}
 		}
 
