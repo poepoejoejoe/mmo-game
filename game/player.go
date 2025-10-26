@@ -263,14 +263,21 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		quests = &models.PlayerQuests{Quests: make(map[models.QuestID]*models.Quest)}
 	}
 
+	experience := make(map[models.Skill]float64)
+	experienceJSON, err := rdb.HGet(ctx, playerID, "experience").Result()
+	if err == nil {
+		json.Unmarshal([]byte(experienceJSON), &experience)
+	}
+
 	initialState := &models.InitialStateMessage{
-		Type:      string(ServerEventInitialState),
-		PlayerId:  playerID,
-		Entities:  allEntitiesState,
-		World:     worldDataTyped,
-		Inventory: inventoryDataTyped,
-		Gear:      gearDataTyped,
-		Quests:    quests.Quests,
+		Type:       string(ServerEventInitialState),
+		PlayerId:   playerID,
+		Entities:   allEntitiesState,
+		World:      worldDataTyped,
+		Inventory:  inventoryDataTyped,
+		Gear:       gearDataTyped,
+		Quests:     quests.Quests,
+		Experience: experience,
 	}
 
 	playerHealth, _ := strconv.Atoi(playerData["health"])
@@ -412,6 +419,16 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	pipe.HSet(ctx, playerID, "quests", questsJSON)
 
 	// --- END NEW ---
+	experience := make(map[models.Skill]float64)
+	experience[models.SkillWoodcutting] = 0
+	experience[models.SkillMining] = 0
+	experience[models.SkillSmithing] = 0
+	experience[models.SkillCooking] = 0
+	experience[models.SkillConstruction] = 0
+	experience[models.SkillAttack] = 0
+	experience[models.SkillDefense] = 0
+	experienceJSON, _ := json.Marshal(experience)
+	pipe.HSet(ctx, playerID, "experience", experienceJSON)
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {
@@ -466,4 +483,41 @@ func CleanupPlayer(playerID string) {
 
 	// Remove the entity from the geospatial index, but do NOT delete their data.
 	rdb.ZRem(ctx, string(RedisKeyZone0Positions), playerID)
+}
+
+func AddExperience(playerID string, skill models.Skill, amount float64) {
+	pipe := rdb.Pipeline()
+
+	experienceJSON, err := rdb.HGet(ctx, playerID, "experience").Result()
+	if err != nil && err != redis.Nil {
+		log.Printf("Error getting experience for player %s: %v", playerID, err)
+		return
+	}
+
+	experience := make(map[models.Skill]float64)
+	if err == nil {
+		json.Unmarshal([]byte(experienceJSON), &experience)
+	}
+
+	experience[skill] += amount
+	newExperienceJSON, _ := json.Marshal(experience)
+	pipe.HSet(ctx, playerID, "experience", newExperienceJSON)
+
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		log.Printf("Error setting experience for player %s: %v", playerID, err)
+		return
+	}
+	playerData, _ := rdb.HGetAll(ctx, playerID).Result()
+	playerHealth, _ := strconv.Atoi(playerData["health"])
+	statsUpdateMsg := models.PlayerStatsUpdateMessage{
+		Type:       string(ServerEventPlayerStatsUpdate),
+		Health:     playerHealth,
+		MaxHealth:  PlayerDefs.MaxHealth,
+		Experience: experience,
+	}
+	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
+	if sendDirectMessage != nil {
+		sendDirectMessage(playerID, statsUpdateJSON)
+	}
 }

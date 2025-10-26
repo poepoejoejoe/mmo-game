@@ -57,7 +57,7 @@ function handleMessage(event: MessageEvent) {
         case 'initial_state': {
             const stateMsg = msg as InitialStateMessage;
             // state.setInitialState now receives the full entity map
-            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory, stateMsg.gear, stateMsg.quests);
+            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory, stateMsg.gear, stateMsg.quests, stateMsg.experience);
             updateInventoryUI();
             const myEntity = state.getMyEntity();
             if (myEntity && myEntity.name) {
@@ -179,6 +179,10 @@ function handleMessage(event: MessageEvent) {
         case 'player_stats_update': {
             const statsMsg = msg as PlayerStatsUpdateMessage;
             updatePlayerHealth(statsMsg.health, statsMsg.maxHealth);
+            if (statsMsg.experience) {
+                state.setExperience(statsMsg.experience);
+            }
+            updateInventoryUI(); // This will trigger an experience UI update
             onStateUpdate();
             break;
         }

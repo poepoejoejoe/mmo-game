@@ -52,6 +52,7 @@ export interface ClientState {
     inventory: Record<string, InventoryItem>; // e.g. "slot_0": { id: "wood", quantity: 50 }
     gear: Record<string, InventoryItem>; // e.g. "weapon-slot": { id: "crude_axe", quantity: 1 }
     quests: Record<string, Quest>;
+    experience: Record<string, number>;
     lastInteractionPosition: { x: number, y: number } | null;
     activeNpcId: string | null;
 }
@@ -77,6 +78,7 @@ export interface InitialStateMessage extends ServerMessage {
     inventory: Record<string, InventoryItem>;
     gear: Record<string, InventoryItem>;
     quests: Record<string, Quest>;
+    experience: Record<string, number>;
 }
 
 export interface QuestUpdateMessage extends ServerMessage {
@@ -174,6 +176,7 @@ export interface PlayerStatsUpdateMessage extends ServerMessage {
     type: 'player_stats_update';
     health: number;
     maxHealth: number;
+    experience: Record<string, number>;
 }
 
 export interface PlayerChatMessage extends ServerMessage {

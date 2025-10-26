@@ -19,6 +19,7 @@
 - quest indicator when quest is avail. quest complete turn in indicator?
 
 ### Current
+- need to fix data driven design quest check in action_interact.go
 - xp? 
 - echos?
 - when you gather resource show icon over inventory. When you equip gear show icon over gear button. When you unequip show icon over inventory
@@ -119,3 +120,77 @@ This phase is about lowering the barrier to entry and creating systems that gene
 
 - **Action:** This is the key to your architecture. Refine your Go backend so that you can run multiple Go server instances, with each instance responsible for one or more zones (e.g., Server 1 handles Zone 0, Server 2 handles Zone 1). When a player walks from Zone 0 to Zone 1, their WebSocket connection is seamlessly handed off from Server 1 to Server 2.
 - **Why:** This is how you horizontally scale to an "insane" number of players. Your Redis database acts as the single source of truth, and you can just spin up more Go instances as your population grows.
+
+---
+
+## Experience and Talent System
+
+The progression system will be based on earning talent points to unlock specific bonuses, rather than having levels directly gate content.
+
+### Earning XP:
+Performing an action (e.g., chopping a tree, crafting an item) grants XP in the relevant skill.
+
+### Gaining Talent Points:
+When a skill levels up, the player earns one Talent Point for that skill's specific talent tree.
+
+### Spending Talent Points:
+Players can spend these points to unlock talents that provide passive bonuses. This allows for customized character progression.
+
+### Proposed Skills
+
+#### Gathering Skills
+
+- **Woodcutting:** Chop trees for logs.
+- **Mining:** Mine ores from rocks.
+
+#### Artisan Skills
+
+- **Smithing:** Smelt ores and create metal gear.
+- **Cooking:** Cook food for healing and buffs.
+- **Construction:** Build structures.
+
+#### Combat Skills
+
+- **Attack:** Melee damage.
+- **Defense:** Damage reduction.
+
+### Example Talents
+
+Below are some examples of what these talents could look like for each skill.
+
+#### Gathering Skills
+
+- **Woodcutting:**
+    - **Tough Bark:** Increases your chance of finding rare wood types from any tree.
+    - **Lumberjack's Vigor:** Grants a chance to gather extra wood from each tree.
+    - **Axe Specialization:** Increases chopping speed with all axes.
+- **Mining:**
+    - **Rich Veins:** Increases your chance of finding additional ore.
+    - **Geologist's Luck:** Grants a chance to find valuable gems while mining.
+    - **Efficient Swinging:** Increases mining speed with all pickaxes.
+
+#### Artisan Skills
+
+- **Smithing:**
+    - **Reinforced Forging:** Improves the durability of weapons and armor you smith.
+    - **Master Smelter:** Increases the yield from smelting ore.
+    - **Efficient Smith:** Reduces the material cost for smithing items.
+- **Cooking:**
+    - **Master Chef:** Increases the potency and duration of buffs from food you cook.
+    - **Waste Not:** Reduces the chance of burning food.
+    - **Hearty Meals:** Cooked food provides more healing.
+- **Construction:**
+    - **Structural Integrity:** Increases the durability and health of structures you build.
+    - **Resourceful Architect:** Provides a chance to save materials when constructing something.
+    - **Swift Builder:** Increases the speed at which you build structures.
+
+#### Combat Skills
+
+- **Attack:**
+    - **Weapon Finesse:** Increases critical strike chance with all melee weapons.
+    - **Sword Specialization:** Increases damage and accuracy when using swords.
+    - **Brute Force:** Increases overall melee damage by a small percentage.
+- **Defense:**
+    - **Shield Block:** Increases the effectiveness of blocking with a shield.
+    - **Reinforced Plating:** Increases the defensive value of all worn armor.
+    - **Last Stand:** Grants a defense boost when your health is low.

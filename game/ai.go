@@ -136,6 +136,10 @@ func processNPCAction(npcID string) {
 				return
 			}
 
+			if props.XPOnDealt > 0 {
+				AddExperience(targetID, models.SkillDefense, props.XPOnDealt)
+			}
+
 			// Broadcast damage message
 			damageMsg := models.EntityDamagedMessage{
 				Type:     string(ServerEventEntityDamaged),

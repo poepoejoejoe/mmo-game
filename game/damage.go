@@ -93,10 +93,17 @@ func applyFireDamage(entityID string, entityData map[string]string) {
 		}
 	} else if strings.HasPrefix(entityID, "player:") {
 		// Also send a stats update to the player who was damaged
+		experience := make(map[models.Skill]float64)
+		experienceJSON, err := rdb.HGet(ctx, entityID, "experience").Result()
+		if err == nil {
+			json.Unmarshal([]byte(experienceJSON), &experience)
+		}
+
 		statsUpdateMsg := models.PlayerStatsUpdateMessage{
-			Type:      string(ServerEventPlayerStatsUpdate),
-			Health:    int(newHealth),
-			MaxHealth: PlayerDefs.MaxHealth,
+			Type:       string(ServerEventPlayerStatsUpdate),
+			Health:     int(newHealth),
+			MaxHealth:  PlayerDefs.MaxHealth,
+			Experience: experience,
 		}
 		statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
 		if sendDirectMessage != nil {

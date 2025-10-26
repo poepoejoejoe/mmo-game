@@ -338,6 +338,58 @@ body {
     width: 100%;
 }
 
+#experience-view {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+.skill-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.skill-icon {
+    font-size: 2em;
+    width: 40px;
+    text-align: center;
+}
+
+.skill-info {
+    flex-grow: 1;
+}
+
+.skill-name {
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #eee;
+    margin-bottom: 4px;
+}
+
+.skill-bar-container {
+    width: 100%;
+    height: 12px;
+    background-color: #333;
+    border-radius: 6px;
+    border: 1px solid #555;
+    overflow: hidden;
+}
+
+.skill-bar {
+    height: 100%;
+    background-color: #3498db;
+    border-radius: 5px;
+    transition: width 0.5s ease-out;
+}
+
+.skill-xp-text {
+    font-size: 0.8em;
+    color: #aaa;
+    margin-top: 2px;
+}
+
 .quest {
     margin-bottom: 10px;
 }

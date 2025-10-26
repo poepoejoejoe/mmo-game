@@ -2,6 +2,16 @@ import * as state from './state';
 import { edibleDefs, itemDefinitions } from './definitions';
 import { send } from './network';
 
+const skillIcons = {
+    woodcutting: '🌳',
+    mining: '⛏️',
+    smithing: '🔥',
+    cooking: '🍳',
+    construction: '🏠',
+    attack: '⚔️',
+    defense: '🛡️',
+};
+
 function createIconElement(itemDef: any): HTMLElement {
     const iconEl = document.createElement('div');
     iconEl.classList.add('item-icon');
@@ -38,10 +48,12 @@ export let inventoryView: HTMLElement;
 export let craftingView: HTMLElement;
 export let gearView: HTMLElement;
 export let questView: HTMLElement;
+export let experienceView: HTMLElement;
 let inventoryButton: HTMLButtonElement;
 let craftingButton: HTMLButtonElement;
 let gearButton: HTMLButtonElement;
 let questButton: HTMLButtonElement;
+let experienceButton: HTMLButtonElement;
 let chatMessagesEl: HTMLElement;
 let chatButton: HTMLButtonElement;
 let chatContainer: HTMLElement;
@@ -55,7 +67,7 @@ let dialogCloseButton: HTMLElement;
 let dialogOverlay: HTMLElement;
 
 
-const openPanels = new Set<'inventory' | 'crafting' | 'gear' | 'quest'>();
+const openPanels = new Set<'inventory' | 'crafting' | 'gear' | 'quest' | 'experience'>();
 let isChatOpen = true;
 
 export function initializeUI() {
@@ -79,10 +91,12 @@ export function initializeUI() {
     craftingView = document.getElementById('crafting-view')!;
     gearView = document.getElementById('gear-view')!;
     questView = document.getElementById('quest-view')!;
+    experienceView = document.getElementById('experience-view')!;
     inventoryButton = document.getElementById('inventory-button') as HTMLButtonElement;
     craftingButton = document.getElementById('crafting-button') as HTMLButtonElement;
     gearButton = document.getElementById('gear-button') as HTMLButtonElement;
     questButton = document.getElementById('quest-button') as HTMLButtonElement;
+    experienceButton = document.getElementById('experience-button') as HTMLButtonElement;
     chatMessagesEl = document.getElementById('chat-messages')!;
     chatButton = document.getElementById('chat-button') as HTMLButtonElement;
     chatContainer = document.getElementById('chat-container')!;
@@ -110,6 +124,7 @@ export function initializeUI() {
     craftingButton.addEventListener('click', () => toggleInfoPanel('crafting'));
     gearButton.addEventListener('click', () => toggleInfoPanel('gear'));
     questButton.addEventListener('click', () => toggleInfoPanel('quest'));
+    experienceButton.addEventListener('click', () => toggleInfoPanel('experience'));
     helpButton.addEventListener('click', () => toggleModal('help-modal', true));
     helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
     dialogCloseButton.addEventListener('click', hideDialog);
@@ -168,7 +183,7 @@ function toggleChat() {
     }
 }
 
-function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest') {
+function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience') {
     if (openPanels.has(panelType)) {
         openPanels.delete(panelType);
     } else {
@@ -179,6 +194,7 @@ function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest')
             crafting: craftingView,
             gear: gearView,
             quest: questView,
+            experience: experienceView,
         };
 
         const panelElement = panelMap[panelType];
@@ -196,12 +212,14 @@ function updateButtonAndPanelSelection() {
     craftingButton.classList.toggle('selected', openPanels.has('crafting'));
     gearButton.classList.toggle('selected', openPanels.has('gear'));
     questButton.classList.toggle('selected', openPanels.has('quest'));
+    experienceButton.classList.toggle('selected', openPanels.has('experience'));
 
     // Views
     inventoryView.style.display = openPanels.has('inventory') ? 'flex' : 'none';
     craftingView.style.display = openPanels.has('crafting') ? 'flex' : 'none';
     gearView.style.display = openPanels.has('gear') ? 'flex' : 'none';
     questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
+    experienceView.style.display = openPanels.has('experience') ? 'flex' : 'none';
 }
 
 function toggleModal(modalId: string, show: boolean) {
@@ -561,6 +579,7 @@ export function updateInventoryUI(): void {
     updateCraftingUI();
     updateGearUI();
     updateQuestUI();
+    updateExperienceUI();
 }
 
 export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {
@@ -602,6 +621,42 @@ export function updatePlayerHealth(health: number, maxHealth: number) {
     healthBar.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
 
     healthBarText.textContent = `${health} / ${maxHealth}`;
+}
+
+export function updateExperienceUI(): void {
+    const experience = state.getState().experience;
+    experienceView.innerHTML = '<h2>Experience</h2>';
+
+    if (!experience) {
+        return;
+    }
+
+    for (const skill in experience) {
+        const xp = experience[skill];
+        const skillEl = document.createElement('div');
+        skillEl.classList.add('skill-display');
+
+        const icon = skillIcons[skill as keyof typeof skillIcons] || '❓';
+        const name = skill.charAt(0).toUpperCase() + skill.slice(1);
+        const level = Math.floor(xp / 100); // Example: 100 xp per level
+        const xpForNextLevel = (level + 1) * 100;
+        const currentLevelXp = xp - level * 100;
+        const xpProgress = (currentLevelXp / 100) * 100;
+
+
+        skillEl.innerHTML = `
+            <div class="skill-icon">${icon}</div>
+            <div class="skill-info">
+                <div class="skill-name">${name} (Level ${level})</div>
+                <div class="skill-bar-container">
+                    <div class="skill-bar" style="width: ${xpProgress}%"></div>
+                </div>
+                <div class="skill-xp-text">${Math.floor(xp)} / ${xpForNextLevel} XP</div>
+            </div>
+        `;
+
+        experienceView.appendChild(skillEl);
+    }
 }
 
 export function updatePlayerCoords(x: number, y: number) {

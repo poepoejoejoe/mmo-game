@@ -8,6 +8,7 @@ const clientState: ClientState = {
     inventory: {},
     gear: {},
     quests: {},
+    experience: {},
     lastInteractionPosition: null,
     activeNpcId: null,
 };
@@ -48,7 +49,8 @@ export function setInitialState(
     world: Record<string, WorldTile>, 
     inventory: Record<string, InventoryItem>,
     gear: Record<string, InventoryItem>,
-    quests: Record<string, Quest>
+    quests: Record<string, Quest>,
+    experience: Record<string, number>
 ) {
     clientState.playerId = playerId;
     
@@ -66,6 +68,7 @@ export function setInitialState(
     clientState.inventory = inventory;
     clientState.gear = gear;
     clientState.quests = quests;
+    clientState.experience = experience;
 }
 
 export function setEntityPosition(entityId: string, x: number, y: number, direction?: 'up' | 'down' | 'left' | 'right') {
@@ -118,6 +121,10 @@ export function setResourceHealth(x: number, y: number, health: number) {
     if (clientState.world[key]) {
         clientState.world[key].health = health;
     }
+}
+
+export function setExperience(experience: Record<string, number>) {
+    clientState.experience = experience;
 }
 
 export function setInventory(inventory: Record<string, InventoryItem>) {

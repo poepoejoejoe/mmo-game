@@ -1,5 +1,7 @@
 package game
 
+import "mmo-game/models"
+
 // --- NEW CONSTANTS ---
 
 // KILOMETERS_PER_DEGREE is the approximate number of kilometers in one degree of
@@ -134,8 +136,10 @@ const (
 
 // Recipe defines the ingredients required to craft an item.
 type Recipe struct {
-	Ingredients map[ItemID]int // Use new type
-	Yield       int
+	Ingredients   map[ItemID]int // Use new type
+	Yield         int
+	CraftingSkill models.Skill
+	CraftingXP    float64
 }
 
 // TileProperties defines the behavioral attributes of a game object.
@@ -146,6 +150,8 @@ type TileProperties struct {
 	IsBuildableOn   bool
 	MovementPenalty bool
 	GatherResource  ItemID // Use new type
+	GatherSkill     models.Skill
+	GatherXP        float64
 	MaxHealth       int
 	Damage          int
 	DamageInterval  int64
@@ -164,8 +170,10 @@ const (
 
 // NPCProperties defines the behavioral attributes of an NPC.
 type NPCProperties struct {
-	Health int
-	Damage int
+	Health    int
+	Damage    int
+	XPOnHit   float64
+	XPOnDealt float64
 }
 
 type LootEntry struct {
@@ -228,12 +236,16 @@ func init() {
 
 	// --- NPC Definitions ---
 	NPCDefs[NPCTypeSlime] = NPCProperties{
-		Health: 3,
-		Damage: 1,
+		Health:    3,
+		Damage:    1,
+		XPOnHit:   5,
+		XPOnDealt: 2,
 	}
 	NPCDefs[NPCTypeRat] = NPCProperties{
-		Health: 2,
-		Damage: 2,
+		Health:    2,
+		Damage:    2,
+		XPOnHit:   4,
+		XPOnDealt: 4,
 	}
 	NPCDefs[NPCTypeWizard] = NPCProperties{
 		Health: 100,
@@ -310,12 +322,16 @@ func init() {
 		IsCollidable:   true,
 		IsGatherable:   true,
 		GatherResource: ItemWood,
+		GatherSkill:    models.SkillWoodcutting,
+		GatherXP:       10,
 		MaxHealth:      2,
 	}
 	TileDefs[TileTypeRock] = TileProperties{
 		IsCollidable:   true,
 		IsGatherable:   true,
 		GatherResource: ItemStone, // Changed from ItemRock
+		GatherSkill:    models.SkillMining,
+		GatherXP:       10,
 		MaxHealth:      4,
 	}
 	TileDefs[TileTypeWoodenWall] = TileProperties{
@@ -333,16 +349,22 @@ func init() {
 
 	// --- Recipe Definitions (USING CONSTANTS) ---
 	RecipeDefs[ItemWoodenWall] = Recipe{
-		Ingredients: map[ItemID]int{ItemWood: 10},
-		Yield:       1,
+		Ingredients:   map[ItemID]int{ItemWood: 10},
+		Yield:         1,
+		CraftingSkill: models.SkillConstruction,
+		CraftingXP:    5,
 	}
 	RecipeDefs[ItemFire] = Recipe{
-		Ingredients: map[ItemID]int{ItemWood: 10},
-		Yield:       1,
+		Ingredients:   map[ItemID]int{ItemWood: 10},
+		Yield:         1,
+		CraftingSkill: models.SkillConstruction,
+		CraftingXP:    10,
 	}
 	RecipeDefs[ItemCookedRatMeat] = Recipe{
-		Ingredients: map[ItemID]int{ItemRatMeat: 1},
-		Yield:       1,
+		Ingredients:   map[ItemID]int{ItemRatMeat: 1},
+		Yield:         1,
+		CraftingSkill: models.SkillCooking,
+		CraftingXP:    15,
 	}
 	RecipeDefs[ItemCrudeAxe] = Recipe{
 		Ingredients: map[ItemID]int{
@@ -350,7 +372,9 @@ func init() {
 			ItemWood:  10,
 			ItemGoop:  5,
 		},
-		Yield: 1,
+		Yield:         1,
+		CraftingSkill: models.SkillSmithing,
+		CraftingXP:    25,
 	}
 
 	// --- Edible Definitions ---

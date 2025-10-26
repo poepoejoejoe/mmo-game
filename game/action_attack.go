@@ -61,6 +61,11 @@ func ProcessAttack(playerID string, targetEntityID string) *models.EntityDamaged
 		log.Printf("Error decrementing health for %s: %v", targetEntityID, err)
 		return nil
 	}
+	npcType := NPCType(targetData["npcType"])
+	npcProps := NPCDefs[npcType]
+	if npcProps.XPOnHit > 0 {
+		AddExperience(playerID, models.SkillAttack, npcProps.XPOnHit)
+	}
 
 	damageMsg := &models.EntityDamagedMessage{
 		Type:     string(ServerEventEntityDamaged),

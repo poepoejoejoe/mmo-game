@@ -127,6 +127,9 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 				Type:      string(ServerEventInventoryUpdate),
 				Inventory: newInventory,
 			}
+			if props.GatherSkill != "" && props.GatherXP > 0 {
+				AddExperience(playerID, props.GatherSkill, props.GatherXP)
+			}
 
 			// --- NEW: Quest Completion Check for Gathering ---
 			if props.GatherResource == ItemWood {

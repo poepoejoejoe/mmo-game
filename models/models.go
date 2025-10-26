@@ -54,13 +54,14 @@ type EntityState struct {
 
 // InitialStateMessage now sends a map of all entities.
 type InitialStateMessage struct {
-	Type      string                 `json:"type"`
-	PlayerId  string                 `json:"playerId"`
-	Entities  map[string]EntityState `json:"entities"`
-	World     map[string]WorldTile   `json:"world"`
-	Inventory map[string]Item        `json:"inventory"`
-	Gear      map[string]Item        `json:"gear"`
-	Quests    map[QuestID]*Quest     `json:"quests"`
+	Type       string                 `json:"type"`
+	PlayerId   string                 `json:"playerId"`
+	Entities   map[string]EntityState `json:"entities"`
+	World      map[string]WorldTile   `json:"world"`
+	Inventory  map[string]Item        `json:"inventory"`
+	Gear       map[string]Item        `json:"gear"`
+	Quests     map[QuestID]*Quest     `json:"quests"`
+	Experience map[Skill]float64      `json:"experience"`
 }
 
 type QuestUpdateMessage struct {
@@ -131,9 +132,10 @@ type EntityDamagedMessage struct {
 }
 
 type PlayerStatsUpdateMessage struct {
-	Type      string `json:"type"`
-	Health    int    `json:"health"`
-	MaxHealth int    `json:"maxHealth"`
+	Type       string            `json:"type"`
+	Health     int               `json:"health"`
+	MaxHealth  int               `json:"maxHealth"`
+	Experience map[Skill]float64 `json:"experience"`
 }
 
 // Item defines a single item instance in a player's inventory.
@@ -201,6 +203,18 @@ const (
 	QuestBuildAWall QuestID = "build_a_wall"
 	QuestRatProblem QuestID = "rat_problem"
 	QuestAngryTrees QuestID = "angry_trees"
+)
+
+type Skill string
+
+const (
+	SkillWoodcutting  Skill = "woodcutting"
+	SkillMining       Skill = "mining"
+	SkillSmithing     Skill = "smithing"
+	SkillCooking      Skill = "cooking"
+	SkillConstruction Skill = "construction"
+	SkillAttack       Skill = "attack"
+	SkillDefense      Skill = "defense"
 )
 
 type ObjectiveType string

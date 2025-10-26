@@ -127,6 +127,10 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 		return nil, nil, nil
 	}
 
+	if recipe.CraftingSkill != "" && recipe.CraftingXP > 0 {
+		AddExperience(playerID, recipe.CraftingSkill, recipe.CraftingXP)
+	}
+
 	CheckObjectives(playerID, models.ObjectiveCraft, craftData.Item)
 	if ItemID(craftData.Item) == ItemCookedRatMeat {
 		CheckObjectives(playerID, models.ObjectiveCook, craftData.Item)
