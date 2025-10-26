@@ -87,6 +87,8 @@ func ProcessEquip(playerID string, payload json.RawMessage) (*models.InventoryUp
 		Gear: newGear,
 	}
 
+	CheckObjectives(playerID, models.ObjectiveEquip, item.ID)
+
 	return inventoryUpdate, gearUpdate
 }
 

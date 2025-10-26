@@ -106,14 +106,8 @@ func cleanupAndDropLoot(npcID string, npcData map[string]string) {
 
 	npcType := NPCType(npcData["npcType"])
 
-	if npcType == NPCTypeRat && ownerID != "" {
-		playerQuests, err := GetPlayerQuests(ownerID)
-		if err == nil {
-			if _, ok := playerQuests.Quests[models.QuestRatProblem]; ok {
-				UpdateObjective(playerQuests, models.QuestRatProblem, "slay_rat", ownerID)
-				SavePlayerQuests(ownerID, playerQuests)
-			}
-		}
+	if ownerID != "" {
+		CheckObjectives(ownerID, models.ObjectiveSlay, string(npcType))
 	}
 
 	loot := generateLoot(npcType)

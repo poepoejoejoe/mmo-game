@@ -127,22 +127,10 @@ func ProcessCraft(playerID string, payload json.RawMessage) (*models.InventoryUp
 		return nil, nil, nil
 	}
 
-	// --- NEW: Quest Completion Check ---
-	playerQuests, err := GetPlayerQuests(playerID)
-	if err == nil {
-		buildWallQuest := playerQuests.Quests[models.QuestBuildAWall]
-		if buildWallQuest != nil && !buildWallQuest.IsComplete && ItemID(craftData.Item) == ItemWoodenWall {
-			UpdateObjective(playerQuests, models.QuestBuildAWall, "craft_wall", playerID)
-			SavePlayerQuests(playerID, playerQuests)
-		}
-
-		ratProblemQuest := playerQuests.Quests[models.QuestRatProblem]
-		if ratProblemQuest != nil && !ratProblemQuest.IsComplete && ItemID(craftData.Item) == ItemCookedRatMeat {
-			UpdateObjective(playerQuests, models.QuestRatProblem, "cook_rat_meat", playerID)
-			SavePlayerQuests(playerID, playerQuests)
-		}
+	CheckObjectives(playerID, models.ObjectiveCraft, craftData.Item)
+	if ItemID(craftData.Item) == ItemCookedRatMeat {
+		CheckObjectives(playerID, models.ObjectiveCook, craftData.Item)
 	}
-	// --- END NEW ---
 
 	inventoryUpdateMsg := &models.InventoryUpdateMessage{
 		Type:      string(ServerEventInventoryUpdate),

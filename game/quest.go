@@ -11,9 +11,9 @@ var QuestDefs = map[models.QuestID]models.Quest{
 		ID:    models.QuestBuildAWall,
 		Title: "A Sturdy Defense",
 		Objectives: []models.QuestObjective{
-			{ID: "gather_wood", Description: "Gather 10 wood", Completed: false},
-			{ID: "craft_wall", Description: "Craft a Wooden Wall", Completed: false},
-			{ID: "place_wall", Description: "Place the Wooden Wall", Completed: false},
+			{Type: models.ObjectiveGather, Target: string(ItemWood), Description: "Gather 10 wood"},
+			{Type: models.ObjectiveCraft, Target: string(ItemWoodenWall), Description: "Craft a Wooden Wall"},
+			{Type: models.ObjectivePlace, Target: string(ItemWoodenWall), Description: "Place the Wooden Wall"},
 		},
 		IsComplete: false,
 	},
@@ -21,8 +21,17 @@ var QuestDefs = map[models.QuestID]models.Quest{
 		ID:    models.QuestRatProblem,
 		Title: "A Culinary Conundrum",
 		Objectives: []models.QuestObjective{
-			{ID: "slay_rat", Description: "Slay a giant rat", Completed: false},
-			{ID: "cook_rat_meat", Description: "Cook the rat meat", Completed: false},
+			{Type: models.ObjectiveSlay, Target: "rat", Description: "Slay a giant rat"},
+			{Type: models.ObjectiveCook, Target: string(ItemCookedRatMeat), Description: "Cook the rat meat"},
+		},
+		IsComplete: false,
+	},
+	models.QuestAngryTrees: {
+		ID:    models.QuestAngryTrees,
+		Title: "A-bewood-ing Problem",
+		Objectives: []models.QuestObjective{
+			{Type: models.ObjectiveCraft, Target: string(ItemCrudeAxe), Description: "Craft a Crude Axe"},
+			{Type: models.ObjectiveEquip, Target: string(ItemCrudeAxe), Description: "Equip the Crude Axe"},
 		},
 		IsComplete: false,
 	},
@@ -90,7 +99,22 @@ func UpdateObjective(pq *models.PlayerQuests, questID models.QuestID, objectiveI
 	if quest, ok := pq.Quests[questID]; ok && !quest.IsComplete {
 		objectiveCompleted := false
 		for i, obj := range quest.Objectives {
-			if obj.ID == objectiveID && !obj.Completed {
+			// This is a temporary way to keep the old system working.
+			// Ideally, all objective checks would move to the new data-driven system.
+			// We'll use the description as a pseudo-ID for now.
+			var pseudoID string
+			switch obj.Type {
+			case models.ObjectiveCraft:
+				if obj.Target == string(ItemWoodenWall) {
+					pseudoID = "craft_wall"
+				}
+			case models.ObjectivePlace:
+				if obj.Target == string(ItemWoodenWall) {
+					pseudoID = "place_wall"
+				}
+			}
+
+			if pseudoID == objectiveID && !obj.Completed {
 				quest.Objectives[i].Completed = true
 				objectiveCompleted = true
 				log.Printf("Objective '%s' for quest '%s' completed for player %s.", objectiveID, questID, playerID)
@@ -140,6 +164,63 @@ func MarkQuestAsCompleted(pq *models.PlayerQuests, questID models.QuestID) {
 	}
 	pq.CompletedQuests[questID] = true
 	log.Printf("Quest '%s' marked as completed for a player.", questID)
+}
+
+func CheckObjectives(playerID string, objectiveType models.ObjectiveType, target string) {
+	pq, err := GetPlayerQuests(playerID)
+	if err != nil {
+		log.Printf("Could not get player quests for objective check: %v", err)
+		return
+	}
+
+	for questID, quest := range pq.Quests {
+		if quest.IsComplete {
+			continue
+		}
+
+		objectiveCompleted := false
+		for i, obj := range quest.Objectives {
+			if !obj.Completed && obj.Type == objectiveType && obj.Target == target {
+				quest.Objectives[i].Completed = true
+				objectiveCompleted = true
+				log.Printf("Objective '%s %s' for quest '%s' completed for player %s.", objectiveType, target, questID, playerID)
+			}
+		}
+
+		if objectiveCompleted {
+			// Check if the entire quest is now complete
+			allComplete := true
+			for _, obj := range quest.Objectives {
+				if !obj.Completed {
+					allComplete = false
+					break
+				}
+			}
+
+			if allComplete {
+				quest.IsComplete = true
+				log.Printf("Quest '%s' completed for player %s.", questID, playerID)
+
+				// Send a notification to the player
+				notification := models.NotificationMessage{
+					Type:    string(ServerEventNotification),
+					Message: "Quest Complete: " + quest.Title,
+				}
+				notificationJSON, _ := json.Marshal(notification)
+				sendDirectMessage(playerID, notificationJSON)
+
+				// Update the NPC's quest state indicator
+				npcUpdateMsg := models.NpcQuestStateUpdateMessage{
+					Type:       string(ServerEventNpcQuestStateUpdate),
+					NpcName:    "wizard",
+					QuestState: "turn-in-ready",
+				}
+				npcUpdateJSON, _ := json.Marshal(npcUpdateMsg)
+				sendDirectMessage(playerID, npcUpdateJSON)
+			}
+		}
+	}
+	SavePlayerQuests(playerID, pq)
 }
 
 // CanAcceptAnyQuestFromWizard checks if a player can accept any quest from the wizard.

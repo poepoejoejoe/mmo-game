@@ -78,5 +78,5 @@ func spawnRat() {
 
 func spawnWizard() {
 	entityID := string(NPCWizardPrefix) + utils.GenerateUniqueID()
-	SpawnNPC(entityID, 2, 0, NPCTypeWizard)
+	SpawnNPC(entityID, 4, 0, NPCTypeWizard)
 }

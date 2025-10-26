@@ -200,12 +200,25 @@ type QuestID string
 const (
 	QuestBuildAWall QuestID = "build_a_wall"
 	QuestRatProblem QuestID = "rat_problem"
+	QuestAngryTrees QuestID = "angry_trees"
+)
+
+type ObjectiveType string
+
+const (
+	ObjectiveCraft  ObjectiveType = "craft"
+	ObjectiveEquip  ObjectiveType = "equip"
+	ObjectiveSlay   ObjectiveType = "slay"
+	ObjectiveGather ObjectiveType = "gather"
+	ObjectivePlace  ObjectiveType = "place"
+	ObjectiveCook   ObjectiveType = "cook"
 )
 
 type QuestObjective struct {
-	ID          string `json:"id"`
-	Description string `json:"description"`
-	Completed   bool   `json:"completed"`
+	Type        ObjectiveType `json:"type"`
+	Target      string        `json:"target"`
+	Description string        `json:"description"`
+	Completed   bool          `json:"completed"`
 }
 
 type Quest struct {

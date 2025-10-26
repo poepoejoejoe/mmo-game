@@ -65,6 +65,11 @@ var WizardDialogTree = []DialogNode{
 		Options:   []models.DialogOption{{Text: "Glad I could help.", Action: "turn_in_rat_problem"}},
 		Condition: DialogCondition{IsQuestReadyToTurnIn: models.QuestRatProblem},
 	},
+	{
+		Text:      "You made an axe! The trees are already looking less smug. Amazing work!",
+		Options:   []models.DialogOption{{Text: "Happy to help.", Action: "turn_in_angry_trees"}},
+		Condition: DialogCondition{IsQuestReadyToTurnIn: models.QuestAngryTrees},
+	},
 	// --- Quest In-Progress ---
 	{
 		Text:      "You're back! Have you crafted and placed a wooden wall yet? The village needs fortifications!",
@@ -76,12 +81,17 @@ var WizardDialogTree = []DialogNode{
 		Options:   []models.DialogOption{{Text: "I'm on it.", Action: "close_dialog"}},
 		Condition: DialogCondition{RequiredActiveQuests: []models.QuestID{models.QuestRatProblem}},
 	},
+	{
+		Text:      "Those trees won't chop themselves down! Have you crafted that crude axe yet?",
+		Options:   []models.DialogOption{{Text: "Working on it.", Action: "close_dialog"}},
+		Condition: DialogCondition{RequiredActiveQuests: []models.QuestID{models.QuestAngryTrees}},
+	},
 	// --- Post-Quest & Quest Offers ---
 	{
 		Text:    "Your assistance has been invaluable. My research progresses, thanks to you!",
 		Options: []models.DialogOption{{Text: "Happy to help the pursuit of knowledge.", Action: "close_dialog"}},
 		Condition: DialogCondition{
-			RequiredCompletedQuests: []models.QuestID{models.QuestBuildAWall, models.QuestRatProblem},
+			RequiredCompletedQuests: []models.QuestID{models.QuestBuildAWall, models.QuestRatProblem, models.QuestAngryTrees},
 		},
 	},
 	{
@@ -93,13 +103,22 @@ var WizardDialogTree = []DialogNode{
 			ForbiddenCompletedQuests: []models.QuestID{models.QuestRatProblem},
 		},
 	},
+	{
+		Text:    "You've been a tremendous help, but I have... another problem. It's slightly embarrassing.",
+		Options: []models.DialogOption{{Text: "What is it this time?", Action: "quest_3_details"}, {Text: "I'm not sure I want to know.", Action: "close_dialog"}},
+		Condition: DialogCondition{
+			RequiredCompletedQuests:  []models.QuestID{models.QuestRatProblem},
+			ForbiddenActiveQuests:    []models.QuestID{models.QuestAngryTrees},
+			ForbiddenCompletedQuests: []models.QuestID{models.QuestAngryTrees},
+		},
+	},
 	// --- Default/Initial Dialog ---
 	{
 		Text:    "Greetings, traveler! I sense a spark of potential in you. Are you here to help an old wizard protect our village?",
 		Options: []models.DialogOption{{Text: "Yes, tell me more.", Action: "quest_1_details"}, {Text: "Sorry, I'm busy.", Action: "close_dialog"}},
 		Condition: DialogCondition{
-			ForbiddenActiveQuests:    []models.QuestID{models.QuestBuildAWall, models.QuestRatProblem},
-			ForbiddenCompletedQuests: []models.QuestID{models.QuestBuildAWall, models.QuestRatProblem},
+			ForbiddenActiveQuests:    []models.QuestID{models.QuestBuildAWall, models.QuestRatProblem, models.QuestAngryTrees},
+			ForbiddenCompletedQuests: []models.QuestID{models.QuestBuildAWall, models.QuestRatProblem, models.QuestAngryTrees},
 		},
 	},
 }
@@ -126,6 +145,13 @@ var WizardDialogPages = map[string]DialogPage{
 			{Text: "That's... odd. I'll pass.", Action: "close_dialog"},
 		},
 	},
+	"quest_3_details": {
+		Text: "So, the 'eau de vermin' worked a little TOO well. We have more rats than ever, and now they're chewing on the walls! I tried a simple repellent spell, but I might have... well, I seem to have accidentally granted sentience to the nearby trees. And they are NOT happy. To get more wood, you'll need a Crude Axe. You can make one with 10 wood, 10 stone, and 5 goop from the slimes.",
+		Options: []models.DialogOption{
+			{Text: "Angry trees? Of course. I'll do it.", Action: "accept_quest_angry_trees"},
+			{Text: "You're on your own with this one.", Action: "close_dialog"},
+		},
+	},
 }
 
 // QuestAcceptAction defines the properties for a quest-accepting action.
@@ -143,6 +169,10 @@ var QuestAcceptActions = map[string]QuestAcceptAction{
 	"accept_quest_rat_problem": {
 		QuestID:      models.QuestRatProblem,
 		Notification: "Quest Accepted: A Culinary Conundrum",
+	},
+	"accept_quest_angry_trees": {
+		QuestID:      models.QuestAngryTrees,
+		Notification: "Quest Accepted: A-bewood-ing Problem",
 	},
 }
 
@@ -168,5 +198,10 @@ var QuestTurnInActions = map[string]QuestTurnInAction{
 		ItemToTakeQuantity: 1,
 		RewardItem:         ItemSliceOfPizza,
 		RewardQuantity:     1,
+	},
+	"turn_in_angry_trees": {
+		QuestID:        models.QuestAngryTrees,
+		RewardItem:     ItemSliceOfPizza,
+		RewardQuantity: 1,
 	},
 }

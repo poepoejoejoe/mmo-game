@@ -407,6 +407,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		CompletedQuests: make(map[models.QuestID]bool),
 	}
 	playerQuests.CompletedQuests[models.QuestBuildAWall] = true
+	playerQuests.CompletedQuests[models.QuestRatProblem] = true
 	questsJSON, _ := json.Marshal(playerQuests)
 	pipe.HSet(ctx, playerID, "quests", questsJSON)
 
