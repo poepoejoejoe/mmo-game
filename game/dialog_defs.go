@@ -103,3 +103,70 @@ var WizardDialogTree = []DialogNode{
 		},
 	},
 }
+
+// DialogPage represents a static piece of dialog that is not dependent on player state.
+type DialogPage struct {
+	Text    string
+	Options []models.DialogOption
+}
+
+// WizardDialogPages holds the definitions for simple, static dialog pages shown to the player.
+var WizardDialogPages = map[string]DialogPage{
+	"quest_1_details": {
+		Text: "The slimes and rats grow bolder. We need fortifications! Please, gather 10 wood, craft a wall, and place it to start our defenses.",
+		Options: []models.DialogOption{
+			{Text: "I will do it!", Action: "accept_quest_build_a_wall"},
+			{Text: "That sounds like a lot of work.", Action: "close_dialog"},
+		},
+	},
+	"quest_2_details": {
+		Text: "Excellent! I'm working on a potion to better understand our enemies, a sort of... 'eau de vermin'. To complete it, I need the cooked meat of a giant rat. Could you slay one and cook its meat for me? For science!",
+		Options: []models.DialogOption{
+			{Text: "For science! I'll do it.", Action: "accept_quest_rat_problem"},
+			{Text: "That's... odd. I'll pass.", Action: "close_dialog"},
+		},
+	},
+}
+
+// QuestAcceptAction defines the properties for a quest-accepting action.
+type QuestAcceptAction struct {
+	QuestID      models.QuestID
+	Notification string
+}
+
+// QuestAcceptActions maps action strings to their quest acceptance definitions.
+var QuestAcceptActions = map[string]QuestAcceptAction{
+	"accept_quest_build_a_wall": {
+		QuestID:      models.QuestBuildAWall,
+		Notification: "Quest Accepted: A Sturdy Defense",
+	},
+	"accept_quest_rat_problem": {
+		QuestID:      models.QuestRatProblem,
+		Notification: "Quest Accepted: A Culinary Conundrum",
+	},
+}
+
+// QuestTurnInAction defines the properties for a quest turn-in action.
+type QuestTurnInAction struct {
+	QuestID            models.QuestID
+	RewardItem         ItemID
+	RewardQuantity     int
+	ItemToTake         ItemID
+	ItemToTakeQuantity int
+}
+
+// QuestTurnInActions maps action strings to their quest turn-in definitions.
+var QuestTurnInActions = map[string]QuestTurnInAction{
+	"turn_in_build_a_wall": {
+		QuestID:        models.QuestBuildAWall,
+		RewardItem:     ItemSliceOfPizza,
+		RewardQuantity: 1,
+	},
+	"turn_in_rat_problem": {
+		QuestID:            models.QuestRatProblem,
+		ItemToTake:         ItemCookedRatMeat,
+		ItemToTakeQuantity: 1,
+		RewardItem:         ItemSliceOfPizza,
+		RewardQuantity:     1,
+	},
+}
