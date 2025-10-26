@@ -255,11 +255,12 @@ function drawEntities(startX: number, startY: number, time: number) {
 }
 
 // (render, gameLoop, initializeRenderer, startRenderLoop remain the same)
-// ...
 function render(time: number) {
     const me = state.getMyEntity();
     if (!me || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
 
     const viewportWidth = Math.ceil(canvas.width / TILE_SIZE);
     const viewportHeight = Math.ceil(canvas.height / TILE_SIZE);
@@ -271,6 +272,20 @@ function render(time: number) {
     drawWorld(startX, startY, viewportWidth, viewportHeight, time);
     drawEntities(startX, startY, time);
     drawDamageIndicators(startX, startY);
+
+    if (me.isEcho) {
+        // Apply a performant color tint instead of a slow filter
+        ctx.globalCompositeOperation = 'color';
+        ctx.fillStyle = 'rgba(94, 51, 9, 0.6)'; // Sepia color
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Apply a brightness boost
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = 'rgba(255, 255, 224, 0.05)'; // Faint light-yellow layer
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    ctx.restore();
     
     // updatePlayerCoords is now called from main.ts on state update.
     // document.getElementById('player-coords')!.textContent = `Your Position: (${me.x}, ${me.y})`;

@@ -99,6 +99,12 @@ export interface EntityMovedMessage extends ServerMessage {
     direction?: 'up' | 'down' | 'left' | 'right';
 }
 
+export interface EntityUpdateMessage extends ServerMessage {
+    entityId: string;
+    isEcho?: boolean;
+    // other fields to update can go here
+}
+
 // --- RENAMED and UPDATED ---
 export interface EntityJoinedMessage extends ServerMessage {
     type: 'entity_joined'; // <-- RENAMED

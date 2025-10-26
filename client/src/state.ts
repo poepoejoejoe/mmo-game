@@ -111,6 +111,15 @@ export function removeEntity(id: string) {
     delete clientState.entities[id];
 }
 
+export function updateEntity(update: { entityId: string; isEcho?: boolean }) {
+    const entity = clientState.entities[update.entityId];
+    if (entity) {
+        if (update.isEcho !== undefined) {
+            entity.isEcho = update.isEcho;
+        }
+    }
+}
+
 // (Other functions remain the same)
 export function setWorldTile(x: number, y: number, type: string, health: number = 0) {
     const key = `${x},${y}`;

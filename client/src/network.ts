@@ -7,6 +7,7 @@ import {
     EntityJoinedMessage,
     EntityLeftMessage,
     EntityMovedMessage,
+    EntityUpdateMessage,
     PlayerAppearanceChangedMessage,
     PlayerChatMessage,
     PlayerStatsUpdateMessage,
@@ -121,6 +122,12 @@ function handleMessage(event: MessageEvent) {
         case 'entity_left': {
             const leftMsg = msg as EntityLeftMessage;
             state.removeEntity(leftMsg.entityId);
+            onStateUpdate();
+            break;
+        }
+        case 'entity_update': {
+            const updateMsg = msg as EntityUpdateMessage;
+            state.updateEntity(updateMsg);
             onStateUpdate();
             break;
         }
