@@ -44,6 +44,7 @@ type EntityState struct {
 	Type       string          `json:"type"`
 	Direction  string          `json:"direction,omitempty"`
 	Name       string          `json:"name,omitempty"`
+	QuestState string          `json:"questState,omitempty"`
 	ItemID     string          `json:"itemId,omitempty"`
 	Owner      string          `json:"owner,omitempty"`
 	CreatedAt  int64           `json:"createdAt,omitempty"`
@@ -163,13 +164,19 @@ type RegisterPayload struct {
 type RegisteredMessage struct {
 	Type      string `json:"type"`
 	SecretKey string `json:"secretKey"`
-	PlayerID  string `json:"playerId"`
+	PlayerId  string `json:"playerId"`
 	Name      string `json:"name"`
 }
 
 type NotificationMessage struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
+}
+
+type NpcQuestStateUpdateMessage struct {
+	Type       string `json:"type"`
+	NpcName    string `json:"npcName"`
+	QuestState string `json:"questState"`
 }
 
 type DialogMessage struct {

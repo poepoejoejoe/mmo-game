@@ -99,6 +99,7 @@ const (
 	ServerEventNotification            ServerEventType = "notification"
 	ServerEventShowDialog              ServerEventType = "show_dialog"
 	ServerEventQuestUpdate             ServerEventType = "quest_update"
+	ServerEventNpcQuestStateUpdate     ServerEventType = "npc_quest_state_update"
 )
 
 // MoveDirection defines the valid move directions.

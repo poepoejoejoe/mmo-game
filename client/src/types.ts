@@ -6,6 +6,7 @@ export interface EntityState {
     x: number;
     y: number;
     type: 'player' | 'npc' | 'item';
+    questState?: 'available' | 'in-progress' | 'turn-in-ready';
     itemId?: string;
     owner?: string;
     createdAt?: number;
@@ -53,6 +54,12 @@ export interface ClientState {
     quests: Record<string, Quest>;
     lastInteractionPosition: { x: number, y: number } | null;
     activeNpcId: string | null;
+}
+
+export interface NpcQuestStateUpdateMessage extends ServerMessage {
+    type: 'npc_quest_state_update';
+    npcName: string;
+    questState: 'available' | 'in-progress' | 'turn-in-ready';
 }
 
 // --- WebSocket Message Types ---

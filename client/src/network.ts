@@ -17,7 +17,8 @@ import {
     WorldUpdateMessage,
     EntityAttackMessage,
     DialogMessage,
-    QuestUpdateMessage
+    QuestUpdateMessage,
+    NpcQuestStateUpdateMessage
 } from './types';
 import * as state from './state';
 import { 
@@ -72,6 +73,12 @@ function handleMessage(event: MessageEvent) {
             const questMsg = msg as QuestUpdateMessage;
             state.setQuests(questMsg.quests);
             updateInventoryUI(); // This will trigger a quest UI update
+            onStateUpdate();
+            break;
+        }
+        case 'npc_quest_state_update': {
+            const npcUpdateMsg = msg as NpcQuestStateUpdateMessage;
+            state.updateNpcQuestState(npcUpdateMsg.npcName, npcUpdateMsg.questState);
             onStateUpdate();
             break;
         }

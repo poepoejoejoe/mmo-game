@@ -1,8 +1,52 @@
 import { TileGroup } from './grouper';
 import { EntityState, WorldTile } from './types';
 import { itemDefinitions } from './definitions';
-import { TILE_SIZE } from './constants';
 import { SeededRandom } from './utils';
+
+export function drawQuestIndicator(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, time: number, questState: EntityState['questState']) {
+    const centerX = x + tileSize / 2;
+    const baseY = y - tileSize * 0.4;
+
+    // Pulsing effect for size and brightness
+    const pulse = Math.sin(time / 200) * 0.05 + 0.95; // Gently pulsates between 90% and 100% size
+
+    const indicatorHeight = tileSize * 0.7 * pulse;
+
+    // Position oscillates up and down slightly
+    const bounce = Math.sin(time / 200) * tileSize * 0.05;
+    const indicatorY = baseY - bounce;
+
+    ctx.save();
+    ctx.font = `bold ${indicatorHeight}px 'Arial', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+
+    let indicatorChar = '!';
+    let indicatorColor = '#ffffff';
+
+    switch (questState) {
+        case 'available':
+            indicatorColor = '#f1c40f'; // Yellow
+            break;
+        case 'in-progress':
+            indicatorColor = '#bdc3c7'; // Grey
+            break;
+        case 'turn-in-ready':
+            indicatorColor = '#f1c40f'; // Yellow
+            indicatorChar = '?';
+            break;
+    }
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillText(indicatorChar, centerX + 2, indicatorY + 2);
+
+    // Main Text
+    ctx.fillStyle = indicatorColor;
+    ctx.fillText(indicatorChar, centerX, indicatorY);
+
+    ctx.restore();
+}
 
 const crackSVGs = [
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L7.5 7.5' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
@@ -692,7 +736,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.restore();
 }
 
-export function drawWizard(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }) {
+export function drawWizard(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number) {
     const pixelSize = Math.max(1, Math.floor(tileSize / 16));
 
     const centerX = x + tileSize / 2;
@@ -718,8 +762,6 @@ export function drawWizard(ctx: CanvasRenderingContext2D, x: number, y: number, 
 
     ctx.save();
     ctx.translate(centerX, centerY);
-
-    const direction = 'down'; // Always facing down
 
     drawPlayerFacingDown(ctx, pixelSize, walkCycle, isMoving, colors);
 

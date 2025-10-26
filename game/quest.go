@@ -111,13 +111,23 @@ func UpdateObjective(pq *models.PlayerQuests, questID models.QuestID, objectiveI
 			if allComplete {
 				quest.IsComplete = true
 				log.Printf("Quest '%s' completed for player %s.", questID, playerID)
-				// Optionally, send a notification to the player
+
+				// Send a notification to the player
 				notification := models.NotificationMessage{
 					Type:    string(ServerEventNotification),
 					Message: "Quest Complete: " + quest.Title,
 				}
 				notificationJSON, _ := json.Marshal(notification)
 				sendDirectMessage(playerID, notificationJSON)
+
+				// Also update the NPC's quest state indicator for the player
+				npcUpdateMsg := models.NpcQuestStateUpdateMessage{
+					Type:       string(ServerEventNpcQuestStateUpdate),
+					NpcName:    "wizard", // For now, this is the only quest giver
+					QuestState: "turn-in-ready",
+				}
+				npcUpdateJSON, _ := json.Marshal(npcUpdateMsg)
+				sendDirectMessage(playerID, npcUpdateJSON)
 			}
 		}
 	}
@@ -130,4 +140,79 @@ func MarkQuestAsCompleted(pq *models.PlayerQuests, questID models.QuestID) {
 	}
 	pq.CompletedQuests[questID] = true
 	log.Printf("Quest '%s' marked as completed for a player.", questID)
+}
+
+// CanAcceptAnyQuestFromWizard checks if a player can accept any quest from the wizard.
+func CanAcceptAnyQuestFromWizard(playerID string) bool {
+	pq, err := GetPlayerQuests(playerID)
+	if err != nil {
+		log.Printf("Error getting player quests for %s: %v", playerID, err)
+		return false
+	}
+
+	for _, node := range WizardDialogTree {
+		// Check if this dialog node offers a quest
+		isQuestOfferNode := false
+		for _, option := range node.Options {
+			if page, ok := WizardDialogPages[option.Action]; ok {
+				for _, pageOption := range page.Options {
+					if _, ok := QuestAcceptActions[pageOption.Action]; ok {
+						isQuestOfferNode = true
+						break
+					}
+				}
+			}
+			if isQuestOfferNode {
+				break
+			}
+		}
+
+		if isQuestOfferNode {
+			if node.Condition.Evaluate(pq) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func HasActiveQuestFromWizard(playerID string) bool {
+	pq, err := GetPlayerQuests(playerID)
+	if err != nil {
+		log.Printf("Error getting player quests for %s: %v", playerID, err)
+		return false
+	}
+
+	for _, node := range WizardDialogTree {
+		if node.Condition.IsQuestReadyToTurnIn != "" {
+			continue // Skip turn-in nodes
+		}
+
+		if len(node.Condition.RequiredActiveQuests) > 0 {
+			if node.Condition.Evaluate(pq) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func IsQuestReadyToTurnInToWizard(playerID string) bool {
+	pq, err := GetPlayerQuests(playerID)
+	if err != nil {
+		log.Printf("Error getting player quests for %s: %v", playerID, err)
+		return false
+	}
+
+	for _, node := range WizardDialogTree {
+		if node.Condition.IsQuestReadyToTurnIn != "" {
+			if node.Condition.Evaluate(pq) {
+				return true
+			}
+		}
+	}
+
+	return false
 }

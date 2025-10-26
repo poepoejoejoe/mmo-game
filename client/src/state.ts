@@ -152,3 +152,12 @@ export function setEntityAttack(attackerId: string, targetId: string) {
         clientState.entities[attackerId] = { ...entity, lastAttackTime: Date.now(), targetId: targetId };
     }
 }
+
+export function updateNpcQuestState(npcName: string, questState: any) {
+    for (const entityId in clientState.entities) {
+        const entity = clientState.entities[entityId];
+        if (entity.type === 'npc' && entity.name === npcName) {
+            entity.questState = questState;
+        }
+    }
+}

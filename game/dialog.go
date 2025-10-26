@@ -56,6 +56,15 @@ func HandleWizardDialogAction(playerID string, action string) *models.DialogMess
 		}
 		notificationJSON, _ := json.Marshal(notification)
 		sendDirectMessage(playerID, notificationJSON)
+
+		npcUpdateMsg := models.NpcQuestStateUpdateMessage{
+			Type:       string(ServerEventNpcQuestStateUpdate),
+			NpcName:    "wizard", // For now, this is the only quest giver
+			QuestState: "in-progress",
+		}
+		npcUpdateJSON, _ := json.Marshal(npcUpdateMsg)
+		sendDirectMessage(playerID, npcUpdateJSON)
+
 		return nil
 	}
 
@@ -91,6 +100,25 @@ func HandleWizardDialogAction(playerID string, action string) *models.DialogMess
 			inventoryUpdateJSON, _ := json.Marshal(inventoryUpdateMsg)
 			sendDirectMessage(playerID, inventoryUpdateJSON)
 		}
+
+		// Finally, update the NPC's quest indicator state based on the new quest statuses
+		var newQuestState string
+		if IsQuestReadyToTurnInToWizard(playerID) {
+			newQuestState = "turn-in-ready"
+		} else if HasActiveQuestFromWizard(playerID) {
+			newQuestState = "in-progress"
+		} else if CanAcceptAnyQuestFromWizard(playerID) {
+			newQuestState = "available"
+		}
+
+		npcUpdateMsg := models.NpcQuestStateUpdateMessage{
+			Type:       string(ServerEventNpcQuestStateUpdate),
+			NpcName:    "wizard",
+			QuestState: newQuestState, // This will be "" if no conditions are met
+		}
+		npcUpdateJSON, _ := json.Marshal(npcUpdateMsg)
+		sendDirectMessage(playerID, npcUpdateJSON)
+
 		return nil
 	}
 

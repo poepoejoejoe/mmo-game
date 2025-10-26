@@ -1,9 +1,0 @@
-{
-  "asset_name": "quest-icon",
-  "asset_type": "menu_icon",
-  "description": "A quest icon.",
-  "output_format": "png",
-  "size_hint": "small",
-  "transparent": true,
-  "llm_prompt": "A yellow exclamation mark, in the style of a fantasy game UI icon. It should be easily understandable at a small size."
-}

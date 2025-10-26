@@ -109,7 +109,7 @@ func RegisterPlayer(playerID string, name string) (*models.RegisteredMessage, *m
 	registeredMsg := &models.RegisteredMessage{
 		Type:      string(ServerEventRegistered),
 		SecretKey: secretKey,
-		PlayerID:  playerID,
+		PlayerId:  playerID,
 		Name:      name,
 	}
 
@@ -174,6 +174,15 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		if npcType, ok := entityData["npcType"]; ok && entityType == string(EntityTypeNPC) {
 			entityState.Type = string(EntityTypeNPC)
 			entityState.Name = npcType
+			if NPCType(npcType) == NPCTypeWizard {
+				if IsQuestReadyToTurnInToWizard(playerID) {
+					entityState.QuestState = "turn-in-ready"
+				} else if HasActiveQuestFromWizard(playerID) {
+					entityState.QuestState = "in-progress"
+				} else if CanAcceptAnyQuestFromWizard(playerID) {
+					entityState.QuestState = "available"
+				}
+			}
 		} else if name, ok := entityData["name"]; ok {
 			entityState.Name = name
 		}

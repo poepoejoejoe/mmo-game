@@ -3,7 +3,7 @@ import { TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
 // --- UPDATED ---
 import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
 import { findTileGroups } from './grouper';
-import { drawWaterGroup, crackImages } from './drawing';
+import { drawWaterGroup, crackImages, drawQuestIndicator } from './drawing';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -19,7 +19,6 @@ const damageIndicators: DamageIndicator[] = [];
 const DAMAGE_INDICATOR_LIFETIME = 1000; // 1 second
 
 export const assetImages: { [key: string]: HTMLImageElement } = {};
-let assetsLoaded = false;
 
 export function showDamageIndicator(x: number, y: number, damage: number) {
     damageIndicators.push({
@@ -53,7 +52,6 @@ function loadAssets() {
     let loadedCount = 0;
     const totalAssets = assetPaths.size;
     if (totalAssets === 0) {
-        assetsLoaded = true;
         return;
     }
 
@@ -64,7 +62,6 @@ function loadAssets() {
             assetImages[path] = img;
             loadedCount++;
             if (loadedCount === totalAssets) {
-                assetsLoaded = true;
                 console.log("All game assets loaded.");
             }
         };
@@ -208,6 +205,10 @@ function drawEntities(startX: number, startY: number, time: number) {
         } else {
             ctx.fillStyle = props.color;
             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+        }
+
+        if (entity.questState) {
+            drawQuestIndicator(ctx, screenX, screenY, TILE_SIZE, time, entity.questState);
         }
 
         // --- NEW: Render Chat Message ---
