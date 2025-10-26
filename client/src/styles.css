@@ -284,7 +284,7 @@ body {
 /* --- Info Panels --- */
 .info-panel {
     width: clamp(320px, 25vw, 420px) !important;
-    height: 15vh;
+    min-height: 15vh;
     overflow-y: auto;
     background-color: rgba(0, 0, 0, 0.6);
     border-radius: 10px;

@@ -517,14 +517,23 @@ function drawPlayerFacingUp(ctx: CanvasRenderingContext2D, pixelSize: number, wa
 
 function drawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize: number, walkCycle: number, isMoving: boolean, colors: { [key: string]: string }) {
     const torsoWidth = pixelSize * 4;
-    const legWidth = pixelSize * 3;
+    const legWidth = pixelSize * 2.5;
     const armWidth = pixelSize * 2;
     const legY = pixelSize * 2;
     const armY = -pixelSize * 3;
+    const legXOffset = -pixelSize * 0.5;
+    const legHeight = pixelSize * 4;
+    const rotationAngle = 15 * Math.PI / 180;
 
     // 1. Draw Far Limbs (behind torso)
+    const farLegAngle = isMoving ? (walkCycle === 1 ? rotationAngle : -rotationAngle) : 0;
+    ctx.save();
     ctx.fillStyle = colors.pantsColor;
-    ctx.fillRect(-pixelSize / 2, legY + (isMoving && walkCycle === 1 ? -pixelSize : 0), legWidth, pixelSize * 4); // Far leg
+    ctx.translate(-pixelSize / 2 + legXOffset + legWidth / 2, legY);
+    ctx.rotate(farLegAngle);
+    ctx.fillRect(-legWidth / 2, 0, legWidth, legHeight);
+    ctx.restore();
+
     ctx.fillStyle = colors.skinColor;
     ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 0 ? -pixelSize : 0), armWidth, pixelSize * 4); // Far arm
 
@@ -535,12 +544,14 @@ function drawPlayerFacingSide(ctx: CanvasRenderingContext2D, pixelSize: number, 
     ctx.fillRect(-torsoWidth / 2, -pixelSize, torsoWidth, pixelSize * 2);
 
     // 3. Draw Near Limbs (in front of torso)
-    if (isMoving && walkCycle === 0) {
-        ctx.fillStyle = colors.shirtColor;
-        ctx.fillRect(-pixelSize * 1.5, legY, legWidth, pixelSize);
-    }
+    const nearLegAngle = isMoving ? (walkCycle === 0 ? rotationAngle : -rotationAngle) : 0;
+    ctx.save();
     ctx.fillStyle = colors.pantsColor;
-    ctx.fillRect(-pixelSize * 1.5, legY + (isMoving && walkCycle === 0 ? pixelSize : 0), legWidth, pixelSize * 4); // Near Leg
+    ctx.translate(-pixelSize * 1.5 + legXOffset + legWidth / 2, legY);
+    ctx.rotate(nearLegAngle);
+    ctx.fillRect(-legWidth / 2, 0, legWidth, legHeight);
+    ctx.restore();
+
     ctx.fillStyle = colors.skinColor;
     ctx.fillRect(-armWidth / 2, armY + (isMoving && walkCycle === 1 ? pixelSize : 0), armWidth, pixelSize * 4); // Near arm
     
