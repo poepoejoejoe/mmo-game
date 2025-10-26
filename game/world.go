@@ -6,9 +6,11 @@ import (
 	"math/rand"
 	"mmo-game/models"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aquilax/go-perlin"
+	"github.com/go-redis/redis/v8"
 )
 
 const (
@@ -113,4 +115,59 @@ func GenerateWorld() {
 	}
 
 	log.Println("World generation complete.")
+}
+
+func IndexWorldResources() {
+	log.Println("Indexing world resources...")
+	worldData, err := rdb.HGetAll(ctx, string(RedisKeyWorldZone0)).Result()
+	if err != nil {
+		log.Fatalf("Failed to get world data for indexing: %v", err)
+	}
+
+	pipe := rdb.Pipeline()
+	count := 0
+	for coord, tileJSON := range worldData {
+		var tile models.WorldTile
+		json.Unmarshal([]byte(tileJSON), &tile)
+		props := TileDefs[TileType(tile.Type)]
+
+		if props.IsGatherable {
+			coords := strings.Split(coord, ",")
+			x, _ := strconv.Atoi(coords[0])
+			y, _ := strconv.Atoi(coords[1])
+
+			// Member format: "tileType:x,y" e.g., "tree:10,20"
+			member := tile.Type + ":" + coord
+			pipe.GeoAdd(ctx, string(RedisKeyResourcePositions), &redis.GeoLocation{
+				Name:      member,
+				Longitude: float64(x),
+				Latitude:  float64(y),
+			})
+			count++
+		}
+	}
+
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		log.Printf("Error indexing world resources: %v", err)
+	}
+	log.Printf("Indexed %d resource locations.", count)
+}
+
+// GetWorldTile retrieves a single tile and its properties from the world data.
+func GetWorldTile(x, y int) (*models.WorldTile, *TileProperties, error) {
+	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
+
+	tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), coordKey).Result()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var tile models.WorldTile
+	if err := json.Unmarshal([]byte(tileJSON), &tile); err != nil {
+		return nil, nil, err
+	}
+
+	props := TileDefs[TileType(tile.Type)]
+	return &tile, &props, nil
 }

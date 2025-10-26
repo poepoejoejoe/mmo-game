@@ -720,6 +720,12 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.fill();
 
     ctx.save();
+	
+    if (entity.isEcho) {
+        ctx.globalAlpha = 0.5;
+        ctx.filter = 'brightness(150%)';
+    }
+
     ctx.translate(centerX, centerY);
 
     const direction = entity.direction || 'down';

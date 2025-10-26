@@ -28,28 +28,22 @@
 ### Backlog
 
 #### Quests
-- **Rewards:**
-    - Armor
-    - XP?
-    - Gold?
-- **Quest Ideas:**
-    - Collect 10 wood make a wall
-    - Make a fire and cook rat meat
-    - Craft a crude axe
+
 
 #### Experience
-- OSRS like? WoW like?
+- OSRS like with wow like talents
 
 #### Trading
 - TBD
 
 #### Talents
-- Do talents just unlock stuff for your echo?
+- Do talents just unlock stuff for your echo? Talents enhance your abilities and encourage control of your echo
 
 #### Echos
 - Allow trading echoes. Setting trades for echos is like the AH system? e.g. your echo can say 12 wood for 1 box or something?
 - Echos are based on xp what they do? or is it on events?
 - Echos could just be based on talents?
+
 
 ### Ice box
 - **PvP?**
@@ -109,8 +103,17 @@ This phase is about lowering the barrier to entry and creating systems that gene
 
 - **The Echo:** When you log off, your "Echo" appears, perhaps with a ghostly or "dreaming" visual. It wanders the world.
 - **Recorded Behavior:** If you spent 80% of your time chopping trees in a specific forest, your Echo will be found there, chopping trees. If you were a guard, your Echo will patrol your guild's walls. If you were a crafter, your Echo will stand at their workbench, "practicing."
-- **Interaction:** You can't kill these Echos (they're not "online"). But you can interact with them. Maybe you can "Dreamshare" with a logged-off Echo to trade an item, leaving it for them when they log in. Maybe you can "Learn" from a master crafter's Echo, gaining a tiny skill boost once per day.
+- **Interaction:** You can't kill these Echos (they're not "online"). But you can interact with them.
 - **Virality & Fun:** The world feels always populated. You'd see famous players' Echos and make "pilgrimages" to learn from them. It creates a 24/7 world and a sense of legacy. If you die, maybe your Echo becomes a "ghost" that haunts the place you died, creating player-driven lore.
+- The player should have the option to just turn on their echo and watch what its doing. Or when they go afk their echo just takes over.
+
+### Implementation Plan Summary
+
+- **Concept:** Instead of despawning on logout, a player's character can become an AI-controlled "Echo". This can also be manually toggled by the player while online.
+- **Mechanic - Resonance:** Actively playing the game builds up a resource called "Resonance." An active Echo consumes this Resonance over time. When it runs out, the Echo will either despawn (if the player is offline) or return control to the player (if they are online).
+- **Behavior:** The Echo's AI will be simple initially, determined by the player's highest skill. For example, a player with high woodcutting will have an Echo that wanders near forests.
+- **Introduction:** The feature will be unlocked via a new quest, "A Lingering Will," which will introduce the lore and mechanics to the player. The UI for controlling the Echo will only become visible after completing this quest.
+- **Player Control:** When a player manually activates their Echo, their own input will be blocked until they "Reclaim Control" or the Echo's Resonance runs out.
 
 ---
 

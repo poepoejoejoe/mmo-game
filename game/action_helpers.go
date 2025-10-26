@@ -277,34 +277,6 @@ func GetEntitiesInRange(x, y, radius int, entityType EntityType) []string {
 	return entityIDs
 }
 
-// GetWorldTile fetches a tile from Redis and unmarshals it and its properties.
-func GetWorldTile(x, y int) (*models.WorldTile, *TileProperties, error) {
-	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
-	// Use RedisKey constant
-	tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), coordKey).Result()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var tile models.WorldTile
-	if err := json.Unmarshal([]byte(tileJSON), &tile); err != nil {
-		log.Printf("Failed to unmarshal tile at %s: %v", coordKey, err)
-		return nil, nil, err
-	}
-
-	// --- BUG FIX ---
-	// Cast tile.Type string to TileType for map lookup
-	props, ok := TileDefs[TileType(tile.Type)]
-	if !ok {
-		log.Printf("Unknown tile type %s at %s", tile.Type, coordKey)
-		// Fallback to ground properties to be safe
-		props = TileDefs[TileTypeGround]
-	}
-	// --- END BUG FIX ---
-
-	return &tile, &props, nil
-}
-
 // PublishUpdate sends a message to the Redis world_updates channel for broadcasting.
 func PublishUpdate(message interface{}) {
 	jsonMsg, err := json.Marshal(message)

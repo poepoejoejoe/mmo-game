@@ -50,18 +50,21 @@ type EntityState struct {
 	CreatedAt  int64           `json:"createdAt,omitempty"`
 	ShirtColor string          `json:"shirtColor,omitempty"`
 	Gear       map[string]Item `json:"gear,omitempty"`
+	IsEcho     bool            `json:"isEcho,omitempty"`
 }
 
 // InitialStateMessage now sends a map of all entities.
 type InitialStateMessage struct {
-	Type       string                 `json:"type"`
-	PlayerId   string                 `json:"playerId"`
-	Entities   map[string]EntityState `json:"entities"`
-	World      map[string]WorldTile   `json:"world"`
-	Inventory  map[string]Item        `json:"inventory"`
-	Gear       map[string]Item        `json:"gear"`
-	Quests     map[QuestID]*Quest     `json:"quests"`
-	Experience map[Skill]float64      `json:"experience"`
+	Type         string                 `json:"type"`
+	PlayerId     string                 `json:"playerId"`
+	Entities     map[string]EntityState `json:"entities"`
+	World        map[string]WorldTile   `json:"world"`
+	Inventory    map[string]Item        `json:"inventory"`
+	Gear         map[string]Item        `json:"gear"`
+	Quests       map[QuestID]*Quest     `json:"quests"`
+	Experience   map[Skill]float64      `json:"experience"`
+	Resonance    int64                  `json:"resonance"`
+	EchoUnlocked bool                   `json:"echoUnlocked"`
 }
 
 type QuestUpdateMessage struct {
@@ -132,10 +135,12 @@ type EntityDamagedMessage struct {
 }
 
 type PlayerStatsUpdateMessage struct {
-	Type       string            `json:"type"`
-	Health     int               `json:"health"`
-	MaxHealth  int               `json:"maxHealth"`
-	Experience map[Skill]float64 `json:"experience"`
+	Type         string            `json:"type"`
+	Health       int               `json:"health"`
+	MaxHealth    int               `json:"maxHealth"`
+	Experience   map[Skill]float64 `json:"experience"`
+	Resonance    int64             `json:"resonance,omitempty"`
+	EchoUnlocked bool              `json:"echoUnlocked,omitempty"`
 }
 
 // Item defines a single item instance in a player's inventory.

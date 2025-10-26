@@ -195,6 +195,8 @@ func (c *Client) readPump() {
 				game.ProcessSendChat(c.id, msg.Payload)
 			case game.ClientEventDialogAction:
 				game.ProcessDialogAction(c.id, msg.Payload)
+			case game.ClientEventToggleEcho:
+				game.ProcessToggleEcho(c.id)
 			}
 		}
 	}

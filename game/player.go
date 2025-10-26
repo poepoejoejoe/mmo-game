@@ -52,6 +52,22 @@ func LoginPlayer(secretKey string) (string, *models.InitialStateMessage) {
 	initialState := getPlayerState(playerID)
 	if initialState != nil {
 		if playerEntityState, ok := initialState.Entities[playerID]; ok {
+
+			// --- NEW: Handle reconnecting as an Echo ---
+			playerData, _ := rdb.HGetAll(ctx, playerID).Result()
+			if isEcho, _ := strconv.ParseBool(playerData["isEcho"]); isEcho {
+				rdb.HSet(ctx, playerID, "isEcho", "false")
+				log.Printf("Player %s is reclaiming their Echo.", playerID)
+				// Announce the Echo is gone
+				updateMsg := map[string]interface{}{
+					"type":     string(ServerEventEntityUpdate),
+					"entityId": playerID,
+					"isEcho":   false,
+				}
+				PublishUpdate(updateMsg)
+			}
+			// --- END NEW ---
+
 			// Announce the player's return to everyone else
 			updateMsg := map[string]interface{}{
 				"type":       string(ServerEventEntityJoined),
@@ -71,6 +87,7 @@ func LoginPlayer(secretKey string) (string, *models.InitialStateMessage) {
 				Longitude: float64(playerEntityState.X),
 				Latitude:  float64(playerEntityState.Y),
 			})
+			rdb.HSet(ctx, playerID, "loginTimestamp", time.Now().UnixMilli())
 		}
 	}
 	// --- END NEW ---
@@ -200,6 +217,8 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		if entityType == string(EntityTypePlayer) {
 			gear, _ := GetGear(loc.Name)
 			entityState.Gear = gear
+			isEcho, _ := strconv.ParseBool(entityData["isEcho"])
+			entityState.IsEcho = isEcho
 		}
 		allEntitiesState[loc.Name] = entityState
 	}
@@ -222,6 +241,8 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 			}
 			gear, _ := GetGear(playerID)
 			entityState.Gear = gear
+			isEcho, _ := strconv.ParseBool(playerEntityData["isEcho"])
+			entityState.IsEcho = isEcho
 			allEntitiesState[playerID] = entityState
 		}
 	}
@@ -269,22 +290,30 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		json.Unmarshal([]byte(experienceJSON), &experience)
 	}
 
+	resonance, _ := strconv.ParseInt(playerData["resonance"], 10, 64)
+	echoUnlocked, _ := strconv.ParseBool(playerData["echoUnlocked"])
+
 	initialState := &models.InitialStateMessage{
-		Type:       string(ServerEventInitialState),
-		PlayerId:   playerID,
-		Entities:   allEntitiesState,
-		World:      worldDataTyped,
-		Inventory:  inventoryDataTyped,
-		Gear:       gearDataTyped,
-		Quests:     quests.Quests,
-		Experience: experience,
+		Type:         string(ServerEventInitialState),
+		PlayerId:     playerID,
+		Entities:     allEntitiesState,
+		World:        worldDataTyped,
+		Inventory:    inventoryDataTyped,
+		Gear:         gearDataTyped,
+		Quests:       quests.Quests,
+		Experience:   experience,
+		Resonance:    resonance,
+		EchoUnlocked: echoUnlocked,
 	}
 
 	playerHealth, _ := strconv.Atoi(playerData["health"])
 	statsUpdateMsg := models.PlayerStatsUpdateMessage{
-		Type:      string(ServerEventPlayerStatsUpdate),
-		Health:    playerHealth,
-		MaxHealth: PlayerDefs.MaxHealth,
+		Type:         string(ServerEventPlayerStatsUpdate),
+		Health:       playerHealth,
+		MaxHealth:    PlayerDefs.MaxHealth,
+		Experience:   experience,
+		Resonance:    resonance,
+		EchoUnlocked: echoUnlocked,
 	}
 	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
 	time.AfterFunc(100*time.Millisecond, func() {
@@ -365,6 +394,13 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"entityType", string(EntityTypePlayer), // This is the internal type
 		"moveCooldown", 100, // 100ms move cooldown for players
 		"shirtColor", utils.GenerateRandomColor(),
+		"loginTimestamp", time.Now().UnixMilli(),
+		"resonance", 1800,
+		"isEcho", "false",
+		"echoUnlocked", "true",
+		"echoState", "idling",
+		"echoTarget", "",
+		"echoPath", "",
 	)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
 
@@ -415,6 +451,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	}
 	playerQuests.CompletedQuests[models.QuestBuildAWall] = true
 	playerQuests.CompletedQuests[models.QuestRatProblem] = true
+	playerQuests.CompletedQuests["a_lingering_will"] = true
 	questsJSON, _ := json.Marshal(playerQuests)
 	pipe.HSet(ctx, playerID, "quests", questsJSON)
 
@@ -457,12 +494,22 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 func CleanupPlayer(playerID string) {
 	log.Printf("Cleaning up player %s.", playerID)
 
-	// --- NEW: Get player's position and remove their tile lock ---
 	playerData, err := rdb.HGetAll(ctx, playerID).Result()
 	if err != nil {
 		log.Printf("Error getting player data for cleanup %s: %v", playerID, err)
-		// We should still proceed with cleanup as much as possible.
 	} else {
+		// --- NEW: Calculate session duration and add to Resonance ---
+		if loginTimestampStr, ok := playerData["loginTimestamp"]; ok {
+			loginTimestamp, _ := strconv.ParseInt(loginTimestampStr, 10, 64)
+			sessionDuration := time.Now().UnixMilli() - loginTimestamp
+
+			// Add half of the session duration to their Resonance balance
+			resonanceToAdd := sessionDuration / 2000 // in seconds
+			rdb.HIncrBy(ctx, playerID, "resonance", resonanceToAdd)
+			log.Printf("Player %s was online for %dms. Added %d to Resonance.", playerID, sessionDuration, resonanceToAdd)
+		}
+		// --- END NEW ---
+
 		if xStr, ok := playerData["x"]; ok {
 			if yStr, ok := playerData["y"]; ok {
 				x, _ := strconv.Atoi(xStr)
@@ -472,17 +519,33 @@ func CleanupPlayer(playerID string) {
 			}
 		}
 	}
-	// --- END NEW ---
 
-	// Announce the entity has left
-	leftMsg := map[string]interface{}{
-		"type":     string(ServerEventEntityLeft),
-		"entityId": playerID,
+	resonance, _ := strconv.ParseInt(playerData["resonance"], 10, 64)
+
+	if resonance > 0 {
+		// --- BECOME AN ECHO ---
+		rdb.HSet(ctx, playerID, "isEcho", "true")
+		updateMsg := map[string]interface{}{
+			"type":     string(ServerEventEntityUpdate),
+			"entityId": playerID,
+			"isEcho":   true,
+		}
+		PublishUpdate(updateMsg)
+		log.Printf("Player %s has become an Echo.", playerID)
+
+	} else {
+		// --- DISCONNECT NORMALLY ---
+		// Announce the entity has left
+		leftMsg := map[string]interface{}{
+			"type":     string(ServerEventEntityLeft),
+			"entityId": playerID,
+		}
+		PublishUpdate(leftMsg)
+
+		// Remove the entity from the geospatial index, but do NOT delete their data.
+		rdb.ZRem(ctx, string(RedisKeyZone0Positions), playerID)
+		log.Printf("Player %s has disconnected.", playerID)
 	}
-	PublishUpdate(leftMsg)
-
-	// Remove the entity from the geospatial index, but do NOT delete their data.
-	rdb.ZRem(ctx, string(RedisKeyZone0Positions), playerID)
 }
 
 func AddExperience(playerID string, skill models.Skill, amount float64) {
@@ -510,11 +573,15 @@ func AddExperience(playerID string, skill models.Skill, amount float64) {
 	}
 	playerData, _ := rdb.HGetAll(ctx, playerID).Result()
 	playerHealth, _ := strconv.Atoi(playerData["health"])
+	resonance, _ := strconv.ParseInt(playerData["resonance"], 10, 64)
+	echoUnlocked, _ := strconv.ParseBool(playerData["echoUnlocked"])
 	statsUpdateMsg := models.PlayerStatsUpdateMessage{
-		Type:       string(ServerEventPlayerStatsUpdate),
-		Health:     playerHealth,
-		MaxHealth:  PlayerDefs.MaxHealth,
-		Experience: experience,
+		Type:         string(ServerEventPlayerStatsUpdate),
+		Health:       playerHealth,
+		MaxHealth:    PlayerDefs.MaxHealth,
+		Experience:   experience,
+		Resonance:    resonance,
+		EchoUnlocked: echoUnlocked,
 	}
 	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
 	if sendDirectMessage != nil {

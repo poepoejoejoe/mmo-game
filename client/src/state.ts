@@ -11,6 +11,8 @@ const clientState: ClientState = {
     experience: {},
     lastInteractionPosition: null,
     activeNpcId: null,
+    resonance: 0,
+    echoUnlocked: false,
 };
 
 // --- State Accessors (Getters) ---
@@ -50,7 +52,9 @@ export function setInitialState(
     inventory: Record<string, InventoryItem>,
     gear: Record<string, InventoryItem>,
     quests: Record<string, Quest>,
-    experience: Record<string, number>
+    experience: Record<string, number>,
+    resonance: number,
+    echoUnlocked: boolean
 ) {
     clientState.playerId = playerId;
     
@@ -69,6 +73,8 @@ export function setInitialState(
     clientState.gear = gear;
     clientState.quests = quests;
     clientState.experience = experience;
+    clientState.resonance = resonance;
+    clientState.echoUnlocked = echoUnlocked;
 }
 
 export function setEntityPosition(entityId: string, x: number, y: number, direction?: 'up' | 'down' | 'left' | 'right') {
@@ -125,6 +131,14 @@ export function setResourceHealth(x: number, y: number, health: number) {
 
 export function setExperience(experience: Record<string, number>) {
     clientState.experience = experience;
+}
+
+export function setResonance(resonance: number) {
+    clientState.resonance = resonance;
+}
+
+export function setEchoUnlocked(unlocked: boolean) {
+    clientState.echoUnlocked = unlocked;
 }
 
 export function setInventory(inventory: Record<string, InventoryItem>) {

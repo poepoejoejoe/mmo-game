@@ -57,7 +57,7 @@ function handleMessage(event: MessageEvent) {
         case 'initial_state': {
             const stateMsg = msg as InitialStateMessage;
             // state.setInitialState now receives the full entity map
-            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory, stateMsg.gear, stateMsg.quests, stateMsg.experience);
+            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory, stateMsg.gear, stateMsg.quests, stateMsg.experience, stateMsg.resonance || 0, stateMsg.echoUnlocked || false);
             updateInventoryUI();
             const myEntity = state.getMyEntity();
             if (myEntity && myEntity.name) {
@@ -181,6 +181,12 @@ function handleMessage(event: MessageEvent) {
             updatePlayerHealth(statsMsg.health, statsMsg.maxHealth);
             if (statsMsg.experience) {
                 state.setExperience(statsMsg.experience);
+            }
+            if (statsMsg.resonance !== undefined) {
+                state.setResonance(statsMsg.resonance);
+            }
+            if (statsMsg.echoUnlocked !== undefined) {
+                state.setEchoUnlocked(statsMsg.echoUnlocked);
             }
             updateInventoryUI(); // This will trigger an experience UI update
             onStateUpdate();

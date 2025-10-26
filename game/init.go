@@ -16,12 +16,17 @@ var (
 // SendDirectMessageFunc is a function type for sending a message to a specific client.
 type SendDirectMessageFunc func(playerID string, message []byte)
 
+// IsPlayerOnlineFunc checks if a player has an active client connection.
+type IsPlayerOnlineFunc func(playerID string) bool
+
 var sendDirectMessage SendDirectMessageFunc
+var IsPlayerOnline IsPlayerOnlineFunc
 
 // Init initializes the game package with a Redis client.
-func Init(redisClient *redis.Client, directMessageFunc SendDirectMessageFunc) {
+func Init(redisClient *redis.Client, directMessageFunc SendDirectMessageFunc, isOnlineFunc IsPlayerOnlineFunc) {
 	rdb = redisClient
 	sendDirectMessage = directMessageFunc
+	IsPlayerOnline = isOnlineFunc
 	loadScripts()
 }
 

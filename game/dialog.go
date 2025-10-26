@@ -91,6 +91,11 @@ func HandleWizardDialogAction(playerID string, action string) *models.DialogMess
 		MarkQuestAsCompleted(playerQuests, turnInAction.QuestID)
 		SavePlayerQuests(playerID, playerQuests)
 
+		if turnInAction.QuestID == "a_lingering_will" {
+			rdb.HSet(ctx, playerID, "echoUnlocked", "true")
+			log.Printf("Player %s has unlocked the Echo ability.", playerID)
+		}
+
 		// After all server-side changes, send the final inventory state to the client
 		if newInventory != nil {
 			inventoryUpdateMsg := models.InventoryUpdateMessage{

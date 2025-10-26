@@ -35,6 +35,14 @@ var QuestDefs = map[models.QuestID]models.Quest{
 		},
 		IsComplete: false,
 	},
+	"a_lingering_will": {
+		ID:    "a_lingering_will",
+		Title: "A Lingering Will",
+		Objectives: []models.QuestObjective{
+			{Type: models.ObjectiveGather, Target: string(ItemGoop), Description: "Gather 10 Goop", RequiredCount: 10},
+		},
+		IsComplete: false,
+	},
 }
 
 func GetPlayerQuests(playerID string) (*models.PlayerQuests, error) {

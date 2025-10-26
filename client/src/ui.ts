@@ -54,6 +54,7 @@ let craftingButton: HTMLButtonElement;
 let gearButton: HTMLButtonElement;
 let questButton: HTMLButtonElement;
 let experienceButton: HTMLButtonElement;
+let echoButton: HTMLButtonElement;
 let chatMessagesEl: HTMLElement;
 let chatButton: HTMLButtonElement;
 let chatContainer: HTMLElement;
@@ -97,6 +98,7 @@ export function initializeUI() {
     gearButton = document.getElementById('gear-button') as HTMLButtonElement;
     questButton = document.getElementById('quest-button') as HTMLButtonElement;
     experienceButton = document.getElementById('experience-button') as HTMLButtonElement;
+    echoButton = document.getElementById('echo-button') as HTMLButtonElement;
     chatMessagesEl = document.getElementById('chat-messages')!;
     chatButton = document.getElementById('chat-button') as HTMLButtonElement;
     chatContainer = document.getElementById('chat-container')!;
@@ -125,6 +127,9 @@ export function initializeUI() {
     gearButton.addEventListener('click', () => toggleInfoPanel('gear'));
     questButton.addEventListener('click', () => toggleInfoPanel('quest'));
     experienceButton.addEventListener('click', () => toggleInfoPanel('experience'));
+    echoButton.addEventListener('click', () => {
+        send({ type: 'toggle_echo', payload: {} });
+    });
     helpButton.addEventListener('click', () => toggleModal('help-modal', true));
     helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
     dialogCloseButton.addEventListener('click', hideDialog);
@@ -141,6 +146,7 @@ export function initializeUI() {
     gearButton.innerHTML = `<img src="assets/gear-icon.png" alt="Gear">`;
     questButton.innerHTML = `<img src="assets/quest-icon.png" alt="Quests">`;
     chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
+    echoButton.innerHTML = `<img src="assets/fire-icon.png" alt="Echo">`; // Placeholder icon
 }
 
 export function showCraftSuccess(itemId: string) {
@@ -580,6 +586,7 @@ export function updateInventoryUI(): void {
     updateGearUI();
     updateQuestUI();
     updateExperienceUI();
+    updateEchoUI();
 }
 
 export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {
@@ -621,6 +628,30 @@ export function updatePlayerHealth(health: number, maxHealth: number) {
     healthBar.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
 
     healthBarText.textContent = `${health} / ${maxHealth}`;
+}
+
+export function updateEchoUI(): void {
+    const me = state.getMyEntity();
+    const isUnlocked = state.getState().echoUnlocked;
+    if (!me || !isUnlocked) {
+        echoButton.style.display = 'none';
+        return;
+    }
+
+    const resonance = state.getState().resonance || 0;
+    const isEcho = me.isEcho || false;
+
+    if (isEcho) {
+        echoButton.classList.add('selected');
+        const minutes = Math.floor(resonance / 60);
+        const seconds = resonance % 60;
+        echoButton.title = `Reclaim Control (${minutes}m ${seconds}s remaining)`;
+    } else {
+        echoButton.classList.remove('selected');
+        const minutes = Math.floor(resonance / 60);
+        const seconds = resonance % 60;
+        echoButton.title = `Activate Echo (${minutes}m ${seconds}s available)`;
+    }
 }
 
 export function updateExperienceUI(): void {

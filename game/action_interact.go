@@ -132,9 +132,7 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 			}
 
 			// --- NEW: Quest Completion Check for Gathering ---
-			if props.GatherResource == ItemWood {
-				CheckObjectives(playerID, models.ObjectiveGather, string(ItemWood))
-			}
+			CheckObjectives(playerID, models.ObjectiveGather, string(props.GatherResource))
 			// --- END NEW ---
 		}
 	}
@@ -150,6 +148,13 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 			Tile: groundTile,
 		}
 		PublishUpdate(worldUpdateMsg)
+
+		// --- NEW: Remove from resource index ---
+		if props.IsGatherable {
+			member := originalTileType + ":" + targetCoordKey
+			rdb.ZRem(ctx, string(RedisKeyResourcePositions), member)
+		}
+		// --- END NEW ---
 
 		// Use TileType constant
 		if TileType(originalTileType) == TileTypeWoodenWall {

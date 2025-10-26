@@ -77,6 +77,7 @@ const (
 	ClientEventLogin        ClientEventType = "login"
 	ClientEventRegister     ClientEventType = "register"
 	ClientEventDialogAction ClientEventType = "dialog_action"
+	ClientEventToggleEcho   ClientEventType = "toggle_echo"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -91,6 +92,7 @@ const (
 	ServerEventEntityJoined            ServerEventType = "entity_joined" // <-- RENAMED
 	ServerEventEntityLeft              ServerEventType = "entity_left"   // <-- RENAMED
 	ServerEventEntityMoved             ServerEventType = "entity_moved"
+	ServerEventEntityUpdate            ServerEventType = "entity_update"
 	ServerEventEntityDamaged           ServerEventType = "entity_damaged"
 	ServerEventPlayerStatsUpdate       ServerEventType = "player_stats_update"
 	ServerEventItemDropped             ServerEventType = "item_dropped"
@@ -118,18 +120,19 @@ const (
 type RedisKey string
 
 const (
-	RedisKeyPlayerPrefix    RedisKey = "player:"
-	RedisKeyPlayerInventory RedisKey = "player:inventory:"
-	RedisKeyPlayerGear      RedisKey = "player:gear:"
-	RedisKeyLockTile        RedisKey = "lock:tile:"
-	RedisKeyWorldZone0      RedisKey = "world:zone:0"
-	RedisKeyZone0Positions  RedisKey = "zone:0:positions"
-	RedisKeyLockWorldObject RedisKey = "world_object"
-	NPCSlimePrefix          RedisKey = "npc:slime:" // <-- NEW
-	NPCRatPrefix            RedisKey = "npc:rat:"   // <-- NEW
-	NPCWizardPrefix         RedisKey = "npc:wizard:"
-	ItemPrefix              RedisKey = "item:"
-	RedisKeySecretPrefix    RedisKey = "secret:"
+	RedisKeyLockTile          RedisKey = "lock:tile:"
+	RedisKeyLockWorldObject   RedisKey = "lock:world"
+	RedisKeyPlayerPrefix      RedisKey = "player:"
+	RedisKeyPlayerInventory   RedisKey = "inventory:"
+	RedisKeyPlayerGear        RedisKey = "gear:"
+	RedisKeyZone0Positions    RedisKey = "positions:zone:0"
+	RedisKeyResourcePositions RedisKey = "positions:resource"
+	RedisKeyWorldZone0        RedisKey = "world:zone:0"
+	NPCSlimePrefix            RedisKey = "npc:slime:" // <-- NEW
+	NPCRatPrefix              RedisKey = "npc:rat:"   // <-- NEW
+	NPCWizardPrefix           RedisKey = "npc:wizard:"
+	ItemPrefix                RedisKey = "item:"
+	RedisKeySecretPrefix      RedisKey = "secret:"
 )
 
 // --- END NEW CONSTANTS ---

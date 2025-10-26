@@ -4,14 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"math/rand"
 	"mmo-game/game"
 	"mmo-game/game/utils"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
@@ -116,24 +114,29 @@ func main() {
 	}
 	log.Println("Successfully connected to Redis.")
 
-	game.Init(rdb, SendDirectMessage)
+	HubInst = newHub()
+	go HubInst.run()
 
-	rand.Seed(time.Now().UnixNano())
+	isPlayerOnline := func(playerID string) bool {
+		_, ok := HubInst.clients[playerID]
+		return ok
+	}
+	game.Init(rdb, SendDirectMessage, isPlayerOnline)
 	game.GenerateWorld()
-	game.InitializeNPCs() // <-- NEW: Spawn NPCs
+	game.IndexWorldResources()
+	game.InitializeNPCs()
 	// --- For Testing: Spawn some NPCs ---
 	game.SpawnNPC("npc:slime:"+utils.GenerateUniqueID(), 1, 2, game.NPCTypeSlime)
 	game.SpawnNPC("npc:rat:"+utils.GenerateUniqueID(), -2, -3, game.NPCTypeRat)
 
 	// Start the game loops
-	go game.StartAILoop() // <-- NEW: Start the NPC AI loop
+	go game.StartAILoop()
 	go game.StartSpawnerLoop()
 	go game.StartDamageSystem()
 
-	HubInst = newHub()
-	go HubInst.run()
 	go subscribeToWorldUpdates()
 
+	// Configure websocket route
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(HubInst, w, r)
 	})

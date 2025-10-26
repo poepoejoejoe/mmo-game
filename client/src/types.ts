@@ -20,6 +20,7 @@ export interface EntityState {
     targetId?: string;
     shirtColor?: string;
     gear?: Record<string, InventoryItem>;
+    isEcho?: boolean;
 }
 
 export interface WorldTile {
@@ -53,6 +54,8 @@ export interface ClientState {
     gear: Record<string, InventoryItem>; // e.g. "weapon-slot": { id: "crude_axe", quantity: 1 }
     quests: Record<string, Quest>;
     experience: Record<string, number>;
+    resonance?: number;
+    echoUnlocked?: boolean;
     lastInteractionPosition: { x: number, y: number } | null;
     activeNpcId: string | null;
 }
@@ -79,6 +82,8 @@ export interface InitialStateMessage extends ServerMessage {
     gear: Record<string, InventoryItem>;
     quests: Record<string, Quest>;
     experience: Record<string, number>;
+    resonance?: number;
+    echoUnlocked?: boolean;
 }
 
 export interface QuestUpdateMessage extends ServerMessage {
@@ -177,6 +182,8 @@ export interface PlayerStatsUpdateMessage extends ServerMessage {
     health: number;
     maxHealth: number;
     experience: Record<string, number>;
+    resonance?: number;
+    echoUnlocked?: boolean;
 }
 
 export interface PlayerChatMessage extends ServerMessage {

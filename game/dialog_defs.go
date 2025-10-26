@@ -70,6 +70,11 @@ var WizardDialogTree = []DialogNode{
 		Options:   []models.DialogOption{{Text: "Happy to help.", Action: "turn_in_angry_trees"}},
 		Condition: DialogCondition{IsQuestReadyToTurnIn: models.QuestAngryTrees},
 	},
+	{
+		Text:      "The goop! It has a strange... resonance. I can teach you how to focus your will, to leave an Echo of yourself in the world when you depart. This will consume your built-up Resonance.",
+		Options:   []models.DialogOption{{Text: "Amazing!", Action: "turn_in_a_lingering_will"}},
+		Condition: DialogCondition{IsQuestReadyToTurnIn: "a_lingering_will"},
+	},
 	// --- Quest In-Progress ---
 	{
 		Text:      "You're back! Have you crafted and placed a wooden wall yet? The village needs fortifications!",
@@ -86,12 +91,19 @@ var WizardDialogTree = []DialogNode{
 		Options:   []models.DialogOption{{Text: "Working on it.", Action: "close_dialog"}},
 		Condition: DialogCondition{RequiredActiveQuests: []models.QuestID{models.QuestAngryTrees}},
 	},
+	{
+		Text:      "I need that goop to study its strange properties. Have you gathered 10 globs yet?",
+		Options:   []models.DialogOption{{Text: "I'm still gathering it.", Action: "close_dialog"}},
+		Condition: DialogCondition{RequiredActiveQuests: []models.QuestID{"a_lingering_will"}},
+	},
 	// --- Post-Quest & Quest Offers ---
 	{
-		Text:    "Your assistance has been invaluable. My research progresses, thanks to you!",
-		Options: []models.DialogOption{{Text: "Happy to help the pursuit of knowledge.", Action: "close_dialog"}},
+		Text:    "Your assistance has been invaluable. My research progresses, thanks to you! I have one final task, a strange one, that might unlock a hidden potential within you.",
+		Options: []models.DialogOption{{Text: "Tell me more.", Action: "quest_4_details"}, {Text: "I've had enough strange for one day.", Action: "close_dialog"}},
 		Condition: DialogCondition{
-			RequiredCompletedQuests: []models.QuestID{models.QuestBuildAWall, models.QuestRatProblem, models.QuestAngryTrees},
+			RequiredCompletedQuests:  []models.QuestID{models.QuestBuildAWall, models.QuestRatProblem, models.QuestAngryTrees},
+			ForbiddenActiveQuests:    []models.QuestID{"a_lingering_will"},
+			ForbiddenCompletedQuests: []models.QuestID{"a_lingering_will"},
 		},
 	},
 	{
@@ -152,6 +164,13 @@ var WizardDialogPages = map[string]DialogPage{
 			{Text: "You're on your own with this one.", Action: "close_dialog"},
 		},
 	},
+	"quest_4_details": {
+		Text: "I've noticed that the slime goop resonates with a person's life force. I believe if you gather enough of it, I can show you how to manifest an 'Echo' of yourself, a phantom that can linger in the world even when you are not focused on it. Bring me 10 globs of goop.",
+		Options: []models.DialogOption{
+			{Text: "A phantom of myself? I'm in.", Action: "accept_quest_a_lingering_will"},
+			{Text: "That sounds... creepy. No thanks.", Action: "close_dialog"},
+		},
+	},
 }
 
 // QuestAcceptAction defines the properties for a quest-accepting action.
@@ -173,6 +192,10 @@ var QuestAcceptActions = map[string]QuestAcceptAction{
 	"accept_quest_angry_trees": {
 		QuestID:      models.QuestAngryTrees,
 		Notification: "Quest Accepted: A-bewood-ing Problem",
+	},
+	"accept_quest_a_lingering_will": {
+		QuestID:      "a_lingering_will",
+		Notification: "Quest Accepted: A Lingering Will",
 	},
 }
 
@@ -203,5 +226,10 @@ var QuestTurnInActions = map[string]QuestTurnInAction{
 		QuestID:        models.QuestAngryTrees,
 		RewardItem:     ItemSliceOfPizza,
 		RewardQuantity: 1,
+	},
+	"turn_in_a_lingering_will": {
+		QuestID:            "a_lingering_will",
+		ItemToTake:         ItemGoop,
+		ItemToTakeQuantity: 10,
 	},
 }
