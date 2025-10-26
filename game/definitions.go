@@ -343,8 +343,8 @@ func init() {
 		IsCollidable:   false,
 		IsBuildableOn:  false,
 		Damage:         1,
-		DamageInterval: 1000, // 1 second
-		Duration:       1000, // 2 minutes
+		DamageInterval: 1000,   // 1 second
+		Duration:       120000, // 2 minutes
 	}
 
 	// --- Recipe Definitions (USING CONSTANTS) ---
