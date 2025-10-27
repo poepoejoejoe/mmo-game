@@ -25,15 +25,22 @@
 
 
 ### Current
-- need actions attacking in resonance
+
+
+### Idea backlog
 - need to think about dying over all, and as echo
-- need to change wizard quest that enables echos
 - need to consider if want to make it so that the quest unlocks recipes?
 
+### Ui improvements
 - when you gather resource show icon over inventory. When you equip gear show icon over gear button. When you unequip show icon over inventory
 
-
 ### Backlog
+- We should introduce the concept of the ui becoming unlocked as the player does the first couple quests. The first quest should unlock the inventory (in the ui only) as well as the crafting area.
+- The wizard should explain that experience and the experience menu item should unlock after the first quest
+- the reasoning for the third quest should be better. maybe it should just be about kill the rats and slimes with a more powerful weapon
+- The gear menu item should unlock after accepting the third quest which requires you to create an axe
+- We should improve the quest a_lingering_will after finishing the quest it should unlock the runes menu button in the ui, chop trees and mine ore. Finishin the quest also unlocks the toggle echo button in the ui as well as the resonance bar.
+
 - hosting / deploys / monitoring (?)
 - pvp
 - discord

@@ -292,6 +292,10 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 
 	resonance, _ := strconv.ParseInt(playerData["resonance"], 10, 64)
 	echoUnlocked, _ := strconv.ParseBool(playerData["echoUnlocked"])
+	runesJSON, _ := rdb.HGet(ctx, playerID, "runes").Result()
+	var runes []string
+	json.Unmarshal([]byte(runesJSON), &runes)
+	activeRune, _ := rdb.HGet(ctx, playerID, "activeRune").Result()
 
 	initialState := &models.InitialStateMessage{
 		Type:         string(ServerEventInitialState),
@@ -305,17 +309,21 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		Resonance:    resonance,
 		MaxResonance: 1800, // TODO: Make this dynamic
 		EchoUnlocked: echoUnlocked,
+		Runes:        runes,
+		ActiveRune:   activeRune,
 	}
 
 	playerHealth, _ := strconv.Atoi(playerData["health"])
+	maxHealth := PlayerDefs.MaxHealth
+	mr := int64(1800) // TODO: Make this dynamic
 	statsUpdateMsg := models.PlayerStatsUpdateMessage{
 		Type:         string(ServerEventPlayerStatsUpdate),
-		Health:       playerHealth,
-		MaxHealth:    PlayerDefs.MaxHealth,
+		Health:       &playerHealth,
+		MaxHealth:    &maxHealth,
 		Experience:   experience,
-		Resonance:    resonance,
-		MaxResonance: 1800, // TODO: Make this dynamic
-		EchoUnlocked: echoUnlocked,
+		Resonance:    &resonance,
+		MaxResonance: &mr,
+		EchoUnlocked: &echoUnlocked,
 	}
 	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
 	time.AfterFunc(100*time.Millisecond, func() {
@@ -403,6 +411,8 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"echoState", "idling",
 		"echoTarget", "",
 		"echoPath", "",
+		"runes", `["chop_trees", "mine_ore"]`,
+		"activeRune", "",
 	)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
 
@@ -500,18 +510,6 @@ func CleanupPlayer(playerID string) {
 	if err != nil {
 		log.Printf("Error getting player data for cleanup %s: %v", playerID, err)
 	} else {
-		// --- NEW: Calculate session duration and add to Resonance ---
-		if loginTimestampStr, ok := playerData["loginTimestamp"]; ok {
-			loginTimestamp, _ := strconv.ParseInt(loginTimestampStr, 10, 64)
-			sessionDuration := time.Now().UnixMilli() - loginTimestamp
-
-			// Add half of the session duration to their Resonance balance
-			resonanceToAdd := sessionDuration / 2000 // in seconds
-			rdb.HIncrBy(ctx, playerID, "resonance", resonanceToAdd)
-			log.Printf("Player %s was online for %dms. Added %d to Resonance.", playerID, sessionDuration, resonanceToAdd)
-		}
-		// --- END NEW ---
-
 		if xStr, ok := playerData["x"]; ok {
 			if yStr, ok := playerData["y"]; ok {
 				x, _ := strconv.Atoi(xStr)
@@ -550,6 +548,28 @@ func CleanupPlayer(playerID string) {
 	}
 }
 
+// GetEntityData retrieves all HSET data for a given entity ID.
+func GetEntityData(entityID string) (map[string]string, error) {
+	return rdb.HGetAll(ctx, entityID).Result()
+}
+
+// SetEchoState sets the echo state for a player and notifies the client.
+func SetEchoState(playerID string, enabled bool) {
+	pipe := rdb.Pipeline()
+	pipe.HSet(ctx, playerID, "isEcho", strconv.FormatBool(enabled))
+	// Also reset the echo state machine to idling for a clean transition.
+	pipe.HSet(ctx, playerID, "echoState", string(EchoStateIdling))
+	pipe.Exec(ctx)
+
+	// Update the player's client to reflect the change.
+	updateMsg := map[string]interface{}{
+		"type":     string(ServerEventEntityUpdate),
+		"entityId": playerID,
+		"isEcho":   enabled,
+	}
+	PublishUpdate(updateMsg)
+}
+
 func AddExperience(playerID string, skill models.Skill, amount float64) {
 	pipe := rdb.Pipeline()
 
@@ -568,6 +588,8 @@ func AddExperience(playerID string, skill models.Skill, amount float64) {
 	newExperienceJSON, _ := json.Marshal(experience)
 	pipe.HSet(ctx, playerID, "experience", newExperienceJSON)
 
+	pipe.HIncrBy(ctx, playerID, "resonance", 5) // Add 5 seconds of resonance
+
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Error setting experience for player %s: %v", playerID, err)
@@ -577,14 +599,16 @@ func AddExperience(playerID string, skill models.Skill, amount float64) {
 	playerHealth, _ := strconv.Atoi(playerData["health"])
 	resonance, _ := strconv.ParseInt(playerData["resonance"], 10, 64)
 	echoUnlocked, _ := strconv.ParseBool(playerData["echoUnlocked"])
+	maxHealth := PlayerDefs.MaxHealth
+	mr := int64(1800) // TODO: Make this dynamic
 	statsUpdateMsg := models.PlayerStatsUpdateMessage{
 		Type:         string(ServerEventPlayerStatsUpdate),
-		Health:       playerHealth,
-		MaxHealth:    PlayerDefs.MaxHealth,
+		Health:       &playerHealth,
+		MaxHealth:    &maxHealth,
 		Experience:   experience,
-		Resonance:    resonance,
-		MaxResonance: 1800, // TODO: Make this dynamic
-		EchoUnlocked: echoUnlocked,
+		Resonance:    &resonance,
+		MaxResonance: &mr,
+		EchoUnlocked: &echoUnlocked,
 	}
 	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
 	if sendDirectMessage != nil {

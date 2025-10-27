@@ -19,7 +19,8 @@ import {
     EntityAttackMessage,
     DialogMessage,
     QuestUpdateMessage,
-    NpcQuestStateUpdateMessage
+    NpcQuestStateUpdateMessage,
+    ActiveRuneUpdateMessage
 } from './types';
 import * as state from './state';
 import { 
@@ -68,6 +69,8 @@ function handleMessage(event: MessageEvent) {
                 initialState.resonance || 0,
                 initialState.maxResonance || 1,
                 initialState.echoUnlocked || false,
+                initialState.runes || [],
+                initialState.activeRune || '',
             );
             updateInventoryUI();
             const myEntity = state.getMyEntity();
@@ -77,6 +80,13 @@ function handleMessage(event: MessageEvent) {
                 // If we logged in but don't have a name, show the registration prompt.
                 promptForRegistration();
             }
+            onStateUpdate();
+            break;
+        }
+        case 'active_rune_update': {
+            const runeMsg = msg as ActiveRuneUpdateMessage;
+            state.setActiveRune(runeMsg.activeRune);
+            updateInventoryUI(); // This will trigger a runes UI update
             onStateUpdate();
             break;
         }
@@ -195,7 +205,9 @@ function handleMessage(event: MessageEvent) {
         }
         case 'player_stats_update': {
             const statsMsg = msg as PlayerStatsUpdateMessage;
-            updatePlayerHealth(statsMsg.health, statsMsg.maxHealth);
+            if (statsMsg.health !== undefined && statsMsg.maxHealth !== undefined) {
+                updatePlayerHealth(statsMsg.health, statsMsg.maxHealth);
+            }
             if (statsMsg.experience) {
                 state.setExperience(statsMsg.experience);
             }

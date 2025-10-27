@@ -14,6 +14,8 @@ const clientState: ClientState = {
     resonance: 0,
     maxResonance: 1,
     echoUnlocked: false,
+    runes: [],
+    activeRune: '',
 };
 
 // --- State Accessors (Getters) ---
@@ -56,7 +58,9 @@ export function setInitialState(
     experience: Record<string, number>,
     resonance: number,
     maxResonance: number,
-    echoUnlocked: boolean
+    echoUnlocked: boolean,
+    runes: string[],
+    activeRune: string,
 ) {
     clientState.playerId = playerId;
     
@@ -78,6 +82,8 @@ export function setInitialState(
     clientState.resonance = resonance;
     clientState.maxResonance = maxResonance;
     clientState.echoUnlocked = echoUnlocked;
+    clientState.runes = runes;
+    clientState.activeRune = activeRune;
 }
 
 export function setEntityPosition(entityId: string, x: number, y: number, direction?: 'up' | 'down' | 'left' | 'right') {
@@ -121,6 +127,10 @@ export function updateEntity(update: { entityId: string; isEcho?: boolean }) {
             entity.isEcho = update.isEcho;
         }
     }
+}
+
+export function setActiveRune(rune: string) {
+    clientState.activeRune = rune;
 }
 
 // (Other functions remain the same)

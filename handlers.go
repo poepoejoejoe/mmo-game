@@ -93,6 +93,10 @@ func (c *Client) readPump() {
 			}
 
 		} else { // Client is already logged in, handle other messages.
+			// --- NEW: Player Action Disables Echo ---
+			handlePlayerActionDisablesEcho(c, msg)
+			// --- END NEW ---
+
 			switch game.ClientEventType(msg.Type) {
 			case game.ClientEventRegister:
 				var registerData models.RegisterPayload
@@ -197,6 +201,8 @@ func (c *Client) readPump() {
 				game.ProcessDialogAction(c.id, msg.Payload)
 			case game.ClientEventToggleEcho:
 				game.ProcessToggleEcho(c.id)
+			case game.ClientEventSetRune:
+				game.ProcessSetRune(c.id, msg.Payload)
 			}
 		}
 	}
@@ -236,5 +242,27 @@ func (c *Client) writePump() {
 				return
 			}
 		}
+	}
+}
+
+// handlePlayerActionDisablesEcho checks if a player action should disable the echo state.
+func handlePlayerActionDisablesEcho(c *Client, msg models.WebSocketMessage) {
+	eventType := game.ClientEventType(msg.Type)
+
+	// Rune-related actions should not disable the echo state.
+	if eventType == game.ClientEventToggleEcho || eventType == game.ClientEventSetRune {
+		return
+	}
+
+	// This is a bit inefficient to fetch the data here again, but it's the cleanest
+	// place to put this logic without tangling it in every single game action.
+	playerData, err := game.GetEntityData(c.id)
+	if err != nil {
+		return
+	}
+
+	if isEcho, _ := playerData["isEcho"]; isEcho == "true" {
+		log.Printf("Player %s performed an action, disabling echo state.", c.id)
+		game.SetEchoState(c.id, false)
 	}
 }

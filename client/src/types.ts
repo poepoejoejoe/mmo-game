@@ -59,6 +59,8 @@ export interface ClientState {
     echoUnlocked?: boolean;
     lastInteractionPosition: { x: number, y: number } | null;
     activeNpcId: string | null;
+    runes: string[];
+    activeRune: string;
 }
 
 export interface NpcQuestStateUpdateMessage extends ServerMessage {
@@ -86,6 +88,13 @@ export interface InitialStateMessage extends ServerMessage {
     resonance?: number;
     maxResonance?: number;
     echoUnlocked?: boolean;
+    runes: string[];
+    activeRune: string;
+}
+
+export interface ActiveRuneUpdateMessage extends ServerMessage {
+    type: 'active_rune_update';
+    activeRune: string;
 }
 
 export interface QuestUpdateMessage extends ServerMessage {
@@ -187,9 +196,9 @@ export interface EntityDamagedMessage extends ServerMessage {
 
 export interface PlayerStatsUpdateMessage extends ServerMessage {
     type: 'player_stats_update';
-    health: number;
-    maxHealth: number;
-    experience: Record<string, number>;
+    health?: number;
+    maxHealth?: number;
+    experience?: Record<string, number>;
     resonance?: number;
     maxResonance?: number;
     echoUnlocked?: boolean;

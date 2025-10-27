@@ -66,6 +66,8 @@ type InitialStateMessage struct {
 	Resonance    int64                  `json:"resonance"`
 	MaxResonance int64                  `json:"maxResonance"`
 	EchoUnlocked bool                   `json:"echoUnlocked"`
+	Runes        []string               `json:"runes"`
+	ActiveRune   string                 `json:"activeRune"`
 }
 
 type QuestUpdateMessage struct {
@@ -137,12 +139,12 @@ type EntityDamagedMessage struct {
 
 type PlayerStatsUpdateMessage struct {
 	Type         string            `json:"type"`
-	Health       int               `json:"health"`
-	MaxHealth    int               `json:"maxHealth"`
-	Experience   map[Skill]float64 `json:"experience"`
-	Resonance    int64             `json:"resonance,omitempty"`
-	MaxResonance int64             `json:"maxResonance,omitempty"`
-	EchoUnlocked bool              `json:"echoUnlocked,omitempty"`
+	Health       *int              `json:"health,omitempty"`
+	MaxHealth    *int              `json:"maxHealth,omitempty"`
+	Experience   map[Skill]float64 `json:"experience,omitempty"`
+	Resonance    *int64            `json:"resonance,omitempty"`
+	MaxResonance *int64            `json:"maxResonance,omitempty"`
+	EchoUnlocked *bool             `json:"echoUnlocked,omitempty"`
 }
 
 // Item defines a single item instance in a player's inventory.

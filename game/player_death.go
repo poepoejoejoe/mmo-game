@@ -54,10 +54,11 @@ func HandlePlayerDeath(playerID string) {
 	PublishUpdate(updateMsg)
 
 	// Send a message to the client to update their health UI
+	h := PlayerDefs.MaxHealth
 	statsUpdateMsg := models.PlayerStatsUpdateMessage{
 		Type:      string(ServerEventPlayerStatsUpdate),
-		Health:    PlayerDefs.MaxHealth,
-		MaxHealth: PlayerDefs.MaxHealth,
+		Health:    &h,
+		MaxHealth: &h,
 	}
 	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
 

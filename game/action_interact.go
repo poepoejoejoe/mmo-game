@@ -91,7 +91,7 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	// --- Existing Resource Interaction ---
 	targetX, targetY := interactData.X, interactData.Y
 
-	if !IsAdjacent(currentX, currentY, targetX, targetY) {
+	if !IsAdjacentOrDiagonal(currentX, currentY, targetX, targetY) {
 		// Use ServerEventType constant
 		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
 	}

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"mmo-game/game"
-	"mmo-game/game/utils"
 	"net/http"
 	_ "net/http/pprof" // Import for performance profiling
 	"os"
@@ -127,8 +126,8 @@ func main() {
 	game.IndexWorldResources()
 	game.InitializeNPCs()
 	// --- For Testing: Spawn some NPCs ---
-	game.SpawnNPC("npc:slime:"+utils.GenerateUniqueID(), 1, 2, game.NPCTypeSlime)
-	game.SpawnNPC("npc:rat:"+utils.GenerateUniqueID(), -2, -3, game.NPCTypeRat)
+	// game.SpawnNPC("npc:slime:"+utils.GenerateUniqueID(), 1, 2, game.NPCTypeSlime)
+	// game.SpawnNPC("npc:rat:"+utils.GenerateUniqueID(), -2, -3, game.NPCTypeRat)
 
 	// Start the game loops
 	go game.StartAILoop()

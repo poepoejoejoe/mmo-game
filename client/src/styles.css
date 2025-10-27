@@ -382,6 +382,45 @@ body {
     width: 100%;
 }
 
+#runes-view {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.rune-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background-color: #444;
+    border: 1px solid #666;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease-out;
+    color: #f0f0f0;
+    font-size: 1em;
+    text-transform: capitalize;
+}
+
+.rune-button:hover {
+    background-color: #555;
+    border-color: #888;
+}
+
+.rune-button.selected {
+    background-color: #3498db;
+    border-color: #fff;
+    color: #fff;
+}
+
+.rune-button img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
 .skill-display {
     display: flex;
     align-items: center;

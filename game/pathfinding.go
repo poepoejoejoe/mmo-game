@@ -72,7 +72,7 @@ func isWalkable(x, y, endX, endY int, tickCache *TickCache) bool {
 	}
 
 	// 3. Check tile properties from the global in-memory grid
-	if CollisionGrid[coordKey] {
+	if tickCache.CollisionGrid[coordKey] {
 		return false // Tile is collidable
 	}
 
@@ -139,6 +139,58 @@ func FindPath(startX, startY, endX, endY int, tickCache *TickCache) []*Node {
 		}
 	}
 	return nil // No path found
+}
+
+// FindPathToAdjacent finds a path from a start point to a tile adjacent to the target endpoint.
+// This is useful for things like resource gathering or interacting with objects where the
+// character needs to be next to the target, not on top of it.
+func FindPathToAdjacent(startX, startY, endX, endY int, tickCache *TickCache) []*Node {
+	var bestPath []*Node
+	var closestDist float64 = -1
+
+	// Check all four neighbors of the target tile
+	for _, neighbor := range getNeighborCoords(&Node{X: endX, Y: endY}) {
+		// The isWalkable check for the pathfinder's destination is special.
+		// Here, we need to know if the tile is *actually* walkable for a move.
+		if isActuallyWalkable(neighbor.X, neighbor.Y, tickCache) {
+			path := FindPath(startX, startY, neighbor.X, neighbor.Y, tickCache)
+			if path != nil {
+				// We found a valid path. See if it's the best one so far.
+				// "Best" is defined as the shortest path.
+				pathLength := float64(len(path))
+				if bestPath == nil || pathLength < closestDist {
+					bestPath = path
+					closestDist = pathLength
+				}
+			}
+		}
+	}
+
+	return bestPath
+}
+
+// isActuallyWalkable is a stricter version of isWalkable that does not
+// treat the destination as a special case. It checks if a tile can
+// actually be moved onto.
+func isActuallyWalkable(x, y int, tickCache *TickCache) bool {
+	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
+
+	// 1. Check world boundaries
+	if x < -WorldSize/2 || x >= WorldSize/2 || y < -WorldSize/2 || y >= WorldSize/2 {
+		return false
+	}
+
+	// 2. Check for tile locks from the tick-local cache
+	if tickCache.LockedTiles[coordKey] {
+		return false
+	}
+
+	// 3. Check tile properties from the global in-memory grid
+	if tickCache.CollisionGrid[coordKey] {
+		return false // Tile is collidable
+	}
+
+	return true
 }
 
 func getNeighborCoords(node *Node) []Node {

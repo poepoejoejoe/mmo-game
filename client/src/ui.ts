@@ -51,11 +51,13 @@ export let craftingView: HTMLElement;
 export let gearView: HTMLElement;
 export let questView: HTMLElement;
 export let experienceView: HTMLElement;
+export let runesView: HTMLElement;
 let inventoryButton: HTMLButtonElement;
 let craftingButton: HTMLButtonElement;
 let gearButton: HTMLButtonElement;
 let questButton: HTMLButtonElement;
 let experienceButton: HTMLButtonElement;
+let runesButton: HTMLButtonElement;
 let echoButton: HTMLButtonElement;
 let chatMessagesEl: HTMLElement;
 let chatButton: HTMLButtonElement;
@@ -70,7 +72,7 @@ let dialogCloseButton: HTMLElement;
 let dialogOverlay: HTMLElement;
 
 
-const openPanels = new Set<'inventory' | 'crafting' | 'gear' | 'quest' | 'experience'>();
+const openPanels = new Set<'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes'>();
 let isChatOpen = true;
 
 export function initializeUI() {
@@ -97,11 +99,13 @@ export function initializeUI() {
     gearView = document.getElementById('gear-view')!;
     questView = document.getElementById('quest-view')!;
     experienceView = document.getElementById('experience-view')!;
+    runesView = document.getElementById('runes-view')!;
     inventoryButton = document.getElementById('inventory-button') as HTMLButtonElement;
     craftingButton = document.getElementById('crafting-button') as HTMLButtonElement;
     gearButton = document.getElementById('gear-button') as HTMLButtonElement;
     questButton = document.getElementById('quest-button') as HTMLButtonElement;
     experienceButton = document.getElementById('experience-button') as HTMLButtonElement;
+    runesButton = document.getElementById('runes-button') as HTMLButtonElement;
     echoButton = document.getElementById('echo-button') as HTMLButtonElement;
     chatMessagesEl = document.getElementById('chat-messages')!;
     chatButton = document.getElementById('chat-button') as HTMLButtonElement;
@@ -131,6 +135,7 @@ export function initializeUI() {
     gearButton.addEventListener('click', () => toggleInfoPanel('gear'));
     questButton.addEventListener('click', () => toggleInfoPanel('quest'));
     experienceButton.addEventListener('click', () => toggleInfoPanel('experience'));
+    runesButton.addEventListener('click', () => toggleInfoPanel('runes'));
     echoButton.addEventListener('click', () => {
         send({ type: 'toggle_echo', payload: {} });
     });
@@ -150,6 +155,7 @@ export function initializeUI() {
     gearButton.innerHTML = `<img src="assets/gear-icon.png" alt="Gear">`;
     questButton.innerHTML = `<img src="assets/quest-icon.png" alt="Quests">`;
     experienceButton.innerHTML = `<img src="assets/experience-icon.png" alt="Experience">`;
+    runesButton.innerHTML = `<img src="assets/woodcutting-icon.png" alt="Runes">`; // temp icon
     chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
     echoButton.innerHTML = `<img src="assets/echo-icon.png" alt="Echo">`;
 }
@@ -194,7 +200,7 @@ function toggleChat() {
     }
 }
 
-function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience') {
+function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes') {
     if (openPanels.has(panelType)) {
         openPanels.delete(panelType);
     } else {
@@ -206,6 +212,7 @@ function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' 
             gear: gearView,
             quest: questView,
             experience: experienceView,
+            runes: runesView,
         };
 
         const panelElement = panelMap[panelType];
@@ -224,6 +231,7 @@ function updateButtonAndPanelSelection() {
     gearButton.classList.toggle('selected', openPanels.has('gear'));
     questButton.classList.toggle('selected', openPanels.has('quest'));
     experienceButton.classList.toggle('selected', openPanels.has('experience'));
+    runesButton.classList.toggle('selected', openPanels.has('runes'));
 
     // Views
     inventoryView.style.display = openPanels.has('inventory') ? 'flex' : 'none';
@@ -231,6 +239,7 @@ function updateButtonAndPanelSelection() {
     gearView.style.display = openPanels.has('gear') ? 'flex' : 'none';
     questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
     experienceView.style.display = openPanels.has('experience') ? 'flex' : 'none';
+    runesView.style.display = openPanels.has('runes') ? 'flex' : 'none';
 }
 
 function toggleModal(modalId: string, show: boolean) {
@@ -592,6 +601,7 @@ export function updateInventoryUI(): void {
     updateQuestUI();
     updateExperienceUI();
     updateEchoUI();
+    updateRunesUI();
 }
 
 export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {
@@ -600,6 +610,47 @@ export function setBuildModeActive(isActive: boolean, buildItem: string | null):
     } else {
         gameCanvas.classList.remove('build-mode');
     }
+}
+
+export function updateRunesUI(): void {
+    const s = state.getState();
+    const runes = s.runes || [];
+    const activeRune = s.activeRune;
+
+    runesView.innerHTML = '<h2>Runes</h2>';
+
+    if (runes.length === 0) {
+        runesView.innerHTML += '<p>No runes unlocked.</p>';
+        return;
+    }
+
+    runes.forEach(runeId => {
+        const runeButton = document.createElement('button');
+        runeButton.classList.add('rune-button');
+        if (runeId === activeRune) {
+            runeButton.classList.add('selected');
+        }
+
+        const icon = document.createElement('img');
+        // TODO: Map runeId to icon
+        if (runeId === 'chop_trees') {
+            icon.src = 'assets/woodcutting-icon.png';
+        } else if (runeId === 'mine_ore') {
+            icon.src = 'assets/mining-icon.png';
+        }
+        runeButton.appendChild(icon);
+
+        const name = document.createElement('span');
+        name.textContent = runeId.replace(/_/g, ' ');
+        runeButton.appendChild(name);
+
+        runeButton.addEventListener('click', () => {
+            const newRune = runeId === activeRune ? '' : runeId;
+            send({ type: 'set_rune', payload: { rune: newRune } });
+        });
+
+        runesView.appendChild(runeButton);
+    });
 }
 
 export function updatePlayerIdDisplay() {

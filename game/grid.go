@@ -17,17 +17,18 @@ type TickCache struct {
 	EntityData    map[string]map[string]string
 	ResourceNodes map[TileType][]redis.GeoLocation
 	LockedTiles   map[string]bool
+	CollisionGrid map[string]bool
 }
 
-// InitCollisionGrid scans the world state from Redis and populates a local,
+// BuildCollisionGrid scans the world state from Redis and populates a local,
 // in-memory grid of all collidable tiles for fast pathfinding checks.
-func InitCollisionGrid() {
-	log.Println("Initializing collision grid...")
-	CollisionGrid = make(map[string]bool)
+func BuildCollisionGrid() map[string]bool {
+	collisionGrid := make(map[string]bool)
 
 	worldData, err := rdb.HGetAll(ctx, string(RedisKeyWorldZone0)).Result()
 	if err != nil {
-		log.Fatalf("Failed to get world data for collision grid: %v", err)
+		log.Printf("Failed to get world data for collision grid: %v", err)
+		return collisionGrid // Return empty grid on error
 	}
 
 	for coord, tileJSON := range worldData {
@@ -39,9 +40,9 @@ func InitCollisionGrid() {
 
 		if props, ok := TileDefs[TileType(tile.Type)]; ok {
 			if props.IsCollidable {
-				CollisionGrid[coord] = true
+				collisionGrid[coord] = true
 			}
 		}
 	}
-	log.Printf("Collision grid initialized with %d collidable tiles.", len(CollisionGrid))
+	return collisionGrid
 }

@@ -48,6 +48,14 @@ const (
 	ItemCrudeAxe      ItemID = "crude_axe"
 )
 
+// RuneType defines the string literals for runes.
+type RuneType string
+
+const (
+	RuneTypeChopTrees RuneType = "chop_trees"
+	RuneTypeMineOre   RuneType = "mine_ore"
+)
+
 // ItemProperties defines the static properties of an item type.
 type ItemProperties struct {
 	Stackable  bool
@@ -78,6 +86,7 @@ const (
 	ClientEventRegister     ClientEventType = "register"
 	ClientEventDialogAction ClientEventType = "dialog_action"
 	ClientEventToggleEcho   ClientEventType = "toggle_echo"
+	ClientEventSetRune      ClientEventType = "set_rune"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -104,6 +113,7 @@ const (
 	ServerEventShowDialog              ServerEventType = "show_dialog"
 	ServerEventQuestUpdate             ServerEventType = "quest_update"
 	ServerEventNpcQuestStateUpdate     ServerEventType = "npc_quest_state_update"
+	ServerEventActiveRuneUpdate        ServerEventType = "active_rune_update"
 )
 
 // MoveDirection defines the valid move directions.

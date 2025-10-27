@@ -64,6 +64,7 @@ func buildTickCache() (*TickCache, error) {
 		EntityData:    make(map[string]map[string]string),
 		ResourceNodes: make(map[TileType][]redis.GeoLocation),
 		LockedTiles:   make(map[string]bool),
+		CollisionGrid: BuildCollisionGrid(),
 	}
 
 	// 1. Get all entity IDs
@@ -161,6 +162,18 @@ func runEchoAI(playerID string, tickCache *TickCache) {
 		return
 	}
 
+	// NEW: Send a stats update to the player if they are online
+	if IsPlayerOnline(playerID) {
+		statsUpdateMsg := models.PlayerStatsUpdateMessage{
+			Type:      string(ServerEventPlayerStatsUpdate),
+			Resonance: &newResonance,
+		}
+		statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
+		if sendDirectMessage != nil {
+			sendDirectMessage(playerID, statsUpdateJSON)
+		}
+	}
+
 	// 2. Check if Resonance has run out
 	if newResonance <= 0 {
 		log.Printf("Echo for player %s has run out of Resonance.", playerID)
@@ -199,96 +212,46 @@ func runEchoAI(playerID string, tickCache *TickCache) {
 	}
 }
 
-type EchoAction string
-
-const (
-	ActionWander      EchoAction = "wander"
-	ActionGatherWood  EchoAction = "gather_wood"
-	ActionGatherStone EchoAction = "gather_stone"
-)
-
-func selectActionBasedOnXP(playerData map[string]string) EchoAction {
-	experienceJSON, ok := playerData["experience"]
-	if !ok {
-		return ActionWander
-	}
-
-	var experience map[models.Skill]float64
-	json.Unmarshal([]byte(experienceJSON), &experience)
-
-	// Create a weighted list of actions
-	// Give a base weight to wandering
-	weightedActions := []struct {
-		Action EchoAction
-		Weight float64
-	}{
-		{ActionWander, 10},
-	}
-
-	if xp, ok := experience[models.SkillWoodcutting]; ok {
-		weightedActions = append(weightedActions, struct {
-			Action EchoAction
-			Weight float64
-		}{ActionGatherWood, xp})
-	}
-	if xp, ok := experience[models.SkillMining]; ok {
-		weightedActions = append(weightedActions, struct {
-			Action EchoAction
-			Weight float64
-		}{ActionGatherStone, xp})
-	}
-
-	// Calculate total weight
-	var totalWeight float64
-	for _, wa := range weightedActions {
-		totalWeight += wa.Weight
-	}
-
-	// If no skills have XP, just wander
-	if totalWeight <= 10 {
-		return ActionWander
-	}
-
-	// Select a random action based on weight
-	r := rand.Float64() * totalWeight
-	var cumulativeWeight float64
-	for _, wa := range weightedActions {
-		cumulativeWeight += wa.Weight
-		if r < cumulativeWeight {
-			return wa.Action
-		}
-	}
-
-	return ActionWander // Fallback
-}
-
 func handleEchoIdling(playerID string, playerData map[string]string, tickCache *TickCache) {
-	log.Printf("[Echo AI] %s is idling, deciding on action.", playerID)
+	log.Printf("[Echo AI] %s is idling, deciding on action based on active rune.", playerID)
 
-	action := selectActionBasedOnXP(playerData)
-	log.Printf("[Echo AI] %s chose action: %s", playerID, action)
-
+	activeRune := RuneType(playerData["activeRune"])
 	var resourceType TileType
-	switch action {
-	case ActionGatherWood:
+
+	switch activeRune {
+	case RuneTypeChopTrees:
 		resourceType = TileTypeTree
-	case ActionGatherStone:
+	case RuneTypeMineOre:
 		resourceType = TileTypeRock
-	default: // Wander
+	default: // No active rune, or an unknown rune
+		log.Printf("[Echo AI] %s has no active rune. Wandering.", playerID)
 		if rand.Intn(100) < 40 {
 			dir := getRandomDirection()
 			ProcessMove(playerID, dir)
 		}
 		return
 	}
+	log.Printf("[Echo AI] %s is using rune: %s", playerID, activeRune)
 
 	currentX, currentY := GetEntityPosition(playerData)
 	targetX, targetY, found := findNearestResource(currentX, currentY, resourceType, tickCache)
 
 	if found {
 		log.Printf("[Echo AI] %s found nearest %s at %d,%d. Pathfinding...", playerID, resourceType, targetX, targetY)
-		path := FindPath(currentX, currentY, targetX, targetY, tickCache)
-		if path != nil && len(path) > 1 {
+
+		// First, check if we're already adjacent.
+		if IsAdjacent(currentX, currentY, targetX, targetY) {
+			log.Printf("[Echo AI] %s is already adjacent to %d,%d. Gathering...", playerID, targetX, targetY)
+			pipe := rdb.Pipeline()
+			pipe.HSet(ctx, playerID, "echoState", string(EchoStateGathering))
+			pipe.HSet(ctx, playerID, "echoTarget", strconv.Itoa(targetX)+","+strconv.Itoa(targetY))
+			pipe.Exec(ctx)
+			return // End this tick's logic here.
+		}
+
+		// If not adjacent, then find a path.
+		path := FindPathToAdjacent(currentX, currentY, targetX, targetY, tickCache)
+		if len(path) > 1 {
 			pathJSON, _ := json.Marshal(path)
 			pipe := rdb.Pipeline()
 			pipe.HSet(ctx, playerID, "echoState", string(EchoStateMoving))
@@ -338,10 +301,14 @@ func handleEchoMoving(playerID string, playerData map[string]string) {
 
 	// Update the path
 	remainingPath := path[1:]
-	if len(remainingPath) <= 1 {
-		// Reached the destination
+	if len(remainingPath) == 0 {
+		// This should not happen if len(path) > 1, but as a safeguard.
+		rdb.HSet(ctx, playerID, "echoState", string(EchoStateIdling))
+	} else if len(remainingPath) == 1 {
+		// We have arrived at the destination (the tile adjacent to the resource)
 		rdb.HSet(ctx, playerID, "echoState", string(EchoStateGathering))
 	} else {
+		// Still more path to traverse
 		pathJSON, _ := json.Marshal(remainingPath)
 		rdb.HSet(ctx, playerID, "echoPath", string(pathJSON))
 	}
@@ -360,10 +327,19 @@ func handleEchoGathering(playerID string, playerData map[string]string) {
 	payload, _ := json.Marshal(models.InteractPayload{X: targetX, Y: targetY})
 	ProcessInteract(playerID, payload)
 
-	// Return to idling to find the next thing to do
-	rdb.HSet(ctx, playerID, "echoState", string(EchoStateIdling))
+	// --- NEW: Check if the resource is depleted ---
+	// After gathering, check the tile again. If it's still gatherable,
+	// stay in the gathering state. Otherwise, go back to idling.
+	_, props, err := GetWorldTile(targetX, targetY)
+	if err != nil || !props.IsGatherable {
+		// Resource is gone or no longer gatherable, find a new one.
+		rdb.HSet(ctx, playerID, "echoState", string(EchoStateIdling))
+	}
+	// If the resource is still there, the AI will remain in the "gathering"
+	// state and this function will be called again on the next AI tick.
 }
 
+// findNearestResource finds the nearest resource of a given type to a point.
 func findNearestResource(x, y int, tileType TileType, tickCache *TickCache) (int, int, bool) {
 	locations, ok := tickCache.ResourceNodes[tileType]
 	if !ok {
@@ -377,13 +353,18 @@ func findNearestResource(x, y int, tileType TileType, tickCache *TickCache) (int
 	found := false
 
 	for _, loc := range locations {
-		coords := strings.Split(loc.Name, ":")[1] // "tileType:x,y" -> "x,y"
-		if tickCache.LockedTiles[coords] {
+		coordsStr := strings.Split(loc.Name, ":")[1] // "tileType:x,y" -> "x,y"
+		if tickCache.LockedTiles[coordsStr] {
 			continue // Tile is locked
 		}
 
-		resX := int(loc.Longitude)
-		resY := int(loc.Latitude)
+		// --- BUG FIX: Use the coordinate string from the member name as the source of truth ---
+		// The lat/lon from the GEO query can have minor precision errors.
+		// The exact game coordinates are stored in the member name.
+		coordParts := strings.Split(coordsStr, ",")
+		resX, _ := strconv.Atoi(coordParts[0])
+		resY, _ := strconv.Atoi(coordParts[1])
+
 		dx := float64(x - resX)
 		dy := float64(y - resY)
 		distSq := dx*dx + dy*dy
@@ -503,10 +484,12 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 				HandlePlayerDeath(targetID)
 			} else {
 				// Also send a stats update to the player who was damaged
+				h := int(newHealth)
+				mh := PlayerDefs.MaxHealth
 				statsUpdateMsg := models.PlayerStatsUpdateMessage{
 					Type:      string(ServerEventPlayerStatsUpdate),
-					Health:    int(newHealth),
-					MaxHealth: PlayerDefs.MaxHealth,
+					Health:    &h,
+					MaxHealth: &mh,
 				}
 				statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
 				if sendDirectMessage != nil {

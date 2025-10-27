@@ -20,14 +20,6 @@ func ProcessToggleEcho(playerID string) {
 		return
 	}
 
-	newIsEcho := !isEcho
-	rdb.HSet(ctx, playerID, "isEcho", strconv.FormatBool(newIsEcho))
-
-	updateMsg := map[string]interface{}{
-		"type":     string(ServerEventEntityUpdate),
-		"entityId": playerID,
-		"isEcho":   newIsEcho,
-	}
-	PublishUpdate(updateMsg)
-	log.Printf("Player %s toggled echo state to: %v", playerID, newIsEcho)
+	log.Printf("Player %s toggled echo state to: %v", playerID, !isEcho)
+	SetEchoState(playerID, !isEcho)
 }

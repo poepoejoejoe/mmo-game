@@ -99,10 +99,12 @@ func applyFireDamage(entityID string, entityData map[string]string) {
 			json.Unmarshal([]byte(experienceJSON), &experience)
 		}
 
+		h := int(newHealth)
+		mh := PlayerDefs.MaxHealth
 		statsUpdateMsg := models.PlayerStatsUpdateMessage{
 			Type:       string(ServerEventPlayerStatsUpdate),
-			Health:     int(newHealth),
-			MaxHealth:  PlayerDefs.MaxHealth,
+			Health:     &h,
+			MaxHealth:  &mh,
 			Experience: experience,
 		}
 		statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)

@@ -98,8 +98,8 @@ func ProcessEat(playerID string, payload json.RawMessage) {
 	if newHealth > health {
 		statsUpdateMsg := models.PlayerStatsUpdateMessage{
 			Type:      string(ServerEventPlayerStatsUpdate),
-			Health:    newHealth,
-			MaxHealth: maxHealth,
+			Health:    &newHealth,
+			MaxHealth: &maxHealth,
 		}
 		statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
 		sendDirectMessage(playerID, statsUpdateJSON)
