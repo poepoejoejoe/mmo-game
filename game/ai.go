@@ -37,35 +37,121 @@ const (
 
 // runAIActions fetches all entities and processes their next action if they are AI-controlled.
 func runAIActions() {
-	// Get all entity IDs from the geospatial index
-	entityIDs, err := rdb.ZRange(ctx, string(RedisKeyZone0Positions), 0, -1).Result()
+	tickCache, err := buildTickCache()
 	if err != nil {
-		log.Printf("Error fetching entities for AI loop: %v", err)
+		log.Printf("Error building tick cache for AI loop: %v", err)
 		return
 	}
 
-	for _, entityID := range entityIDs {
+	for entityID, entityData := range tickCache.EntityData {
+		// Stagger AI ticks to smooth out server load.
+		time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
+
 		// Check the entity type and process accordingly
 		if strings.HasPrefix(entityID, "npc:") {
-			go processNPCAction(entityID)
+			go processNPCAction(entityID, tickCache)
 		} else if strings.HasPrefix(entityID, "player:") {
-			playerData, err := rdb.HGetAll(ctx, entityID).Result()
-			if err != nil {
-				continue // Skip if we can't get data
-			}
-			isEcho, _ := strconv.ParseBool(playerData["isEcho"])
+			isEcho, _ := strconv.ParseBool(entityData["isEcho"])
 			if isEcho {
-				go runEchoAI(entityID, playerData)
+				go runEchoAI(entityID, tickCache)
 			}
 		}
 	}
 }
 
+func buildTickCache() (*TickCache, error) {
+	cache := &TickCache{
+		EntityData:    make(map[string]map[string]string),
+		ResourceNodes: make(map[TileType][]redis.GeoLocation),
+		LockedTiles:   make(map[string]bool),
+	}
+
+	// 1. Get all entity IDs
+	entityIDs, err := rdb.ZRange(ctx, string(RedisKeyZone0Positions), 0, -1).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	pipe := rdb.Pipeline()
+
+	// 2. Queue HGETALL for each entity
+	entityDataCmds := make(map[string]*redis.StringStringMapCmd)
+	for _, entityID := range entityIDs {
+		entityDataCmds[entityID] = pipe.HGetAll(ctx, entityID)
+	}
+
+	// 3. Queue GEORADIUS for all resource types
+	// We search from the center of the map with a radius large enough to cover everything.
+	const searchRadiusKm = 20000
+	resourceCmds := make(map[TileType]*redis.GeoLocationCmd)
+	for tileType, props := range TileDefs {
+		if props.IsGatherable {
+			query := &redis.GeoRadiusQuery{
+				Radius:    searchRadiusKm,
+				Unit:      "km",
+				WithCoord: true,
+				Sort:      "ASC",
+			}
+			resourceCmds[tileType] = pipe.GeoRadius(ctx, string(RedisKeyResourcePositions), 0, 0, query)
+		}
+	}
+
+	// 4. Queue SCAN for all locked tiles
+	lockedTileKeys, err := rdb.Keys(ctx, string(RedisKeyLockTile)+"*").Result()
+	if err != nil {
+		log.Printf("Could not get locked tiles using KEYS, falling back to empty set: %v", err)
+	}
+
+	// Execute all queued commands
+	if _, err := pipe.Exec(ctx); err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	// --- Process Results ---
+
+	// Process entity data
+	for entityID, cmd := range entityDataCmds {
+		data, err := cmd.Result()
+		if err == nil {
+			cache.EntityData[entityID] = data
+		}
+	}
+
+	// Process resource locations
+	for tileType, cmd := range resourceCmds {
+		locations, err := cmd.Result()
+		if err == nil {
+			// Filter for the correct resource type since GeoRadius on "positions:resource"
+			// returns all resources. The member name is "tileType:x,y".
+			var filteredLocations []redis.GeoLocation
+			for _, loc := range locations {
+				if strings.HasPrefix(loc.Name, string(tileType)+":") {
+					filteredLocations = append(filteredLocations, loc)
+				}
+			}
+			cache.ResourceNodes[tileType] = filteredLocations
+		}
+	}
+
+	// Process locked tiles
+	for _, key := range lockedTileKeys {
+		// key is "lock:tile:x,y", we want to store "x,y"
+		coords := strings.TrimPrefix(key, string(RedisKeyLockTile))
+		cache.LockedTiles[coords] = true
+	}
+
+	return cache, nil
+}
+
 // runEchoAI handles the logic for a player's Echo.
-func runEchoAI(playerID string, playerData map[string]string) {
-	canAct, playerData := CanEntityAct(playerID)
-	if !canAct {
-		return
+func runEchoAI(playerID string, tickCache *TickCache) {
+	playerData := tickCache.EntityData[playerID]
+	if nextActionAtStr, ok := playerData["nextActionAt"]; ok {
+		if nextActionAt, err := strconv.ParseInt(nextActionAtStr, 10, 64); err == nil {
+			if time.Now().UnixMilli() < nextActionAt {
+				return // On cooldown
+			}
+		}
 	}
 
 	// 1. Decrement Resonance
@@ -105,7 +191,7 @@ func runEchoAI(playerID string, playerData map[string]string) {
 	state := EchoState(playerData["echoState"])
 	switch state {
 	case EchoStateIdling:
-		handleEchoIdling(playerID, playerData)
+		handleEchoIdling(playerID, playerData, tickCache)
 	case EchoStateMoving:
 		handleEchoMoving(playerID, playerData)
 	case EchoStateGathering:
@@ -176,7 +262,7 @@ func selectActionBasedOnXP(playerData map[string]string) EchoAction {
 	return ActionWander // Fallback
 }
 
-func handleEchoIdling(playerID string, playerData map[string]string) {
+func handleEchoIdling(playerID string, playerData map[string]string, tickCache *TickCache) {
 	log.Printf("[Echo AI] %s is idling, deciding on action.", playerID)
 
 	action := selectActionBasedOnXP(playerData)
@@ -197,11 +283,11 @@ func handleEchoIdling(playerID string, playerData map[string]string) {
 	}
 
 	currentX, currentY := GetEntityPosition(playerData)
-	targetX, targetY, found := findNearestResource(currentX, currentY, resourceType)
+	targetX, targetY, found := findNearestResource(currentX, currentY, resourceType, tickCache)
 
 	if found {
 		log.Printf("[Echo AI] %s found nearest %s at %d,%d. Pathfinding...", playerID, resourceType, targetX, targetY)
-		path := FindPath(currentX, currentY, targetX, targetY)
+		path := FindPath(currentX, currentY, targetX, targetY, tickCache)
 		if path != nil && len(path) > 1 {
 			pathJSON, _ := json.Marshal(path)
 			pipe := rdb.Pipeline()
@@ -278,56 +364,54 @@ func handleEchoGathering(playerID string, playerData map[string]string) {
 	rdb.HSet(ctx, playerID, "echoState", string(EchoStateIdling))
 }
 
-func findNearestResource(x, y int, tileType TileType) (int, int, bool) {
-	// We must use a very large radius because Redis's geo distance calculation
-	// interprets our integer tile coordinates as degrees, making tile distances
-	// seem huge (1 tile is > 100km).
-	// By searching a massive radius and sorting the results, we can efficiently
-	// find the closest resource in our coordinate system.
-	const searchRadiusKm = 20000 // Guaranteed to cover the entire map.
-
-	locations, err := rdb.GeoRadius(ctx, string(RedisKeyResourcePositions), float64(x), float64(y), &redis.GeoRadiusQuery{
-		Radius:    searchRadiusKm,
-		Unit:      "km",
-		WithCoord: true,
-		Sort:      "ASC", // Find the closest first
-	}).Result()
-	if err != nil {
-		log.Printf("[Echo AI] Error finding nearest resource: %v", err)
+func findNearestResource(x, y int, tileType TileType, tickCache *TickCache) (int, int, bool) {
+	locations, ok := tickCache.ResourceNodes[tileType]
+	if !ok {
 		return 0, 0, false
 	}
 
-	for _, loc := range locations {
-		parts := strings.Split(loc.Name, ":")
-		if len(parts) == 2 && parts[0] == string(tileType) {
-			// Check if the tile is currently locked by someone else
-			coords := parts[1]
-			lockKey := string(RedisKeyLockTile) + coords
-			lockExists, err := rdb.Exists(ctx, lockKey).Result()
-			if err != nil {
-				continue // Skip on error
-			}
+	// The locations are pre-sorted by distance from the center of the map,
+	// which is not useful here. We need to find the closest to the entity's position.
+	var closestDistSq float64 = -1
+	var targetX, targetY int
+	found := false
 
-			if lockExists == 0 {
-				// We found the closest, unlocked resource of the correct type
-				xy := strings.Split(coords, ",")
-				targetX, _ := strconv.Atoi(xy[0])
-				targetY, _ := strconv.Atoi(xy[1])
-				return targetX, targetY, true
-			}
+	for _, loc := range locations {
+		coords := strings.Split(loc.Name, ":")[1] // "tileType:x,y" -> "x,y"
+		if tickCache.LockedTiles[coords] {
+			continue // Tile is locked
+		}
+
+		resX := int(loc.Longitude)
+		resY := int(loc.Latitude)
+		dx := float64(x - resX)
+		dy := float64(y - resY)
+		distSq := dx*dx + dy*dy
+
+		if !found || distSq < closestDistSq {
+			closestDistSq = distSq
+			targetX = resX
+			targetY = resY
+			found = true
 		}
 	}
 
-	// No unlocked resources of this type were found
+	if found {
+		return targetX, targetY, true
+	}
+
 	return 0, 0, false
 }
 
 // processNPCAction contains the core logic for an individual NPC's turn.
-func processNPCAction(npcID string) {
-	canAct, npcData := CanEntityAct(npcID)
-	if !canAct {
-		// log.Printf("[AI Debug] NPC %s is on cooldown. Skipping.", npcID)
-		return // NPC is on cooldown
+func processNPCAction(npcID string, tickCache *TickCache) {
+	npcData := tickCache.EntityData[npcID]
+	if nextActionAtStr, ok := npcData["nextActionAt"]; ok {
+		if nextActionAt, err := strconv.ParseInt(nextActionAtStr, 10, 64); err == nil {
+			if time.Now().UnixMilli() < nextActionAt {
+				return // On cooldown
+			}
+		}
 	}
 
 	npcTypeStr, ok := npcData["npcType"]
@@ -341,50 +425,37 @@ func processNPCAction(npcID string) {
 	}
 
 	npcX, npcY := GetEntityPosition(npcData)
-
-	// --- REVERTED: Use GeoRadius with explicit coordinates for reliability ---
-	locations, err := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), float64(npcX), float64(npcY), &redis.GeoRadiusQuery{
-		Radius:    TilesToKilometers(5), // Use helper for 5-tile aggro range
-		Unit:      "km",
-		WithCoord: true, // Ask Redis to return coordinates for debugging
-	}).Result()
-	if err != nil {
-		log.Printf("[AI Error] Could not perform GeoRadius for %s: %v", npcID, err)
-		return
-	}
+	aggroRange := 5.0
 
 	var targetID string
 	var targetX, targetY int
 	var targetFound bool
+	var closestDistSq float64 = -1
 
-	// Find the first entity that is a player
-	for _, loc := range locations {
-		if loc.Name == npcID {
-			continue // Skip self
+	// Find the closest player in range from the cache
+	for entityID, entityData := range tickCache.EntityData {
+		if !strings.HasPrefix(entityID, "player:") {
+			continue // Not a player
 		}
 
-		entityType, err := rdb.HGet(ctx, loc.Name, "entityType").Result()
-		if err != nil {
-			log.Printf("[AI Error] Could not get entityType for %s: %v. Skipping.", loc.Name, err)
+		// Check if target has health, might be in a weird state
+		if _, ok := entityData["health"]; !ok {
 			continue
 		}
 
-		if entityType == string(EntityTypePlayer) {
-			targetID = loc.Name
-			targetData, err := rdb.HGetAll(ctx, targetID).Result()
-			if err != nil {
-				log.Printf("[AI Error] Could not get target data for %s: %v. Skipping.", targetID, err)
-				continue
-			}
+		pX, pY := GetEntityPosition(entityData)
+		dx := float64(npcX - pX)
+		dy := float64(npcY - pY)
+		distSq := dx*dx + dy*dy
 
-			// Check if target has health, might be in a weird state
-			if _, ok := targetData["health"]; !ok {
-				log.Printf("[AI Debug] Target %s has no health field. Skipping.", targetID)
-				continue
+		if distSq <= aggroRange*aggroRange {
+			if !targetFound || distSq < closestDistSq {
+				targetFound = true
+				closestDistSq = distSq
+				targetID = entityID
+				targetX = pX
+				targetY = pY
 			}
-			targetX, targetY = GetEntityPosition(targetData)
-			targetFound = true
-			break // First player found is the closest
 		}
 	}
 

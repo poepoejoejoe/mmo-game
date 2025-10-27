@@ -28,6 +28,7 @@ func Init(redisClient *redis.Client, directMessageFunc SendDirectMessageFunc, is
 	sendDirectMessage = directMessageFunc
 	IsPlayerOnline = isOnlineFunc
 	loadScripts()
+	InitCollisionGrid()
 }
 
 func StartDamageSystem() {

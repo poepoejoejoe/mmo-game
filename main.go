@@ -7,6 +7,7 @@ import (
 	"mmo-game/game"
 	"mmo-game/game/utils"
 	"net/http"
+	_ "net/http/pprof" // Import for performance profiling
 	"os"
 	"os/signal"
 	"syscall"

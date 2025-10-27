@@ -2,7 +2,6 @@ package game
 
 import (
 	"container/heap"
-	"log"
 	"math"
 	"strconv"
 )
@@ -53,45 +52,35 @@ func manhattanDistance(a, b *Node) float64 {
 }
 
 // isWalkable checks if a tile is passable, allowing the destination to be a collidable target.
-func isWalkable(x, y, endX, endY int) bool {
+func isWalkable(x, y, endX, endY int, tickCache *TickCache) bool {
 	// The destination tile is always considered "walkable" for pathfinding purposes,
 	// as the goal is to find a path to an adjacent tile, not to step on the target.
 	if x == endX && y == endY {
 		return true
 	}
 
-	// 1. Check world boundaries (optional, but good practice)
+	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
+
+	// 1. Check world boundaries
 	if x < -WorldSize/2 || x >= WorldSize/2 || y < -WorldSize/2 || y >= WorldSize/2 {
 		return false
 	}
 
-	// 2. Check for tile locks
-	lockKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
-	lockExists, err := rdb.Exists(ctx, lockKey).Result()
-	if err != nil {
-		log.Printf("[Pathfinding] Error checking tile lock for %d,%d: %v", x, y)
-		return false // Fail safely
-	}
-	if lockExists > 0 {
-		return false // Tile is locked
+	// 2. Check for tile locks from the tick-local cache
+	if tickCache.LockedTiles[coordKey] {
+		return false
 	}
 
-	// 3. Check tile properties
-	_, props, err := GetWorldTile(x, y)
-	if err != nil {
-		// This can happen if the tile doesn't exist in the world data (e.g., void).
-		// Treat as unwalkable.
-		return false
-	}
-	if props.IsCollidable {
-		return false
+	// 3. Check tile properties from the global in-memory grid
+	if CollisionGrid[coordKey] {
+		return false // Tile is collidable
 	}
 
 	return true
 }
 
 // FindPath implements the A* algorithm.
-func FindPath(startX, startY, endX, endY int) []*Node {
+func FindPath(startX, startY, endX, endY int, tickCache *TickCache) []*Node {
 	startNode := &Node{X: startX, Y: startY}
 	endNode := &Node{X: endX, Y: endY}
 
@@ -118,7 +107,7 @@ func FindPath(startX, startY, endX, endY int) []*Node {
 		}
 
 		for _, neighborCoords := range getNeighborCoords(currentNode) {
-			if !isWalkable(neighborCoords.X, neighborCoords.Y, endNode.X, endNode.Y) {
+			if !isWalkable(neighborCoords.X, neighborCoords.Y, endNode.X, endNode.Y, tickCache) {
 				continue
 			}
 

@@ -705,7 +705,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     const walkCycle = isMoving ? Math.floor(time / 200) % 2 : 0;
 
     const shirtColor = entity.shirtColor || '#7b9c48';
-    const colors = {
+    const colors: {[k: string]: string} = {
         hairColor: '#634b3a',
         skinColor: '#d3a07c',
         shirtColor: shirtColor,
@@ -723,7 +723,9 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
 	
     if (entity.isEcho) {
         ctx.globalAlpha = 0.5;
-        ctx.filter = 'brightness(150%)';
+        for (const key in colors) {
+            colors[key] = lightenColor(colors[key], 50);
+        }
     }
 
     ctx.translate(centerX, centerY);
