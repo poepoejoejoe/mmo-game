@@ -4,6 +4,7 @@ import (
 	"log"
 	"mmo-game/models"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -38,6 +39,14 @@ func ProcessMove(entityID string, direction MoveDirection) *models.StateCorrecti
 	if err != nil {
 		return nil // Tile doesn't exist or other error
 	}
+
+	// --- NEW: Prevent NPCs from entering sanctuaries ---
+	if strings.HasPrefix(entityID, "npc:") {
+		if tile.IsSanctuary {
+			return nil // NPC runs into a sanctuary, treat as a wall
+		}
+	}
+	// --- END NEW ---
 
 	if props.IsCollidable {
 		return nil // Ran into a wall

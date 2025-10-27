@@ -425,6 +425,14 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 		}
 
 		pX, pY := GetEntityPosition(entityData)
+
+		// --- NEW: Check if the target player is in a sanctuary ---
+		targetTile, _, err := GetWorldTile(pX, pY)
+		if err == nil && targetTile.IsSanctuary {
+			continue // Player is in a sanctuary, ignore them.
+		}
+		// --- END NEW ---
+
 		dx := float64(npcX - pX)
 		dy := float64(npcY - pY)
 		distSq := dx*dx + dy*dy

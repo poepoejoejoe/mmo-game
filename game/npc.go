@@ -65,15 +65,31 @@ func SpawnNPC(entityID string, x, y int, npcType NPCType) {
 // spawnSlime creates a new slime entity in the world.
 func spawnSlime() {
 	entityID := string(NPCSlimePrefix) + utils.GenerateUniqueID()
-	spawnX, spawnY := FindOpenSpawnPoint(entityID)
-	SpawnNPC(entityID, spawnX, spawnY, NPCTypeSlime)
+	for i := 0; i < 100; i++ { // Try 100 times to find a valid spot
+		spawnX, spawnY := FindOpenSpawnPoint(entityID)
+		tile, _, err := GetWorldTile(spawnX, spawnY)
+		if err == nil && !tile.IsSanctuary {
+			SpawnNPC(entityID, spawnX, spawnY, NPCTypeSlime)
+			return
+		}
+		// Unlock the invalid tile if it was locked
+		UnlockTileForEntity(entityID, spawnX, spawnY)
+	}
 }
 
 // spawnRat creates a new rat entity in the world.
 func spawnRat() {
 	entityID := string(NPCRatPrefix) + utils.GenerateUniqueID()
-	spawnX, spawnY := FindOpenSpawnPoint(entityID)
-	SpawnNPC(entityID, spawnX, spawnY, NPCTypeRat)
+	for i := 0; i < 100; i++ { // Try 100 times to find a valid spot
+		spawnX, spawnY := FindOpenSpawnPoint(entityID)
+		tile, _, err := GetWorldTile(spawnX, spawnY)
+		if err == nil && !tile.IsSanctuary {
+			SpawnNPC(entityID, spawnX, spawnY, NPCTypeRat)
+			return
+		}
+		// Unlock the invalid tile if it was locked
+		UnlockTileForEntity(entityID, spawnX, spawnY)
+	}
 }
 
 func spawnWizard() {
