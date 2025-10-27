@@ -2,10 +2,8 @@ package game
 
 import (
 	"encoding/json"
-	mrand "math/rand"
 	"mmo-game/models"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -70,37 +68,7 @@ func completeTeleport(playerID string, expectedCompleteTime time.Time) {
 	// Clear the teleporting state
 	rdb.HDel(ctx, playerID, "teleportingUntil")
 
-	binding := playerData["binding"]
-	parts := strings.Split(binding, ",")
-	bindX, _ := strconv.Atoi(parts[0])
-	bindY, _ := strconv.Atoi(parts[1])
-
-	foundValidSpot := false
-	var destX, destY int
-	for i := 0; i < 20; i++ {
-		offsetX := mrand.Intn(9) - 4
-		offsetY := mrand.Intn(9) - 4
-		destX = bindX + offsetX
-		destY = bindY + offsetY
-
-		if destX == bindX && destY == bindY {
-			continue
-		}
-		_, props, err := GetWorldTile(destX, destY)
-		if err != nil || props.IsCollidable {
-			continue
-		}
-		lockKey := string(RedisKeyLockTile) + strconv.Itoa(destX) + "," + strconv.Itoa(destY)
-		if rdb.Exists(ctx, lockKey).Val() == 0 {
-			foundValidSpot = true
-			break
-		}
-	}
-
-	if !foundValidSpot {
-		sendNotification(playerID, "Could not find a clear spot to teleport.")
-		return
-	}
+	destX, destY := GetPlayerSpawnPoint(playerID, playerData)
 
 	oldX, _ := strconv.Atoi(playerData["x"])
 	oldY, _ := strconv.Atoi(playerData["y"])

@@ -22,15 +22,15 @@
 - need echo icon
 - need a resonance bar
 - need to address echo performance and concurrency
-
+- echos can't recharge resonance when in echo form?
+- need to think about dying over all, and as echo. i think just respawn at sanctuary
 
 ### Current
-- echos can't recharge resonance when in echo form?
 
 
 ### Idea backlog
 - echos and defending themselves?
-- need to think about dying over all, and as echo. i think just respawn at sanctuary
+
 - need to consider if want to make it so that the quest unlocks recipes?
 
 ### Ui improvements

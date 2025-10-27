@@ -9,6 +9,7 @@ import (
 	"mmo-game/game/utils"
 	"mmo-game/models"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -378,6 +379,26 @@ func FindOpenSpawnPoint(entityID string) (int, int) {
 	return startX, startY
 }
 
+func GetPlayerSpawnPoint(playerID string, playerData map[string]string) (int, int) {
+	binding, ok := playerData["binding"]
+	if ok && binding != "" {
+		parts := strings.Split(binding, ",")
+		if len(parts) == 2 {
+			x, errX := strconv.Atoi(parts[0])
+			y, errY := strconv.Atoi(parts[1])
+			if errX == nil && errY == nil {
+				// Check if the binding point is occupied
+				tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
+				lockExists, _ := rdb.Exists(ctx, tileKey).Result()
+				if lockExists == 0 {
+					return x, y
+				}
+			}
+		}
+	}
+	return FindOpenSpawnPoint(playerID)
+}
+
 func InitializePlayer(playerID string) *models.InitialStateMessage {
 	log.Printf("Initializing player %s.", playerID)
 	spawnX, spawnY := FindOpenSpawnPoint(playerID)
@@ -571,24 +592,40 @@ func SetEchoState(playerID string, enabled bool) {
 }
 
 func AddExperience(playerID string, skill models.Skill, amount float64) {
-	pipe := rdb.Pipeline()
-
-	experienceJSON, err := rdb.HGet(ctx, playerID, "experience").Result()
-	if err != nil && err != redis.Nil {
-		log.Printf("Error getting experience for player %s: %v", playerID, err)
+	vals, err := rdb.HMGet(ctx, playerID, "isEcho", "experience").Result()
+	if err != nil {
+		log.Printf("Error getting player data for AddExperience %s: %v", playerID, err)
 		return
 	}
 
+	var isEchoStr string
+	if vals[0] != nil {
+		isEchoStr, _ = vals[0].(string)
+	}
+	isEcho, _ := strconv.ParseBool(isEchoStr)
+
+	var experienceJSON string
+	if vals[1] != nil {
+		experienceJSON, _ = vals[1].(string)
+	}
+
+	pipe := rdb.Pipeline()
+
 	experience := make(map[models.Skill]float64)
-	if err == nil {
-		json.Unmarshal([]byte(experienceJSON), &experience)
+	if experienceJSON != "" {
+		err := json.Unmarshal([]byte(experienceJSON), &experience)
+		if err != nil {
+			log.Printf("Error unmarshalling experience for player %s: %v", playerID, err)
+		}
 	}
 
 	experience[skill] += amount
 	newExperienceJSON, _ := json.Marshal(experience)
 	pipe.HSet(ctx, playerID, "experience", newExperienceJSON)
 
-	pipe.HIncrBy(ctx, playerID, "resonance", 5) // Add 5 seconds of resonance
+	if !isEcho {
+		pipe.HIncrBy(ctx, playerID, "resonance", 5) // Add 5 seconds of resonance
+	}
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {

@@ -24,8 +24,7 @@ func HandlePlayerDeath(playerID string) {
 		UnlockTileForEntity(playerID, currentX, currentY)
 	}
 
-	// Find a new spawn point for the player
-	spawnX, spawnY := FindOpenSpawnPoint(playerID)
+	spawnX, spawnY := GetPlayerSpawnPoint(playerID, playerData)
 
 	// Lock the new spawn tile
 	LockTileForEntity(playerID, spawnX, spawnY)
