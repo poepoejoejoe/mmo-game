@@ -26,6 +26,7 @@ export interface EntityState {
 export interface WorldTile {
     type: string;
     health: number;
+    isSanctuary?: boolean;
 }
 
 export interface InventoryItem {

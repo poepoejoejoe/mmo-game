@@ -146,11 +146,27 @@ function drawWorld(startX: number, startY: number, viewportWidth: number, viewpo
                     ctx.fillStyle = tileProps.color;
                     ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
-
             }
         }
     }
 }
+
+function drawSanctuaries(startX: number, startY: number, viewportWidth: number, viewportHeight: number) {
+    if (!ctx) return;
+
+    for (let y = startY; y < startY + viewportHeight; y++) {
+        for (let x = startX; x < startX + viewportWidth; x++) {
+            const tileData = state.getTileData(x, y);
+            if (tileData.isSanctuary) {
+                const screenX = (x - startX) * TILE_SIZE;
+                const screenY = (y - startY) * TILE_SIZE;
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.2)'; // Gold color with alpha
+                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+            }
+        }
+    }
+}
+
 
 function drawDamageIndicators(startX: number, startY: number) {
     const now = Date.now();
@@ -197,6 +213,21 @@ function drawEntities(startX: number, startY: number, time: number) {
         const screenX = (entity.x - startX) * TILE_SIZE;
         const screenY = (entity.y - startY) * TILE_SIZE;
 
+        ctx.save();
+
+        const tile = state.getTileData(entity.x, entity.y);
+        const onSanctuary = tile && tile.isSanctuary;
+
+        if (entity.isEcho) {
+            // Echo State: Apply a monochromatic filter before drawing.
+            // No transparency is used for this state.
+            ctx.filter = 'grayscale(100%)';
+        } else if (onSanctuary) {
+            // Ethereal State (on sanctuary): Slight transparency.
+            ctx.globalAlpha = 0.8;
+        }
+
+        // Draw the entity (player, item, etc.)
         const props = getEntityProperties(entity.type, entity, myPlayerId);
         if (props.draw) {
             props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages);
@@ -206,6 +237,24 @@ function drawEntities(startX: number, startY: number, time: number) {
             ctx.fillStyle = props.color;
             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
         }
+
+        // If in Echo State, apply a non-transparent color tint effect *over* the entity.
+        if (entity.isEcho) {
+            ctx.filter = 'grayscale(100%)';
+            ctx.globalCompositeOperation = 'screen';
+            ctx.fillStyle = 'rgba(0, 150, 150, 0.2)'; // A subtle cyan/teal glow
+            // Draw the tint
+            const props = getEntityProperties(entity.type, entity, myPlayerId);
+             if (props.draw) {
+                // For complex drawn entities, re-draw them with the tint
+                props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages);
+            } else if (props.asset && assetImages[props.asset]) {
+                // For simple asset entities, just re-draw the image
+                ctx.drawImage(assetImages[props.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
+            }
+        }
+
+        ctx.restore();
 
         if (entity.questState) {
             drawQuestIndicator(ctx, screenX, screenY, TILE_SIZE, time, entity.questState);
@@ -269,22 +318,11 @@ function render(time: number) {
     const startY = me.y - Math.floor(viewportHeight / 2);
 
     drawBackground(startX, startY);
+    drawSanctuaries(startX, startY, viewportWidth, viewportHeight);
     drawWorld(startX, startY, viewportWidth, viewportHeight, time);
     drawEntities(startX, startY, time);
     drawDamageIndicators(startX, startY);
 
-    if (me.isEcho) {
-        // Apply a performant color tint instead of a slow filter
-        ctx.globalCompositeOperation = 'color';
-        ctx.fillStyle = 'rgba(94, 51, 9, 0.6)'; // Sepia color
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Apply a brightness boost
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.fillStyle = 'rgba(255, 255, 224, 0.05)'; // Faint light-yellow layer
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    
     ctx.restore();
     
     // updatePlayerCoords is now called from main.ts on state update.

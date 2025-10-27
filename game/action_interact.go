@@ -204,6 +204,19 @@ func ProcessPlaceItem(playerID string, payload json.RawMessage) (*models.StateCo
 		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}, nil
 	}
 
+	targetTile, _, err := GetWorldTile(targetX, targetY)
+	if err != nil {
+		return nil, nil // Or handle error appropriately
+	}
+	if targetTile.IsSanctuary {
+		notification := models.NotificationMessage{
+			Type:    string(ServerEventNotification),
+			Message: "You cannot build on sanctuary tiles.",
+		}
+		PublishPrivately(playerID, notification)
+		return nil, nil
+	}
+
 	switch ItemID(placeData.Item) {
 	case ItemWoodenWall:
 		return handlePlaceWoodenWall(playerID, currentX, currentY, targetX, targetY)

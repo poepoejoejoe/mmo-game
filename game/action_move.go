@@ -34,7 +34,7 @@ func ProcessMove(entityID string, direction MoveDirection) *models.StateCorrecti
 		targetX++
 	}
 
-	_, props, err := GetWorldTile(targetX, targetY)
+	tile, props, err := GetWorldTile(targetX, targetY)
 	if err != nil {
 		return nil // Tile doesn't exist or other error
 	}
@@ -43,12 +43,13 @@ func ProcessMove(entityID string, direction MoveDirection) *models.StateCorrecti
 		return nil // Ran into a wall
 	}
 
-	// Lock the tile for the entity
-	wasSet, err := LockTileForEntity(entityID, targetX, targetY)
-	if err != nil || !wasSet {
-		// Tile is locked, send state correction
-		// Use ServerEventType constant
-		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}
+	// Lock the tile for the entity, unless it's a sanctuary
+	if !tile.IsSanctuary {
+		wasSet, err := LockTileForEntity(entityID, targetX, targetY)
+		if err != nil || !wasSet {
+			// Tile is locked, send state correction
+			return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}
+		}
 	}
 
 	// --- UPDATED COOLDOWN LOGIC ---
@@ -82,13 +83,24 @@ func ProcessMove(entityID string, direction MoveDirection) *models.StateCorrecti
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Error updating entity state, rolling back lock for tile %d,%d", targetX, targetY)
-		UnlockTileForEntity(entityID, targetX, targetY)
+		// Release the lock using the entity's ID, if it was set
+		if !tile.IsSanctuary {
+			UnlockTileForEntity(entityID, targetX, targetY)
+		}
 		// Use ServerEventType constant
 		return &models.StateCorrectionMessage{Type: string(ServerEventStateCorrection), X: currentX, Y: currentY}
 	}
 
-	// Release the lock using the entity's ID
-	UnlockTileForEntity(entityID, currentX, currentY)
+	// Get info about the source tile to decide whether to unlock it.
+	sourceTile, _, err := GetWorldTile(currentX, currentY)
+	if err != nil {
+		log.Printf("Could not get source tile %d,%d for unlocking: %v", currentX, currentY, err)
+	}
+
+	// Release the lock on the previous tile, if the entity was on a non-sanctuary tile.
+	if sourceTile == nil || !sourceTile.IsSanctuary {
+		UnlockTileForEntity(entityID, currentX, currentY)
+	}
 
 	// --- UPDATED MESSAGE ---
 	// Use new ServerEventType constant and generic "entityId"

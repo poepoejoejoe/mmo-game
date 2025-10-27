@@ -9,8 +9,9 @@ type CraftPayload struct {
 }
 
 type WorldTile struct {
-	Type   string `json:"type"`
-	Health int    `json:"health,omitempty"`
+	Type        string `json:"type"`
+	Health      int    `json:"health,omitempty"`
+	IsSanctuary bool   `json:"isSanctuary,omitempty"`
 }
 
 type ResourceDamagedMessage struct {
