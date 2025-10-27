@@ -1,0 +1,9 @@
+{
+    "asset_name": "smithing-icon",
+    "asset_type": "skill_icon",
+    "description": "An icon for the smithing skill.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "llm_prompt": "An anvil and hammer icon for a fantasy game UI. The icon should be easily understandable at a small size."
+}

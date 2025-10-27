@@ -2,14 +2,14 @@ import * as state from './state';
 import { edibleDefs, itemDefinitions } from './definitions';
 import { send } from './network';
 
-const skillIcons = {
-    woodcutting: '🌳',
-    mining: '⛏️',
-    smithing: '🔥',
-    cooking: '🍳',
-    construction: '🏠',
-    attack: '⚔️',
-    defense: '🛡️',
+const skillIcons: Record<string, string> = {
+    woodcutting: 'assets/woodcutting-icon.png',
+    mining: 'assets/mining-icon.png',
+    smithing: 'assets/smithing-icon.png',
+    cooking: 'assets/cooking-icon.png',
+    construction: 'assets/construction-icon.png',
+    attack: 'assets/attack-icon.png',
+    defense: 'assets/defense-icon.png',
 };
 
 function createIconElement(itemDef: any): HTMLElement {
@@ -43,6 +43,8 @@ let gameCanvas: HTMLElement;
 let playerCoordsEl: HTMLElement;
 let healthBar: HTMLElement;
 let healthBarText: HTMLElement;
+let resonanceBar: HTMLElement;
+let resonanceBarText: HTMLElement;
 let playerNameDisplayEl: HTMLElement;
 export let inventoryView: HTMLElement;
 export let craftingView: HTMLElement;
@@ -87,6 +89,8 @@ export function initializeUI() {
     playerCoordsEl = document.getElementById('player-coords')!;
     healthBar = document.getElementById('health-bar')!;
     healthBarText = document.getElementById('health-bar-text')!;
+    resonanceBar = document.getElementById('resonance-bar')!;
+    resonanceBarText = document.getElementById('resonance-bar-text')!;
     playerNameDisplayEl = document.getElementById('player-name-display')!;
     inventoryView = document.getElementById('inventory-view')!;
     craftingView = document.getElementById('crafting-view')!;
@@ -145,8 +149,9 @@ export function initializeUI() {
     craftingButton.innerHTML = `<img src="assets/crafting-icon.png" alt="Crafting">`;
     gearButton.innerHTML = `<img src="assets/gear-icon.png" alt="Gear">`;
     questButton.innerHTML = `<img src="assets/quest-icon.png" alt="Quests">`;
+    experienceButton.innerHTML = `<img src="assets/experience-icon.png" alt="Experience">`;
     chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
-    echoButton.innerHTML = `<img src="assets/fire-icon.png" alt="Echo">`; // Placeholder icon
+    echoButton.innerHTML = `<img src="assets/echo-icon.png" alt="Echo">`;
 }
 
 export function showCraftSuccess(itemId: string) {
@@ -630,13 +635,33 @@ export function updatePlayerHealth(health: number, maxHealth: number) {
     healthBarText.textContent = `${health} / ${maxHealth}`;
 }
 
+export function updateResonanceUI(): void {
+    const resonance = state.getState().resonance || 0;
+    const maxResonance = state.getState().maxResonance || 1; // Avoid division by zero
+    const resonancePercentage = (resonance / maxResonance) * 100;
+
+    resonanceBar.style.width = `${resonancePercentage}%`;
+
+    const minutes = Math.floor(resonance / 60);
+    const seconds = resonance % 60;
+    resonanceBarText.textContent = `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+}
+
 export function updateEchoUI(): void {
     const me = state.getMyEntity();
     const isUnlocked = state.getState().echoUnlocked;
+    const resonanceContainer = document.querySelector('.resonance-display') as HTMLElement;
+
     if (!me || !isUnlocked) {
         echoButton.style.display = 'none';
+        if (resonanceContainer) resonanceContainer.style.display = 'none';
         return;
+    } else {
+        echoButton.style.display = 'grid'; // Assuming 'grid' is used for centering
+        if (resonanceContainer) resonanceContainer.style.display = 'flex';
     }
+
+    updateResonanceUI();
 
     const resonance = state.getState().resonance || 0;
     const isEcho = me.isEcho || false;
@@ -676,7 +701,7 @@ export function updateExperienceUI(): void {
 
 
         skillEl.innerHTML = `
-            <div class="skill-icon">${icon}</div>
+            <div class="skill-icon"><img src="${icon}" alt="${name} icon"></div>
             <div class="skill-info">
                 <div class="skill-name">${name} (Level ${level})</div>
                 <div class="skill-bar-container">

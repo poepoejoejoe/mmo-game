@@ -1,0 +1,9 @@
+{
+    "asset_name": "echo-icon",
+    "asset_type": "menu_icon",
+    "description": "An icon for the echo toggle button.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "llm_prompt": "A ghostly silhouette of a person. The icon should be simple and clear at a small size."
+}

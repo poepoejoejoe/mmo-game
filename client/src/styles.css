@@ -206,7 +206,25 @@ body {
     width: 200px; /* Give the container a fixed width */
 }
 
+.resonance-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.2em;
+    width: 200px; /* Give the container a fixed width */
+}
+
 #health-bar-container {
+    width: 100%;
+    height: 20px;
+    background-color: #333;
+    border-radius: 10px;
+    border: 1px solid #555;
+    position: relative;
+    overflow: hidden;
+}
+
+#resonance-bar-container {
     width: 100%;
     height: 20px;
     background-color: #333;
@@ -224,7 +242,26 @@ body {
     transition: width 0.5s ease-out, background-color 0.5s ease-out;
 }
 
+#resonance-bar {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    background-color: #3498db; /* Blue for resonance */
+    transition: width 0.5s ease-out;
+}
+
 #health-bar-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+#resonance-bar-text {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -354,7 +391,17 @@ body {
 .skill-icon {
     font-size: 2em;
     width: 40px;
+    height: 40px;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.skill-icon img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 .skill-info {

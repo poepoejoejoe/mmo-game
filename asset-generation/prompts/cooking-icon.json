@@ -1,0 +1,9 @@
+{
+    "asset_name": "cooking-icon",
+    "asset_type": "skill_icon",
+    "description": "An icon for the cooking skill.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "llm_prompt": "A cooking pot icon for a fantasy game UI. The icon should be easily understandable at a small size."
+}

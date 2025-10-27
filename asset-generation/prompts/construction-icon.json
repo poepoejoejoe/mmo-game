@@ -1,0 +1,9 @@
+{
+    "asset_name": "construction-icon",
+    "asset_type": "skill_icon",
+    "description": "An icon for the construction skill.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "llm_prompt": "A hammer and saw icon for a fantasy game UI. The icon should be easily understandable at a small size."
+}

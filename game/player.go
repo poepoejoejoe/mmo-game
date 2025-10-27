@@ -303,6 +303,7 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		Quests:       quests.Quests,
 		Experience:   experience,
 		Resonance:    resonance,
+		MaxResonance: 1800, // TODO: Make this dynamic
 		EchoUnlocked: echoUnlocked,
 	}
 
@@ -313,6 +314,7 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		MaxHealth:    PlayerDefs.MaxHealth,
 		Experience:   experience,
 		Resonance:    resonance,
+		MaxResonance: 1800, // TODO: Make this dynamic
 		EchoUnlocked: echoUnlocked,
 	}
 	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
@@ -581,6 +583,7 @@ func AddExperience(playerID string, skill models.Skill, amount float64) {
 		MaxHealth:    PlayerDefs.MaxHealth,
 		Experience:   experience,
 		Resonance:    resonance,
+		MaxResonance: 1800, // TODO: Make this dynamic
 		EchoUnlocked: echoUnlocked,
 	}
 	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)

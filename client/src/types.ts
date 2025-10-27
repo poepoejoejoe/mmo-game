@@ -55,6 +55,7 @@ export interface ClientState {
     quests: Record<string, Quest>;
     experience: Record<string, number>;
     resonance?: number;
+    maxResonance?: number;
     echoUnlocked?: boolean;
     lastInteractionPosition: { x: number, y: number } | null;
     activeNpcId: string | null;
@@ -83,6 +84,7 @@ export interface InitialStateMessage extends ServerMessage {
     quests: Record<string, Quest>;
     experience: Record<string, number>;
     resonance?: number;
+    maxResonance?: number;
     echoUnlocked?: boolean;
 }
 
@@ -189,6 +191,7 @@ export interface PlayerStatsUpdateMessage extends ServerMessage {
     maxHealth: number;
     experience: Record<string, number>;
     resonance?: number;
+    maxResonance?: number;
     echoUnlocked?: boolean;
 }
 

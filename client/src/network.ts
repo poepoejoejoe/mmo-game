@@ -56,9 +56,19 @@ function handleMessage(event: MessageEvent) {
 
     switch (msg.type) {
         case 'initial_state': {
-            const stateMsg = msg as InitialStateMessage;
-            // state.setInitialState now receives the full entity map
-            state.setInitialState(stateMsg.playerId, stateMsg.entities, stateMsg.world, stateMsg.inventory, stateMsg.gear, stateMsg.quests, stateMsg.experience, stateMsg.resonance || 0, stateMsg.echoUnlocked || false);
+            const initialState = msg as InitialStateMessage;
+            state.setInitialState(
+                initialState.playerId,
+                initialState.entities,
+                initialState.world,
+                initialState.inventory,
+                initialState.gear,
+                initialState.quests,
+                initialState.experience,
+                initialState.resonance || 0,
+                initialState.maxResonance || 1,
+                initialState.echoUnlocked || false,
+            );
             updateInventoryUI();
             const myEntity = state.getMyEntity();
             if (myEntity && myEntity.name) {
@@ -191,6 +201,9 @@ function handleMessage(event: MessageEvent) {
             }
             if (statsMsg.resonance !== undefined) {
                 state.setResonance(statsMsg.resonance);
+            }
+            if (statsMsg.maxResonance !== undefined) {
+                state.setMaxResonance(statsMsg.maxResonance);
             }
             if (statsMsg.echoUnlocked !== undefined) {
                 state.setEchoUnlocked(statsMsg.echoUnlocked);

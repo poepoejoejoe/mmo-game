@@ -64,6 +64,7 @@ type InitialStateMessage struct {
 	Quests       map[QuestID]*Quest     `json:"quests"`
 	Experience   map[Skill]float64      `json:"experience"`
 	Resonance    int64                  `json:"resonance"`
+	MaxResonance int64                  `json:"maxResonance"`
 	EchoUnlocked bool                   `json:"echoUnlocked"`
 }
 
@@ -140,6 +141,7 @@ type PlayerStatsUpdateMessage struct {
 	MaxHealth    int               `json:"maxHealth"`
 	Experience   map[Skill]float64 `json:"experience"`
 	Resonance    int64             `json:"resonance,omitempty"`
+	MaxResonance int64             `json:"maxResonance,omitempty"`
 	EchoUnlocked bool              `json:"echoUnlocked,omitempty"`
 }
 

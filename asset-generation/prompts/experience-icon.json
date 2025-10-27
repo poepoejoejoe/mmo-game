@@ -1,0 +1,9 @@
+{
+    "asset_name": "experience-icon",
+    "asset_type": "menu_icon",
+    "description": "An icon for the experience menu.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "llm_prompt": "A trophy or medal icon for a fantasy game UI. The icon should be easily understandable at a small size."
+}

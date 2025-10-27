@@ -12,6 +12,7 @@ const clientState: ClientState = {
     lastInteractionPosition: null,
     activeNpcId: null,
     resonance: 0,
+    maxResonance: 1,
     echoUnlocked: false,
 };
 
@@ -54,6 +55,7 @@ export function setInitialState(
     quests: Record<string, Quest>,
     experience: Record<string, number>,
     resonance: number,
+    maxResonance: number,
     echoUnlocked: boolean
 ) {
     clientState.playerId = playerId;
@@ -74,6 +76,7 @@ export function setInitialState(
     clientState.quests = quests;
     clientState.experience = experience;
     clientState.resonance = resonance;
+    clientState.maxResonance = maxResonance;
     clientState.echoUnlocked = echoUnlocked;
 }
 
@@ -140,6 +143,10 @@ export function setResourceHealth(x: number, y: number, health: number) {
 
 export function setExperience(experience: Record<string, number>) {
     clientState.experience = experience;
+}
+
+export function setMaxResonance(maxResonance: number) {
+    clientState.maxResonance = maxResonance;
 }
 
 export function setResonance(resonance: number) {

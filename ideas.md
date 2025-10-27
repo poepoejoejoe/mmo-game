@@ -16,16 +16,28 @@
 - [x] image generation needs to crop the transparent images after doing the transparency
 - Fix the way the ui panels in bottom left work.
 - Now I want to make a second quest that is only available after the player finishes the first quest. In this quest the wizard asks the player to make cooked rat meat after slaying a rat. The wizard comes up for a good reason for this.
+- need to fix data driven design quest check in action_interact.go
 - quest indicator when quest is avail. quest complete turn in indicator?
 
 ### Current
-- need to fix data driven design quest check in action_interact.go
-- xp? 
-- echos?
+- need xp icons
+- need echo icon
+- need a resonance bar
+- need actions attacking in resonance
+- need to think about dying over all, and as echo
+- need to change wizard quest that enables echos
+- need to consider if weant to make it so that the quest unlocks recipes?
+- need to address echo performance and concurrency
+
 - when you gather resource show icon over inventory. When you equip gear show icon over gear button. When you unequip show icon over inventory
 
 
 ### Backlog
+- hosting / deploys / monitoring (?)
+- pvp
+- discord
+- add for designers
+
 
 #### Quests
 
