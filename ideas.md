@@ -25,10 +25,12 @@
 
 
 ### Current
+- echos can't recharge resonance when in echo form?
 
 
 ### Idea backlog
-- need to think about dying over all, and as echo
+- echos and defending themselves?
+- need to think about dying over all, and as echo. i think just respawn at sanctuary
 - need to consider if want to make it so that the quest unlocks recipes?
 
 ### Ui improvements
@@ -178,7 +180,7 @@ Procedurally generated hubs that grant the Ethereal State property to characters
 
 An immersive, in-world travel and safety tool centered around a physical object in each Sanctuary.
 
--   **The Aetheric Lodestone:** Each Sanctuary will contain a special, interactable statue called an Aetheric Lodestone.
+-   **The Sanctuary Stone:** Each Sanctuary will contain a special, interactable statue called a Sanctuary Stone.
 -   **Binding:** Interacting with the Lodestone will open a UI menu to set it as their home teleport point.
 -   **Return Ability:** The player will have an ability called "Return to Sanctuary" that initiates the teleport after a channel time.
 -   **Cooldown:** The ability will have a long cooldown (e.g., 30 minutes).

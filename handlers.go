@@ -203,6 +203,8 @@ func (c *Client) readPump() {
 				game.ProcessToggleEcho(c.id)
 			case game.ClientEventSetRune:
 				game.ProcessSetRune(c.id, msg.Payload)
+			case game.ClientEventTeleport:
+				game.ProcessTeleport(c.id, msg.Payload)
 			}
 		}
 	}

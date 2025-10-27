@@ -30,7 +30,9 @@ import {
     showDialog, 
     updateInventoryUI, 
     updatePlayerHealth, 
-    updatePlayerNameDisplay 
+    updatePlayerNameDisplay,
+    showChannelingBar,
+    hideChannelingBar
 } from './ui';
 import { showDamageIndicator } from './renderer';
 
@@ -103,10 +105,19 @@ function handleMessage(event: MessageEvent) {
             onStateUpdate();
             break;
         }
+        case 'teleport_channel_start': {
+            const channelMsg = msg as any; // Quick type assertion
+            showChannelingBar(channelMsg.duration);
+            break;
+        }
+        case 'teleport_channel_end': {
+            hideChannelingBar();
+            break;
+        }
         case 'show_dialog': {
             const dialogMsg = msg as DialogMessage;
             const pos = state.getState().lastInteractionPosition;
-            showDialog(dialogMsg.npcName, dialogMsg.text, dialogMsg.options, pos);
+            showDialog(dialogMsg, pos);
             break;
         }
         case 'state_correction': {

@@ -168,6 +168,78 @@ export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number
     }
 }
 
+export function drawSanctuaryStone(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, _time: number) {
+    const rand = new SeededRandom(tileX * 1000 + tileY);
+    const centerX = x * tileSize + tileSize / 2;
+    const centerY = y * tileSize + tileSize / 2;
+
+    const obeliskWidth = tileSize * 0.4;
+    const obeliskHeight = tileSize * 0.8;
+
+    const baseColor = 100 + rand.nextInt(-10, 10); // Medium gray
+    const highlightColor = baseColor + 40;
+    const shadowColorValue = baseColor - 30;
+
+    const mainBodyHeight = obeliskHeight * 0.7;
+    const pyramidHeight = obeliskHeight * 0.3;
+
+    // --- Base position ---
+    const topY = centerY - obeliskHeight / 2;
+    const leftX = centerX - obeliskWidth / 2;
+
+    // --- Shadow ---
+    ctx.fillStyle = `rgba(0, 0, 0, 0.2)`;
+    ctx.beginPath();
+    ctx.ellipse(centerX, centerY + obeliskHeight / 2, obeliskWidth * 0.6, obeliskWidth * 0.2, 0, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // --- Draw Main Body (3D effect) ---
+    // Front Face (lighter)
+    ctx.fillStyle = `rgb(${baseColor}, ${baseColor}, ${baseColor})`;
+    ctx.fillRect(leftX, topY, obeliskWidth, mainBodyHeight);
+
+    // Side Face (darker)
+    const perspectiveOffset = obeliskWidth * 0.2;
+    ctx.fillStyle = `rgb(${shadowColorValue}, ${shadowColorValue}, ${shadowColorValue})`;
+    ctx.beginPath();
+    ctx.moveTo(leftX + obeliskWidth, topY);
+    ctx.lineTo(leftX + obeliskWidth + perspectiveOffset, topY - perspectiveOffset);
+    ctx.lineTo(leftX + obeliskWidth + perspectiveOffset, topY + mainBodyHeight - perspectiveOffset);
+    ctx.lineTo(leftX + obeliskWidth, topY + mainBodyHeight);
+    ctx.closePath();
+    ctx.fill();
+
+
+    // --- Draw Pyramid Top (3D effect) ---
+    const pyramidTopY = topY - pyramidHeight;
+    // Front pyramid face
+    ctx.fillStyle = `rgb(${baseColor}, ${baseColor}, ${baseColor})`;
+    ctx.beginPath();
+    ctx.moveTo(leftX, topY);
+    ctx.lineTo(leftX + obeliskWidth, topY);
+    ctx.lineTo(centerX, pyramidTopY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Side pyramid face
+    ctx.fillStyle = `rgb(${shadowColorValue}, ${shadowColorValue}, ${shadowColorValue})`;
+    ctx.beginPath();
+    ctx.moveTo(leftX + obeliskWidth, topY);
+    ctx.lineTo(leftX + obeliskWidth + perspectiveOffset, topY - perspectiveOffset);
+    ctx.lineTo(centerX, pyramidTopY);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Highlight on the pyramid tip
+    ctx.fillStyle = `rgba(${highlightColor}, ${highlightColor}, ${highlightColor}, 0.8)`;
+    ctx.beginPath();
+    ctx.moveTo(leftX, topY);
+    ctx.lineTo(centerX, pyramidTopY);
+    ctx.lineTo(centerX - perspectiveOffset * 0.5, pyramidTopY + perspectiveOffset);
+    ctx.closePath();
+    ctx.fill();
+}
+
 export function drawTree(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, _time: number, tileData: WorldTile) {
     const rand = new SeededRandom(tileX * 1000 + tileY);
 

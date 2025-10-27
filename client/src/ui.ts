@@ -59,6 +59,7 @@ let questButton: HTMLButtonElement;
 let experienceButton: HTMLButtonElement;
 let runesButton: HTMLButtonElement;
 let echoButton: HTMLButtonElement;
+let teleportButton: HTMLButtonElement;
 let chatMessagesEl: HTMLElement;
 let chatButton: HTMLButtonElement;
 let chatContainer: HTMLElement;
@@ -107,6 +108,7 @@ export function initializeUI() {
     experienceButton = document.getElementById('experience-button') as HTMLButtonElement;
     runesButton = document.getElementById('runes-button') as HTMLButtonElement;
     echoButton = document.getElementById('echo-button') as HTMLButtonElement;
+    teleportButton = document.getElementById('teleport-button') as HTMLButtonElement;
     chatMessagesEl = document.getElementById('chat-messages')!;
     chatButton = document.getElementById('chat-button') as HTMLButtonElement;
     chatContainer = document.getElementById('chat-container')!;
@@ -139,6 +141,9 @@ export function initializeUI() {
     echoButton.addEventListener('click', () => {
         send({ type: 'toggle_echo', payload: {} });
     });
+    teleportButton.addEventListener('click', () => {
+        send({ type: 'teleport', payload: {} });
+    });
     helpButton.addEventListener('click', () => toggleModal('help-modal', true));
     helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
     dialogCloseButton.addEventListener('click', hideDialog);
@@ -158,6 +163,7 @@ export function initializeUI() {
     runesButton.innerHTML = `<img src="assets/woodcutting-icon.png" alt="Runes">`; // temp icon
     chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
     echoButton.innerHTML = `<img src="assets/echo-icon.png" alt="Echo">`;
+    teleportButton.innerHTML = `<img src="assets/treasure-map-icon.png" alt="Teleport">`;
 }
 
 export function showCraftSuccess(itemId: string) {
@@ -253,20 +259,23 @@ function toggleModal(modalId: string, show: boolean) {
     }
 }
 
-export function showDialog(npcName: string, text: string, options: { text: string, action: string }[], position: {x: number, y: number} | null) {
-    dialogNpcName.textContent = npcName;
-    dialogText.innerHTML = `<p>${text.replace(/\n/g, '</p><p>')}</p>`; // Support newlines
+export function showDialog(dialogMsg: { npcName?: string, text: string, options: { text: string, action: string, context?: string }[] }, position: {x: number, y: number} | null) {
+    dialogNpcName.textContent = dialogMsg.npcName || 'Confirmation';
+    dialogText.innerHTML = `<p>${dialogMsg.text.replace(/\n/g, '</p><p>')}</p>`; // Support newlines
     dialogOptions.innerHTML = '';
 
-    options.forEach(option => {
+    dialogMsg.options.forEach(option => {
         const button = document.createElement('button');
         button.textContent = option.text;
         button.dataset.action = option.action;
+        if (option.context) {
+            button.dataset.context = option.context;
+        }
         button.addEventListener('click', () => {
             if (option.action !== 'close_dialog') {
                 send({
                     type: 'dialog_action',
-                    payload: { action: option.action }
+                    payload: { action: option.action, context: option.context }
                 });
             }
             hideDialog(); // Close dialog after choosing
@@ -768,4 +777,47 @@ export function updateExperienceUI(): void {
 
 export function updatePlayerCoords(x: number, y: number) {
     playerCoordsEl.textContent = `(${x}, ${y})`;
+}
+
+let channelBarTimeout: number | null = null;
+
+export function showChannelingBar(duration: number) {
+	const container = document.getElementById('channeling-container');
+	const bar = document.getElementById('channeling-bar');
+	if (!container || !bar) return;
+
+	// Clear any existing timer
+	if (channelBarTimeout) {
+		clearTimeout(channelBarTimeout);
+		bar.style.transition = 'none';
+		bar.style.width = '0%';
+	}
+	
+	container.style.display = 'block';
+
+	// We trigger the animation slightly after display to ensure the transition plays
+	setTimeout(() => {
+		bar.style.transition = `width ${duration}ms linear`;
+		bar.style.width = '100%';
+	}, 10);
+
+	// Hide the bar after the duration
+	channelBarTimeout = setTimeout(() => {
+		hideChannelingBar();
+	}, duration);
+}
+
+export function hideChannelingBar() {
+	const container = document.getElementById('channeling-container');
+	const bar = document.getElementById('channeling-bar');
+	if (!container || !bar) return;
+
+	if (channelBarTimeout) {
+		clearTimeout(channelBarTimeout);
+		channelBarTimeout = null;
+	}
+
+	container.style.display = 'none';
+	bar.style.transition = 'none';
+	bar.style.width = '0%';
 }

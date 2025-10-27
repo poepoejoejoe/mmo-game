@@ -198,12 +198,14 @@ type DialogMessage struct {
 }
 
 type DialogOption struct {
-	Text   string `json:"text"`
-	Action string `json:"action"`
+	Text    string `json:"text"`
+	Action  string `json:"action"`
+	Context string `json:"context,omitempty"`
 }
 
 type DialogActionPayload struct {
-	Action string `json:"action"`
+	Action  string `json:"action"`
+	Context string `json:"context,omitempty"`
 }
 
 type QuestID string

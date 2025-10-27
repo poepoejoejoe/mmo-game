@@ -1,6 +1,6 @@
 // This file is the single source of truth for all game object properties.
 
-import { drawCrudeAxe, drawPlayer, drawRat, drawRockTile, drawSlime, drawTree, drawItem, drawWizard } from './drawing';
+import { drawCrudeAxe, drawPlayer, drawRat, drawRockTile, drawSanctuaryStone, drawSlime, drawTree, drawItem, drawWizard } from './drawing';
 import { EntityState } from './types';
 
 export interface TileProperties {
@@ -87,6 +87,16 @@ export const tileDefs: Record<string, TileProperties> = {
         maxHealth: 0,
         color: '#FF4500',
         asset: 'assets/fire-icon.png',
+    },
+    'sanctuary_stone': {
+        isCollidable: false,
+        isGatherable: false,
+        isDestructible: false,
+        isBuildableOn: false,
+        movementPenalty: false,
+        maxHealth: 0,
+        color: '#808080',
+        draw: drawSanctuaryStone,
     },
 };
 

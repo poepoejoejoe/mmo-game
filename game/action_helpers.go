@@ -396,3 +396,22 @@ func Abs(x int) int {
 	}
 	return x
 }
+
+func interruptTeleport(playerID string) {
+	playerData, err := rdb.HGetAll(ctx, playerID).Result()
+	if err != nil {
+		return
+	}
+
+	if _, ok := playerData["teleportingUntil"]; ok {
+		rdb.HDel(ctx, playerID, "teleportingUntil")
+
+		// Notify client that channel is over
+		channelEndMsg := map[string]interface{}{"type": string(ServerEventTeleportChannelEnd)}
+		msgJSON, _ := json.Marshal(channelEndMsg)
+		sendDirectMessage(playerID, msgJSON)
+
+		sendNotification(playerID, "Your teleport was interrupted!")
+		log.Printf("Player %s teleport was interrupted.", playerID)
+	}
+}

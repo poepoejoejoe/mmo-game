@@ -251,8 +251,9 @@ function handleInteractionLogic() {
 
     // Priority 4: Gather resource
     const targetTileProps = getTileProperties(state.getTileData(tileX, tileY).type);
-    if (targetTileProps.isGatherable || targetTileProps.isDestructible) {
-        if (Math.abs(me.x - tileX) + Math.abs(me.y - tileY) !== 1) return;
+    if (targetTileProps.isGatherable || targetTileProps.isDestructible || state.getTileData(tileX, tileY).type === 'sanctuary_stone') {
+        if (Math.max(Math.abs(me.x - tileX), Math.abs(me.y - tileY)) > 1) return;
+        state.setLastInteractionPosition(lastMouseEvent!.clientX, lastMouseEvent!.clientY);
         const cooldown = targetTileProps.movementPenalty ? WATER_PENALTY : ACTION_COOLDOWN;
         startActionCooldown(cooldown);
         network.send({ type: 'interact', payload: { x: tileX, y: tileY } });

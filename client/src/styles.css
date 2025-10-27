@@ -111,6 +111,27 @@ body {
     animation: floatUp 1.5s ease-out forwards;
 }
 
+#channeling-container {
+    display: none;
+    position: absolute;
+    bottom: 150px; /* Position above the bottom bar */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 15px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    z-index: 100;
+}
+
+#channeling-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #3498db;
+    border-radius: 4px;
+}
+
 @keyframes floatUp {
     from {
         transform: translate(-50%, 0);

@@ -66,6 +66,9 @@ func GenerateWorld() {
 	spawnTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeGround), Health: 0})
 	pipe.HSet(ctx, worldKey, "0,0", spawnTileJSON)
 
+	sanctuaryStoneTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeSanctuaryStone)})
+	pipe.HSet(ctx, worldKey, "0,-1", sanctuaryStoneTileJSON)
+
 	fireTileJSON, _ := json.Marshal(models.WorldTile{Type: string(TileTypeFire)})
 	pipe.HSet(ctx, worldKey, "0,1", fireTileJSON)
 

@@ -11,6 +11,18 @@ func ProcessDialogAction(playerID string, payload json.RawMessage) {
 		return
 	}
 
+	if dialogAction.Action == "set_binding" {
+		rdb.HSet(ctx, playerID, "binding", dialogAction.Context)
+
+		notification := models.NotificationMessage{
+			Type:    string(ServerEventNotification),
+			Message: "Your binding has been set to this Sanctuary Stone.",
+		}
+		notificationJSON, _ := json.Marshal(notification)
+		sendDirectMessage(playerID, notificationJSON)
+		return
+	}
+
 	// For now, we only have wizard dialogs. A more robust system would check the context of the dialog.
 	newDialog := HandleWizardDialogAction(playerID, dialogAction.Action)
 

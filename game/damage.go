@@ -92,6 +92,7 @@ func applyFireDamage(entityID string, entityData map[string]string) {
 			cleanupAndDropLoot(entityID, entityData)
 		}
 	} else if strings.HasPrefix(entityID, "player:") {
+		interruptTeleport(entityID)
 		// Also send a stats update to the player who was damaged
 		experience := make(map[models.Skill]float64)
 		experienceJSON, err := rdb.HGet(ctx, entityID, "experience").Result()

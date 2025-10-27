@@ -24,12 +24,13 @@ const (
 type TileType string
 
 const (
-	TileTypeGround     TileType = "ground"
-	TileTypeWater      TileType = "water"
-	TileTypeTree       TileType = "tree"
-	TileTypeRock       TileType = "rock"
-	TileTypeWoodenWall TileType = "wooden_wall"
-	TileTypeFire       TileType = "fire"
+	TileTypeGround         TileType = "ground"
+	TileTypeWater          TileType = "water"
+	TileTypeTree           TileType = "tree"
+	TileTypeRock           TileType = "rock"
+	TileTypeWoodenWall     TileType = "wooden_wall"
+	TileTypeFire           TileType = "fire"
+	TileTypeSanctuaryStone TileType = "sanctuary_stone"
 )
 
 // ItemID defines the unique identifier for an item.
@@ -87,6 +88,7 @@ const (
 	ClientEventDialogAction ClientEventType = "dialog_action"
 	ClientEventToggleEcho   ClientEventType = "toggle_echo"
 	ClientEventSetRune      ClientEventType = "set_rune"
+	ClientEventTeleport     ClientEventType = "teleport"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -114,6 +116,8 @@ const (
 	ServerEventQuestUpdate             ServerEventType = "quest_update"
 	ServerEventNpcQuestStateUpdate     ServerEventType = "npc_quest_state_update"
 	ServerEventActiveRuneUpdate        ServerEventType = "active_rune_update"
+	ServerEventTeleportChannelStart    ServerEventType = "teleport_channel_start"
+	ServerEventTeleportChannelEnd      ServerEventType = "teleport_channel_end"
 )
 
 // MoveDirection defines the valid move directions.
@@ -358,6 +362,11 @@ func init() {
 		Damage:         1,
 		DamageInterval: 1000,   // 1 second
 		Duration:       120000, // 2 minutes
+	}
+	TileDefs[TileTypeSanctuaryStone] = TileProperties{
+		IsCollidable:   true,
+		IsBuildableOn:  false,
+		IsDestructible: false,
 	}
 
 	// --- Recipe Definitions (USING CONSTANTS) ---

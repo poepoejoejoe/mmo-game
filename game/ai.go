@@ -483,6 +483,7 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 			if newHealth <= 0 {
 				HandlePlayerDeath(targetID)
 			} else {
+				interruptTeleport(targetID)
 				// Also send a stats update to the player who was damaged
 				h := int(newHealth)
 				mh := PlayerDefs.MaxHealth

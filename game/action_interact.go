@@ -104,6 +104,20 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 
 	targetCoordKey := strconv.Itoa(targetX) + "," + strconv.Itoa(targetY)
 
+	if TileType(tile.Type) == TileTypeSanctuaryStone {
+		dialog := models.DialogMessage{
+			Type: string(ServerEventShowDialog),
+			Text: "Do you want to set your binding to this Sanctuary Stone?",
+			Options: []models.DialogOption{
+				{Text: "Yes", Action: "set_binding", Context: targetCoordKey},
+				{Text: "No", Action: "close_dialog"},
+			},
+		}
+		dialogJSON, _ := json.Marshal(dialog)
+		sendDirectMessage(playerID, dialogJSON)
+		return nil, nil
+	}
+
 	if !props.IsGatherable && !props.IsDestructible {
 		return nil, nil
 	}
