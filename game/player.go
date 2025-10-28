@@ -353,23 +353,9 @@ func FindOpenSpawnPoint(entityID string) (int, int) {
 	x, y, dx, dy := startX, startY, 0, -1
 	for i := 0; i < (WorldSize * 2); i++ {
 		for j := 0; j < (i/2 + 1); j++ {
-			tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
-			// Check if the tile is already locked.
-			lockExists, _ := rdb.Exists(ctx, tileKey).Result()
-			if lockExists == 0 {
-				tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), strconv.Itoa(x)+","+strconv.Itoa(y)).Result()
-				if err != nil {
-					// This tile doesn't exist in the world data, skip.
-					continue
-				}
-				var tile models.WorldTile
-				json.Unmarshal([]byte(tileJSON), &tile)
-				props := TileDefs[TileType(tile.Type)]
-				if !props.IsCollidable {
-					log.Printf("Found open spawn for %s at (%d, %d)", entityID, x, y)
-					// Don't lock it here, just return the coordinates.
-					return x, y
-				}
+			if isTileAvailable(x, y) {
+				log.Printf("Found open spawn for %s at (%d, %d)", entityID, x, y)
+				return x, y
 			}
 			x, y = x+dx, y+dy
 		}
@@ -377,6 +363,36 @@ func FindOpenSpawnPoint(entityID string) (int, int) {
 	}
 	log.Printf("Could not find open spawn point, defaulting to (%d,%d) for entity %s", startX, startY, entityID)
 	return startX, startY
+}
+
+func isTileUncollidable(x, y int) bool {
+	tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), strconv.Itoa(x)+","+strconv.Itoa(y)).Result()
+	if err != nil {
+		return false // Tile doesn't exist in world data.
+	}
+
+	var tile models.WorldTile
+	json.Unmarshal([]byte(tileJSON), &tile)
+	props := TileDefs[TileType(tile.Type)]
+	return !props.IsCollidable
+}
+
+func isTileAvailable(x, y int) bool {
+	tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
+	lockExists, _ := rdb.Exists(ctx, tileKey).Result()
+	if lockExists != 0 {
+		return false
+	}
+
+	tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), strconv.Itoa(x)+","+strconv.Itoa(y)).Result()
+	if err != nil {
+		return false // Tile doesn't exist in world data.
+	}
+
+	var tile models.WorldTile
+	json.Unmarshal([]byte(tileJSON), &tile)
+	props := TileDefs[TileType(tile.Type)]
+	return !props.IsCollidable
 }
 
 func GetPlayerSpawnPoint(playerID string, playerData map[string]string) (int, int) {
@@ -387,15 +403,35 @@ func GetPlayerSpawnPoint(playerID string, playerData map[string]string) (int, in
 			x, errX := strconv.Atoi(parts[0])
 			y, errY := strconv.Atoi(parts[1])
 			if errX == nil && errY == nil {
-				// Check if the binding point is occupied
-				tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
-				lockExists, _ := rdb.Exists(ctx, tileKey).Result()
-				if lockExists == 0 {
-					return x, y
+				radius := 5
+				for r := 1; r <= radius; r++ {
+					var availablePoints [][2]int
+					for i := -r; i <= r; i++ {
+						for j := -r; j <= r; j++ {
+							// Only check the perimeter of the square for this radius
+							if i != r && i != -r && j != r && j != -r {
+								continue
+							}
+							checkX, checkY := x+i, y+j
+							if isTileUncollidable(checkX, checkY) {
+								availablePoints = append(availablePoints, [2]int{checkX, checkY})
+							}
+						}
+					}
+
+					if len(availablePoints) > 0 {
+						// Pick a random point from the available ones
+						randomIndex := mrand.Intn(len(availablePoints))
+						point := availablePoints[randomIndex]
+						log.Printf("Found open spawn for player:%s near binding at (%d, %d)", playerID, point[0], point[1])
+						return point[0], point[1]
+					}
 				}
 			}
 		}
 	}
+	// Fallback to finding any open spawn point if binding is not set or no spot is found
+	log.Printf("Could not find open spawn near binding for player:%s, finding random spawn", playerID)
 	return FindOpenSpawnPoint(playerID)
 }
 
