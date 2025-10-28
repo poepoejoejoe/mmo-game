@@ -71,7 +71,7 @@ var WizardDialogTree = []DialogNode{
 		Condition: DialogCondition{IsQuestReadyToTurnIn: models.QuestAngryTrees},
 	},
 	{
-		Text:      "The goop! It has a strange... resonance. I can teach you how to focus your will, to leave an Echo of yourself in the world when you depart. This will consume your built-up Resonance.",
+		Text:      "The goop! It has a strange... resonance. I can teach you how to focus your will. As you gain experience, you resonate with the land, charging your Echo. When you log out, this Echo will take over for you. It's a powerful tool, but it will consume your built-up Resonance. You can also toggle on your Echo form at will.",
 		Options:   []models.DialogOption{{Text: "Amazing!", Action: "turn_in_a_lingering_will"}},
 		Condition: DialogCondition{IsQuestReadyToTurnIn: "a_lingering_will"},
 	},
@@ -126,7 +126,7 @@ var WizardDialogTree = []DialogNode{
 	},
 	// --- Default/Initial Dialog ---
 	{
-		Text:    "Greetings, traveler! I sense a spark of potential in you. Are you here to help an old wizard protect our village?",
+		Text:    "Greetings, traveler! Welcome to the sanctuary. The very ground here is sacred and radiates an energy that puts you in an ethereal state, allowing you to pass through others. I sense a spark of potential in you. Are you here to help an old wizard protect this place?",
 		Options: []models.DialogOption{{Text: "Yes, tell me more.", Action: "quest_1_details"}, {Text: "Sorry, I'm busy.", Action: "close_dialog"}},
 		Condition: DialogCondition{
 			ForbiddenActiveQuests:    []models.QuestID{models.QuestBuildAWall, models.QuestRatProblem, models.QuestAngryTrees},
@@ -144,7 +144,7 @@ type DialogPage struct {
 // WizardDialogPages holds the definitions for simple, static dialog pages shown to the player.
 var WizardDialogPages = map[string]DialogPage{
 	"quest_1_details": {
-		Text: "The slimes and rats grow bolder. We need fortifications! Please, gather 10 wood, craft a wall, and place it to start our defenses.",
+		Text: "The slimes and rats grow bolder. We need fortifications! Please, gather 10 wood, craft a wall, and place it to start our defenses. Remember, you cannot build inside the boundaries of the sanctuary, so you'll need to venture out a bit.",
 		Options: []models.DialogOption{
 			{Text: "I will do it!", Action: "accept_quest_build_a_wall"},
 			{Text: "That sounds like a lot of work.", Action: "close_dialog"},
@@ -158,17 +158,17 @@ var WizardDialogPages = map[string]DialogPage{
 		},
 	},
 	"quest_3_details": {
-		Text: "So, the 'eau de vermin' worked a little TOO well. We have more rats than ever, and now they're chewing on the walls! I tried a simple repellent spell, but I might have... well, I seem to have accidentally granted sentience to the nearby trees. And they are NOT happy. To get more wood, you'll need a Crude Axe. You can make one with 10 wood, 10 stone, and 5 goop from the slimes.",
+		Text: "The slimes and rats are becoming more aggressive. Your current weapon is barely scratching them. We need to fight back with something stronger. A Crude Axe would be a significant improvement. You can craft one with 10 wood, 10 stone, and 5 goop from the slimes. It's not just a tool, it's a weapon to protect our home.",
 		Options: []models.DialogOption{
-			{Text: "Angry trees? Of course. I'll do it.", Action: "accept_quest_angry_trees"},
-			{Text: "You're on your own with this one.", Action: "close_dialog"},
+			{Text: "I'll craft the axe and fight back.", Action: "accept_quest_angry_trees"},
+			{Text: "I'm not ready for that kind of fight.", Action: "close_dialog"},
 		},
 	},
 	"quest_4_details": {
-		Text: "I've noticed that the slime goop resonates with a person's life force. I believe if you gather enough of it, I can show you how to manifest an 'Echo' of yourself, a phantom that can linger in the world even when you are not focused on it. Bring me 10 globs of goop.",
+		Text: "I've noticed that the slime goop resonates with a person's life force. I believe I can teach you how to manifest an 'Echo' of yourself. Any experience you gather throughout this world will resonate within you, charging your Echo. When you need to rest or log out, your Echo will take over, continuing your tasks. To begin, I need you to bring me 10 globs of goop.",
 		Options: []models.DialogOption{
-			{Text: "A phantom of myself? I'm in.", Action: "accept_quest_a_lingering_will"},
-			{Text: "That sounds... creepy. No thanks.", Action: "close_dialog"},
+			{Text: "An Echo of myself? I'm in.", Action: "accept_quest_a_lingering_will"},
+			{Text: "That sounds... complicated. No thanks.", Action: "close_dialog"},
 		},
 	},
 }
@@ -187,11 +187,11 @@ var QuestAcceptActions = map[string]QuestAcceptAction{
 	},
 	"accept_quest_rat_problem": {
 		QuestID:      models.QuestRatProblem,
-		Notification: "Quest Accepted: A Culinary Conundrum",
+		Notification: "Quest Accepted: A Culinary Conun-drum",
 	},
 	"accept_quest_angry_trees": {
 		QuestID:      models.QuestAngryTrees,
-		Notification: "Quest Accepted: A-bewood-ing Problem",
+		Notification: "Quest Accepted: A Sharper Blade",
 	},
 	"accept_quest_a_lingering_will": {
 		QuestID:      "a_lingering_will",

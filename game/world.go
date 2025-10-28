@@ -7,7 +7,6 @@ import (
 	"mmo-game/models"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aquilax/go-perlin"
 	"github.com/go-redis/redis/v8"
@@ -80,7 +79,7 @@ func GenerateWorld() {
 	// Define sanctuary locations and sizes
 	sanctuaries := []struct{ x, y, radius int }{
 		{0, 1, 8},   // Starting sanctuary at origin
-		{10, 10, 5}, // Second sanctuary for testing
+		{20, 20, 5}, // Second sanctuary for testing
 	}
 
 	isSanctuaryTile := func(x, y int) (bool, bool) {
@@ -145,46 +144,6 @@ func GenerateWorld() {
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Fatalf("Failed to generate world: %v", err)
-	}
-
-	// --- For Testing: Loot ownership ---
-	// This needs to be done after the pipeline executes
-	// Public item for anyone to pickup
-	dropID, createdAt, publicAt, err := CreateWorldItem(1, 1, ItemWood, 1, "", 0)
-	if err != nil {
-		log.Printf("Failed to create test item: %v", err)
-	} else {
-		itemUpdate := map[string]interface{}{
-			"type":       string(ServerEventEntityJoined),
-			"entityId":   dropID,
-			"entityType": string(EntityTypeItem),
-			"itemId":     ItemWood,
-			"x":          1,
-			"y":          1,
-			"owner":      "",
-			"createdAt":  createdAt,
-			"publicAt":   publicAt,
-		}
-		PublishUpdate(itemUpdate)
-	}
-
-	// owned item that will be public in 5 seconds
-	dropID, createdAt, publicAt, err = CreateWorldItem(2, 2, ItemStone, 1, "aplayer", 5*time.Second)
-	if err != nil {
-		log.Printf("Failed to create test item: %v", err)
-	} else {
-		itemUpdate := map[string]interface{}{
-			"type":       string(ServerEventEntityJoined),
-			"entityId":   dropID,
-			"entityType": string(EntityTypeItem),
-			"itemId":     ItemStone,
-			"x":          2,
-			"y":          2,
-			"owner":      "aplayer",
-			"createdAt":  createdAt,
-			"publicAt":   publicAt,
-		}
-		PublishUpdate(itemUpdate)
 	}
 
 	log.Println("World generation complete.")

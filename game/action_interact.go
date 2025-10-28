@@ -106,8 +106,9 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 
 	if TileType(tile.Type) == TileTypeSanctuaryStone {
 		dialog := models.DialogMessage{
-			Type: string(ServerEventShowDialog),
-			Text: "Do you want to set your binding to this Sanctuary Stone?",
+			Type:    string(ServerEventShowDialog),
+			NpcName: "Alter Binding?",
+			Text:    "Do you want to change your binding to this Sanctuary Stone? Your binding determines where you can teleport to and where you will respawn if you die.",
 			Options: []models.DialogOption{
 				{Text: "Yes", Action: "set_binding", Context: targetCoordKey},
 				{Text: "No", Action: "close_dialog"},

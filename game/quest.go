@@ -28,7 +28,7 @@ var QuestDefs = map[models.QuestID]models.Quest{
 	},
 	models.QuestAngryTrees: {
 		ID:    models.QuestAngryTrees,
-		Title: "A-bewood-ing Problem",
+		Title: "A Sharper Blade",
 		Objectives: []models.QuestObjective{
 			{Type: models.ObjectiveCraft, Target: string(ItemCrudeAxe), Description: "Craft a Crude Axe"},
 			{Type: models.ObjectiveEquip, Target: string(ItemCrudeAxe), Description: "Equip the Crude Axe"},

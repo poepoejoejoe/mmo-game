@@ -26,11 +26,15 @@
 - need to think about dying over all, and as echo. i think just respawn at sanctuary
 
 ### Current
+- make the third quest not about chopping trees but about being stronger to kill slimes better.
+- have the 4th quest explain better how resonance and echo form work. when you log out your echo will take over. any experience you gather throughout noria will resonate with you, or as you resonate with the land and gain experience this will charge your echo
+
+- need to exl
+- make the 5th quest about setting your binding and explain player death resets to binding. the 4th quest also needs to explain that we are in a sactuary and the sanctuary causes us to be in our etheral form, no building and players can move through eachother, unlike the rest of the world.
 
 
 ### Idea backlog
 - echos and defending themselves?
-
 - need to consider if want to make it so that the quest unlocks recipes?
 
 ### Ui improvements
@@ -46,7 +50,7 @@
 - hosting / deploys / monitoring (?)
 - pvp
 - discord
-- add for designers
+- ad for designers
 
 
 #### Quests
@@ -66,6 +70,9 @@
 - Echos are based on xp what they do? or is it on events?
 - Echos could just be based on talents?
 
+
+#### Sounds / Music
+lol
 
 ### Ice box
 - **PvP?**
