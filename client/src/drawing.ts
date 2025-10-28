@@ -55,7 +55,7 @@ const crackSVGs = [
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M8 8 L7 10 L5 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M8 8 L7 10 L5 11 L3 9 L1 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-    "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
+    "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M1 15 L4 12 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e"
 ];
@@ -238,6 +238,123 @@ export function drawSanctuaryStone(ctx: CanvasRenderingContext2D, x: number, y: 
     ctx.lineTo(centerX - perspectiveOffset * 0.5, pyramidTopY + perspectiveOffset);
     ctx.closePath();
     ctx.fill();
+
+    // --- Draw Runes ---
+    ctx.save();
+    ctx.strokeStyle = '#00FFFF';
+    ctx.lineWidth = 1.0; // Increased width
+    ctx.shadowColor = '#00FFFF';
+    ctx.shadowBlur = 4;   // Increased glow
+    ctx.lineCap = 'round';
+
+    const runeAreaWidth = obeliskWidth * 1;
+    const runeAreaHeight = mainBodyHeight * 1;
+    const runeAreaX = leftX + (obeliskWidth - runeAreaWidth) / 2;
+    const runeAreaY = topY + (mainBodyHeight - runeAreaHeight) / 2;
+
+    // Define a set of functions that draw different rune components
+    const components = [
+        // Spiral component
+        (ctx: CanvasRenderingContext2D, area: { x: number, y: number, width: number, height: number }) => {
+            ctx.beginPath();
+            const centerX = area.x + area.width / 2;
+            const centerY = area.y + area.height / 2;
+            const maxRadius = Math.min(area.width, area.height) * (0.4 + rand.next() * 0.1); // Larger radius
+            const turns = 1.5 + rand.next(); // 1.5 to 2.5 turns
+            const startAngle = rand.next() * Math.PI * 2;
+            const direction = rand.next() > 0.5 ? 1 : -1;
+
+            let angle = startAngle;
+            ctx.moveTo(centerX + Math.cos(angle) * maxRadius * 0.1, centerY + Math.sin(angle) * maxRadius * 0.1); // Start away from center
+            for (let i = 5; i < turns * 20; i++) { // Start loop further in
+                const radius = (i / (turns * 20)) * maxRadius;
+                angle += direction * (Math.PI * 2) / 20;
+                ctx.lineTo(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius);
+            }
+            ctx.stroke();
+        },
+        // Horizontal lines component (can be wavy)
+        (ctx: CanvasRenderingContext2D, area: { x: number, y: number, width: number, height: number }) => {
+            const numLines = rand.nextInt(1, 3); // 1 or 2 lines
+            const isWavy = rand.next() > 0.6;
+            for (let i = 0; i < numLines; i++) {
+                ctx.beginPath();
+                const y = area.y + area.height * (0.25 + (i / numLines) * 0.5); // Use more of the vertical space
+                const startX = area.x + area.width * 0.1;
+                const endX = area.x + area.width * 0.9;
+                ctx.moveTo(startX, y);
+                if (isWavy) {
+                    const controlY1 = y + (rand.next() - 0.5) * area.height * 0.6;
+                    ctx.quadraticCurveTo((startX + endX) / 2, controlY1, endX, y);
+                } else {
+                    ctx.lineTo(endX, y);
+                }
+                ctx.stroke();
+            }
+        },
+        // Vertical lines component (straight only for clarity)
+        (ctx: CanvasRenderingContext2D, area: { x: number, y: number, width: number, height: number }) => {
+            const numLines = rand.nextInt(1, 4); // 1 to 3 lines
+            for (let i = 0; i < numLines; i++) {
+                ctx.beginPath();
+                const x = area.x + area.width * (0.2 + (i / numLines) * 0.6); // Space them out
+                const startY = area.y + area.height * 0.1;
+                const endY = area.y + area.height * 0.9;
+                ctx.moveTo(x, startY);
+                ctx.lineTo(x, endY);
+                ctx.stroke();
+            }
+        },
+    ];
+
+    // --- Compose the Rune ---
+    // Shuffle the available components for this specific stone
+    for (let i = components.length - 1; i > 0; i--) {
+        const j = rand.nextInt(0, i + 1);
+        [components[i], components[j]] = [components[j], components[i]];
+    }
+
+    const numComponents = rand.nextInt(1, 3); // 1 or 2 components
+
+    if (numComponents === 1) {
+        // Draw one component in the full area
+        const fullArea = {
+            x: runeAreaX,
+            y: runeAreaY,
+            width: runeAreaWidth,
+            height: runeAreaHeight,
+        };
+        components[0](ctx, fullArea);
+    } else {
+        // Asymmetrical vertical split for a dominant/minor component look
+        const splitRatio = 0.3 + rand.next() * 0.2; // 30% to 50%
+        
+        let zone1Height = runeAreaHeight * splitRatio;
+        let zone2Height = runeAreaHeight * (1 - splitRatio);
+        
+        // Randomly assign the larger zone to be on top or bottom
+        if (rand.next() > 0.5) {
+            [zone1Height, zone2Height] = [zone2Height, zone1Height];
+        }
+
+        const zone1Area = {
+            x: runeAreaX,
+            y: runeAreaY,
+            width: runeAreaWidth,
+            height: zone1Height,
+        };
+        components[0](ctx, zone1Area);
+
+        const zone2Area = {
+            x: runeAreaX,
+            y: runeAreaY + zone1Height,
+            width: runeAreaWidth,
+            height: zone2Height,
+        };
+        components[1](ctx, zone2Area);
+    }
+
+    ctx.restore();
 }
 
 export function drawTree(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, _time: number, tileData: WorldTile) {

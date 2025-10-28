@@ -24,33 +24,35 @@
 - need to address echo performance and concurrency
 - echos can't recharge resonance when in echo form?
 - need to think about dying over all, and as echo. i think just respawn at sanctuary
-
-### Current
 - make the third quest not about chopping trees but about being stronger to kill slimes better.
 - have the 4th quest explain better how resonance and echo form work. when you log out your echo will take over. any experience you gather throughout noria will resonate with you, or as you resonate with the land and gain experience this will charge your echo
 
-- need to exl
-- make the 5th quest about setting your binding and explain player death resets to binding. the 4th quest also needs to explain that we are in a sactuary and the sanctuary causes us to be in our etheral form, no building and players can move through eachother, unlike the rest of the world.
+### Current
+
+
 
 
 ### Idea backlog
 - echos and defending themselves?
 - need to consider if want to make it so that the quest unlocks recipes?
+- Do we need a binding explanation? make the 5th quest about setting your binding and explain player death resets to binding. the 4th quest also needs to explain that we are in a sactuary and the sanctuary causes us to be in our etheral form, no building and players can move through eachother, unlike the rest of the world.
+
 
 ### Ui improvements
 - when you gather resource show icon over inventory. When you equip gear show icon over gear button. When you unequip show icon over inventory
 
 ### Backlog
-- We should introduce the concept of the ui becoming unlocked as the player does the first couple quests. The first quest should unlock the inventory (in the ui only) as well as the crafting area.
-- The wizard should explain that experience and the experience menu item should unlock after the first quest
-- the reasoning for the third quest should be better. maybe it should just be about kill the rats and slimes with a more powerful weapon
-- The gear menu item should unlock after accepting the third quest which requires you to create an axe
-- We should improve the quest a_lingering_will after finishing the quest it should unlock the runes menu button in the ui, chop trees and mine ore. Finishin the quest also unlocks the toggle echo button in the ui as well as the resonance bar.
-
 - hosting / deploys / monitoring (?)
 - pvp
 - discord
 - ad for designers
+
+### unlock ui ?
+- We should introduce the concept of the ui becoming unlocked as the player does the first couple quests. The first quest should unlock the inventory (in the ui only) as well as the crafting area.
+- The wizard should explain that experience and the experience menu item should unlock after the first quest
+- The gear menu item should unlock after accepting the third quest which requires you to create an axe
+- We should improve the quest a_lingering_will after finishing the quest it should unlock the runes menu button in the ui, chop trees and mine ore. Finishin the quest also unlocks the toggle echo button in the ui as well as the resonance bar.
+
 
 
 #### Quests

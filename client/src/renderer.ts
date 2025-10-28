@@ -218,11 +218,7 @@ function drawEntities(startX: number, startY: number, time: number) {
         const tile = state.getTileData(entity.x, entity.y);
         const onSanctuary = tile && tile.isSanctuary;
 
-        if (entity.isEcho) {
-            // Echo State: Apply a monochromatic filter before drawing.
-            // No transparency is used for this state.
-            ctx.filter = 'grayscale(100%)';
-        } else if (onSanctuary) {
+        if (onSanctuary) {
             // Ethereal State (on sanctuary): Slight transparency.
             ctx.globalAlpha = 0.8;
         }
@@ -236,22 +232,6 @@ function drawEntities(startX: number, startY: number, time: number) {
         } else {
             ctx.fillStyle = props.color;
             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-        }
-
-        // If in Echo State, apply a non-transparent color tint effect *over* the entity.
-        if (entity.isEcho) {
-            ctx.filter = 'grayscale(100%)';
-            ctx.globalCompositeOperation = 'screen';
-            ctx.fillStyle = 'rgba(0, 150, 150, 0.2)'; // A subtle cyan/teal glow
-            // Draw the tint
-            const props = getEntityProperties(entity.type, entity, myPlayerId);
-             if (props.draw) {
-                // For complex drawn entities, re-draw them with the tint
-                props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages);
-            } else if (props.asset && assetImages[props.asset]) {
-                // For simple asset entities, just re-draw the image
-                ctx.drawImage(assetImages[props.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
-            }
         }
 
         ctx.restore();
