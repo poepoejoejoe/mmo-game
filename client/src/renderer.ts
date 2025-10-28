@@ -153,6 +153,7 @@ function drawWorld(startX: number, startY: number, viewportWidth: number, viewpo
 }
 
 const sanctuaryCracksCache = new Map<string, { start: number, len: number, offset: number }[]>();
+const sanctuaryDustCache = new Map<string, { x: number, y: number, offset: number, radius: number }[]>();
 
 function drawSanctuaries(startX: number, startY: number, viewportWidth: number, viewportHeight: number, time: number) {
     if (!ctx) return;
@@ -181,29 +182,42 @@ function drawSanctuaries(startX: number, startY: number, viewportWidth: number, 
             };
         });
 
+        const totalLength = midPoints.reduce((acc, p, i) => {
+            const p_next = midPoints[(i + 1) % midPoints.length];
+            return acc + Math.sqrt(Math.pow(p_next.x - p.x, 2) + Math.pow(p_next.y - p.y, 2));
+        }, 0);
+
         const cacheKey = `${group.tiles[0].x},${group.tiles[0].y}`;
         if (!sanctuaryCracksCache.has(cacheKey)) {
             const rand = new SeededRandom(group.tiles[0].x * 1000 + group.tiles[0].y);
             const cracks = [];
-            let totalLength = 0;
-            for (let i = 0; i < midPoints.length; i++) {
-                const p1 = midPoints[i];
-                const p2 = midPoints[(i + 1) % midPoints.length];
-                totalLength += Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-            }
 
-            const numCracks = Math.floor(totalLength / 80);
+            const numCracks = Math.floor(totalLength / 70); // Denser cracks
             for (let i = 0; i < numCracks; i++) {
                 cracks.push({
                     start: rand.next(),
-                    len: rand.next() * 0.1 + 0.05, // 5% to 15% of total length
+                    len: rand.next() * 0.04 + 0.02, // 2% to 6% of total length - SHORTER
                     offset: rand.next() * 1000,
                 });
             }
             sanctuaryCracksCache.set(cacheKey, cracks);
+
+            const dustParticles = [];
+            const numParticles = Math.max(8, Math.floor(group.tiles.length / 4));
+            for (let i = 0; i < numParticles; i++) {
+                const tile = group.tiles[rand.nextInt(0, group.tiles.length - 1)];
+                dustParticles.push({
+                    x: (tile.x + rand.next()) * TILE_SIZE, // world coords
+                    y: (tile.y + rand.next()) * TILE_SIZE, // world coords
+                    offset: rand.next() * 5000,
+                    radius: rand.next() * 1.2 + 0.5,
+                });
+            }
+            sanctuaryDustCache.set(cacheKey, dustParticles);
         }
         
         const cracks = sanctuaryCracksCache.get(cacheKey)!;
+        const particles = sanctuaryDustCache.get(cacheKey)!;
         
         ctx.save();
         drawSmoothPath(ctx, midPoints);
@@ -224,11 +238,6 @@ function drawSanctuaries(startX: number, startY: number, viewportWidth: number, 
             const pulse = (Math.sin((time + crack.offset) / 600) + 1) / 2; // 0-1, slower pulse
 
             if (pulse > 0.1) { // Only draw if "active"
-                const totalLength = midPoints.reduce((acc, p, i) => {
-                    const p_next = midPoints[(i + 1) % midPoints.length];
-                    return acc + Math.sqrt(Math.pow(p_next.x - p.x, 2) + Math.pow(p_next.y - p.y, 2));
-                }, 0);
-
                 const crackLength = totalLength * crack.len;
                 const startOffset = totalLength * crack.start;
                 const intensity = (pulse - 0.1) / 0.9; // Remap pulse from 0.1-1 to 0-1
@@ -267,6 +276,45 @@ function drawSanctuaries(startX: number, startY: number, viewportWidth: number, 
         }
 
         ctx.restore();
+    }
+}
+
+function drawSanctuaryDust(startX: number, startY: number, viewportWidth: number, viewportHeight: number, time: number) {
+    if (!ctx) return;
+
+    const sanctuaryGroups = findSanctuaryGroups(startX, startY, viewportWidth, viewportHeight);
+
+    for (const group of sanctuaryGroups) {
+        if (group.tiles.length === 0) continue;
+
+        const cacheKey = `${group.tiles[0].x},${group.tiles[0].y}`;
+        const particles = sanctuaryDustCache.get(cacheKey)!;
+
+        if (particles) {
+            for (const particle of particles) {
+                const pulse = (Math.sin((time + particle.offset) / 2000) + 1) / 2;
+                const screenX = particle.x - startX * TILE_SIZE;
+                const screenY = particle.y - startY * TILE_SIZE;
+
+                const driftX = Math.sin((time + particle.offset * 1.2) / 1500) * 5;
+                const driftY = -(pulse * 20);
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(
+                    screenX + driftX,
+                    screenY + driftY,
+                    particle.radius * pulse,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fillStyle = `rgba(255, 215, 0, ${pulse * 0.5})`;
+                ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                ctx.shadowBlur = 3;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
     }
 }
 
@@ -402,6 +450,7 @@ function render(time: number) {
 
     drawBackground(startX, startY);
     drawSanctuaries(startX, startY, viewportWidth, viewportHeight, time);
+    drawSanctuaryDust(startX, startY, viewportWidth, viewportHeight, time);
     drawWorld(startX, startY, viewportWidth, viewportHeight, time);
     drawEntities(startX, startY, time);
     drawDamageIndicators(startX, startY);
