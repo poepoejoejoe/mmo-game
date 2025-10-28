@@ -208,6 +208,10 @@ function drawSanctuaries(startX: number, startY: number, viewportWidth: number, 
         ctx.save();
         drawSmoothPath(ctx, midPoints);
 
+        // 0. Fill the area
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+        ctx.fill();
+
         // 1. Faint, constant base line
         ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)';
         ctx.lineWidth = 1;
