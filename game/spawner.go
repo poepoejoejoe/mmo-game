@@ -9,7 +9,7 @@ import (
 
 const (
 	targetSlimeCount     = 0
-	targetRatCount       = 1
+	targetRatCount       = 0
 	spawnerCheckInterval = 30 * time.Second
 )
 
