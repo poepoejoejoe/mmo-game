@@ -2,8 +2,8 @@ import * as state from './state';
 import { TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
 // --- UPDATED ---
 import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
-import { findTileGroups } from './grouper';
-import { drawWaterGroup, crackImages, drawQuestIndicator } from './drawing';
+import { findTileGroups, findSanctuaryGroups } from './grouper';
+import { drawWaterGroup, crackImages, drawQuestIndicator, tracePerimeter, drawSmoothPath, ramerDouglasPeucker } from './drawing';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -151,19 +151,49 @@ function drawWorld(startX: number, startY: number, viewportWidth: number, viewpo
     }
 }
 
-function drawSanctuaries(startX: number, startY: number, viewportWidth: number, viewportHeight: number) {
+function drawSanctuaries(startX: number, startY: number, viewportWidth: number, viewportHeight: number, time: number) {
     if (!ctx) return;
 
-    for (let y = startY; y < startY + viewportHeight; y++) {
-        for (let x = startX; x < startX + viewportWidth; x++) {
-            const tileData = state.getTileData(x, y);
-            if (tileData.isSanctuary) {
-                const screenX = (x - startX) * TILE_SIZE;
-                const screenY = (y - startY) * TILE_SIZE;
-                ctx.fillStyle = 'rgba(255, 215, 0, 0.2)'; // Gold color with alpha
-                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-            }
-        }
+    const sanctuaryGroups = findSanctuaryGroups(startX, startY, viewportWidth, viewportHeight);
+
+    for (const group of sanctuaryGroups) {
+        // 1. Draw the pulsing glow
+        const pulse = Math.sin(time / 400) * 4 + 8;
+        const perimeterNodes = tracePerimeter(group);
+        if (perimeterNodes.length < 3) continue;
+
+        const screenPoints = perimeterNodes.map((p: {x: number, y: number}) => ({
+            x: (p.x - startX) * TILE_SIZE,
+            y: (p.y - startY) * TILE_SIZE,
+        }));
+
+        const simplifiedPoints = ramerDouglasPeucker(screenPoints, TILE_SIZE * 1.5);
+
+        const midPoints = simplifiedPoints.map((p: {x: number, y: number}, i: number) => {
+            const p_next = simplifiedPoints[(i + 1) % simplifiedPoints.length];
+            return {
+                x: (p.x + p_next.x) / 2,
+                y: (p.y + p_next.y) / 2,
+            };
+        });
+
+        ctx.save();
+        
+        drawSmoothPath(ctx, midPoints);
+
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(255, 215, 0, 1)';
+        ctx.shadowBlur = pulse;
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. Fill the area with a transparent color
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+        // We can reuse the path from the border for filling
+        ctx.fill(); 
+        ctx.restore();
     }
 }
 
@@ -298,7 +328,7 @@ function render(time: number) {
     const startY = me.y - Math.floor(viewportHeight / 2);
 
     drawBackground(startX, startY);
-    drawSanctuaries(startX, startY, viewportWidth, viewportHeight);
+    drawSanctuaries(startX, startY, viewportWidth, viewportHeight, time);
     drawWorld(startX, startY, viewportWidth, viewportHeight, time);
     drawEntities(startX, startY, time);
     drawDamageIndicators(startX, startY);

@@ -95,6 +95,44 @@ function drawPath(ctx: CanvasRenderingContext2D, points: { x: number, y: number 
     ctx.closePath();
 }
 
+function perpendicularDistance(point: { x: number, y: number }, lineStart: { x: number, y: number }, lineEnd: { x: number, y: number }): number {
+    const dx = lineEnd.x - lineStart.x;
+    const dy = lineEnd.y - lineStart.y;
+    if (dx === 0 && dy === 0) {
+        return Math.sqrt(Math.pow(point.x - lineStart.x, 2) + Math.pow(point.y - lineStart.y, 2));
+    }
+    const t = ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / (dx * dx + dy * dy);
+    const clampedT = Math.max(0, Math.min(1, t));
+    const closestX = lineStart.x + clampedT * dx;
+    const closestY = lineStart.y + clampedT * dy;
+    return Math.sqrt(Math.pow(point.x - closestX, 2) + Math.pow(point.y - closestY, 2));
+}
+
+export function ramerDouglasPeucker(pointList: { x: number, y: number }[], epsilon: number): { x: number, y: number }[] {
+    if (pointList.length < 3) {
+        return pointList;
+    }
+    let dmax = 0;
+    let index = 0;
+    const end = pointList.length - 1;
+
+    for (let i = 1; i < end; i++) {
+        const d = perpendicularDistance(pointList[i], pointList[0], pointList[end]);
+        if (d > dmax) {
+            index = i;
+            dmax = d;
+        }
+    }
+
+    if (dmax > epsilon) {
+        const recResults1 = ramerDouglasPeucker(pointList.slice(0, index + 1), epsilon);
+        const recResults2 = ramerDouglasPeucker(pointList.slice(index, end + 1), epsilon);
+        return recResults1.slice(0, recResults1.length - 1).concat(recResults2);
+    } else {
+        return [pointList[0], pointList[end]];
+    }
+}
+
 // Note: drawRockTile is simplified as neighbors are no longer needed
 export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, _time: number, tileData: WorldTile) {
     const rand = new SeededRandom(tileX * 1000 + tileY);
@@ -477,8 +515,11 @@ class Noise {
     }
 }
 
-function tracePerimeter(group: TileGroup): { x: number, y: number }[] {
+export function tracePerimeter(group: TileGroup): { x: number, y: number }[] {
     const tileSet = new Set(group.tiles.map(t => `${t.x},${t.y}`));
+    if (group.tiles.length === 0) {
+        return [];
+    }
     const startNode = group.tiles.reduce((a, b) => a.y < b.y ? a : (a.y === b.y && a.x < b.x ? a : b));
 
     const path: { x: number, y: number }[] = [];
@@ -524,8 +565,42 @@ function tracePerimeter(group: TileGroup): { x: number, y: number }[] {
     return path;
 }
 
+export function drawSmoothPath(ctx: CanvasRenderingContext2D, points: { x: number, y: number }[]) {
+    if (points.length < 3) {
+        // Fallback for simple shapes
+        ctx.beginPath();
+        if (points.length > 0) {
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+        }
+        ctx.closePath();
+        return;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+
+    for (let i = 0; i < points.length; i++) {
+        const p_minus_1 = points[(i - 1 + points.length) % points.length];
+        const p_i = points[i];
+        const p_i_plus_1 = points[(i + 1) % points.length];
+        const p_i_plus_2 = points[(i + 2) % points.length];
+
+        // Catmull-Rom to Bezier conversion
+        const cp1x = p_i.x + (p_i_plus_1.x - p_minus_1.x) / 6;
+        const cp1y = p_i.y + (p_i_plus_1.y - p_minus_1.y) / 6;
+
+        const cp2x = p_i_plus_1.x - (p_i_plus_2.x - p_i.x) / 6;
+        const cp2y = p_i_plus_1.y - (p_i_plus_2.y - p_i.y) / 6;
+        
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p_i_plus_1.x, p_i_plus_1.y);
+    }
+    ctx.closePath();
+}
+
 export function drawWaterGroup(ctx: CanvasRenderingContext2D, group: TileGroup, startX: number, startY: number, tileSize: number, time: number) {
-    const rand = new SeededRandom(group.tiles[0].x * 1000 + group.tiles[0].y);
     const baseColor = { r: 52, g: 152, b: 219 };
     const shoreColor = 'rgba(88, 178, 233, 0.7)';
     const noise = new Noise(group.tiles[0].x + group.tiles[0].y);
@@ -539,33 +614,20 @@ export function drawWaterGroup(ctx: CanvasRenderingContext2D, group: TileGroup, 
         y: (p.y - startY) * tileSize,
     }));
 
-    // Add a small, controlled jitter to the corner points for a natural look
-    const jitteredPoints = screenPoints.map(p => ({
-        x: p.x + (rand.next() - 0.5) * tileSize * 0.4,
-        y: p.y + (rand.next() - 0.5) * tileSize * 0.4,
-    }));
+    const simplifiedPoints = ramerDouglasPeucker(screenPoints, tileSize * 1.2);
+
+    const midPoints = simplifiedPoints.map((p, i) => {
+        const p_next = simplifiedPoints[(i + 1) % simplifiedPoints.length];
+        return {
+            x: (p.x + p_next.x) / 2,
+            y: (p.y + p_next.y) / 2,
+        };
+    });
 
     ctx.save();
 
     // --- 1. Create a smooth path for the shoreline ---
-    ctx.beginPath();
-    
-    // Move to the midpoint of the last and first segments
-    const startMid = {
-        x: (jitteredPoints[jitteredPoints.length - 1].x + jitteredPoints[0].x) / 2,
-        y: (jitteredPoints[jitteredPoints.length - 1].y + jitteredPoints[0].y) / 2,
-    };
-    ctx.moveTo(startMid.x, startMid.y);
-
-    // Use quadratic curves to smooth the path between midpoints, using the original points as controls
-    for (let i = 0; i < jitteredPoints.length; i++) {
-        const p1 = jitteredPoints[i];
-        const p2 = jitteredPoints[(i + 1) % jitteredPoints.length];
-        
-        const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-        ctx.quadraticCurveTo(p1.x, p1.y, mid.x, mid.y);
-    }
-    ctx.closePath();
+    drawSmoothPath(ctx, midPoints);
 
     // --- 2. Draw the base water color and shoreline ---
     ctx.shadowColor = shoreColor;
