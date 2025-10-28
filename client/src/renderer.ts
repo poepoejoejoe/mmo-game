@@ -4,6 +4,7 @@ import { TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
 import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
 import { findTileGroups, findSanctuaryGroups } from './grouper';
 import { drawWaterGroup, crackImages, drawQuestIndicator, tracePerimeter, drawSmoothPath, ramerDouglasPeucker } from './drawing';
+import { SeededRandom } from './utils';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -151,25 +152,28 @@ function drawWorld(startX: number, startY: number, viewportWidth: number, viewpo
     }
 }
 
+const sanctuaryCracksCache = new Map<string, { start: number, len: number, offset: number }[]>();
+
 function drawSanctuaries(startX: number, startY: number, viewportWidth: number, viewportHeight: number, time: number) {
     if (!ctx) return;
 
     const sanctuaryGroups = findSanctuaryGroups(startX, startY, viewportWidth, viewportHeight);
 
     for (const group of sanctuaryGroups) {
-        // 1. Draw the pulsing glow
-        const pulse = Math.sin(time / 400) * 4 + 8;
+        if (group.tiles.length === 0) continue;
+
         const perimeterNodes = tracePerimeter(group);
         if (perimeterNodes.length < 3) continue;
 
-        const screenPoints = perimeterNodes.map((p: {x: number, y: number}) => ({
+        const screenPoints = perimeterNodes.map((p: { x: number, y: number }) => ({
             x: (p.x - startX) * TILE_SIZE,
             y: (p.y - startY) * TILE_SIZE,
         }));
 
         const simplifiedPoints = ramerDouglasPeucker(screenPoints, TILE_SIZE * 1.5);
-
-        const midPoints = simplifiedPoints.map((p: {x: number, y: number}, i: number) => {
+        if (simplifiedPoints.length < 2) continue;
+        
+        const midPoints = simplifiedPoints.map((p: { x: number, y: number }, i: number) => {
             const p_next = simplifiedPoints[(i + 1) % simplifiedPoints.length];
             return {
                 x: (p.x + p_next.x) / 2,
@@ -177,22 +181,87 @@ function drawSanctuaries(startX: number, startY: number, viewportWidth: number, 
             };
         });
 
-        ctx.save();
+        const cacheKey = `${group.tiles[0].x},${group.tiles[0].y}`;
+        if (!sanctuaryCracksCache.has(cacheKey)) {
+            const rand = new SeededRandom(group.tiles[0].x * 1000 + group.tiles[0].y);
+            const cracks = [];
+            let totalLength = 0;
+            for (let i = 0; i < midPoints.length; i++) {
+                const p1 = midPoints[i];
+                const p2 = midPoints[(i + 1) % midPoints.length];
+                totalLength += Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+            }
+
+            const numCracks = Math.floor(totalLength / 80);
+            for (let i = 0; i < numCracks; i++) {
+                cracks.push({
+                    start: rand.next(),
+                    len: rand.next() * 0.1 + 0.05, // 5% to 15% of total length
+                    offset: rand.next() * 1000,
+                });
+            }
+            sanctuaryCracksCache.set(cacheKey, cracks);
+        }
         
+        const cracks = sanctuaryCracksCache.get(cacheKey)!;
+        
+        ctx.save();
         drawSmoothPath(ctx, midPoints);
 
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.7)';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = 'rgba(255, 215, 0, 1)';
-        ctx.shadowBlur = pulse;
+        // 1. Faint, constant base line
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+        ctx.shadowBlur = 8;
         ctx.stroke();
-        ctx.restore();
 
-        // 2. Fill the area with a transparent color
-        ctx.save();
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
-        // We can reuse the path from the border for filling
-        ctx.fill(); 
+        // 2. Draw each crack with its own pulse
+        for (const crack of cracks) {
+            const pulse = (Math.sin((time + crack.offset) / 600) + 1) / 2; // 0-1, slower pulse
+
+            if (pulse > 0.1) { // Only draw if "active"
+                const totalLength = midPoints.reduce((acc, p, i) => {
+                    const p_next = midPoints[(i + 1) % midPoints.length];
+                    return acc + Math.sqrt(Math.pow(p_next.x - p.x, 2) + Math.pow(p_next.y - p.y, 2));
+                }, 0);
+
+                const crackLength = totalLength * crack.len;
+                const startOffset = totalLength * crack.start;
+                const intensity = (pulse - 0.1) / 0.9; // Remap pulse from 0.1-1 to 0-1
+
+                const gradientSteps = 5;
+                for (let i = 0; i < gradientSteps; i++) {
+                    const stepProgress = i / (gradientSteps - 1); // 0 to 1
+
+                    // Segment gets shorter and is centered on the full crack length
+                    const segmentLen = crackLength * (1 - stepProgress * 0.7);
+                    const segmentStart = startOffset + (crackLength - segmentLen) / 2;
+                    
+                    const stepIntensity = intensity * (0.4 + stepProgress * 0.6);
+
+                    ctx.save();
+                    ctx.setLineDash([segmentLen, totalLength]);
+                    ctx.lineDashOffset = -segmentStart;
+                    
+                    // Outer Glow
+                    ctx.lineWidth = 3.5;
+                    ctx.strokeStyle = `rgba(255, 215, 0, ${stepIntensity * 0.3})`;
+                    ctx.shadowColor = 'rgba(255, 215, 0, 1)';
+                    ctx.shadowBlur = 5 + stepIntensity * 12;
+                    ctx.stroke();
+
+                    // Inner Core
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = `rgba(255, 255, 224, ${stepIntensity * 0.8})`;
+                    ctx.shadowColor = 'rgba(255, 255, 255, 1)';
+                    ctx.shadowBlur = 3 + stepIntensity * 6;
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
+            }
+        }
+
         ctx.restore();
     }
 }
