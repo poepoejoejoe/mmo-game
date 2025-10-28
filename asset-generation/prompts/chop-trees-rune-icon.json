@@ -1,0 +1,9 @@
+{
+    "asset_name": "chop-trees-rune-icon",
+    "asset_type": "skill_icon",
+    "description": "An icon for the chop trees rune.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "llm_prompt": "An icon of a flat, circular grey stone tablet. Carved into the center is a simple, stylized symbol of a woodcutting axe, which glows with a bright, neon blue light."
+}

@@ -160,10 +160,10 @@ export function initializeUI() {
     gearButton.innerHTML = `<img src="assets/gear-icon.png" alt="Gear">`;
     questButton.innerHTML = `<img src="assets/quest-icon.png" alt="Quests">`;
     experienceButton.innerHTML = `<img src="assets/experience-icon.png" alt="Experience">`;
-    runesButton.innerHTML = `<img src="assets/woodcutting-icon.png" alt="Runes">`; // temp icon
+    runesButton.innerHTML = `<img src="assets/runes-icon.png" alt="Runes">`;
     chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
     echoButton.innerHTML = `<img src="assets/echo-icon.png" alt="Echo">`;
-    teleportButton.innerHTML = `<img src="assets/treasure-map-icon.png" alt="Teleport">`;
+    teleportButton.innerHTML = `<img src="assets/sanctuary-stone-icon.png" alt="Teleport">`;
 }
 
 export function showCraftSuccess(itemId: string) {
@@ -643,15 +643,11 @@ export function updateRunesUI(): void {
         const icon = document.createElement('img');
         // TODO: Map runeId to icon
         if (runeId === 'chop_trees') {
-            icon.src = 'assets/woodcutting-icon.png';
+            icon.src = 'assets/chop-trees-rune-icon.png';
         } else if (runeId === 'mine_ore') {
-            icon.src = 'assets/mining-icon.png';
+            icon.src = 'assets/mine-ore-rune-icon.png';
         }
         runeButton.appendChild(icon);
-
-        const name = document.createElement('span');
-        name.textContent = runeId.replace(/_/g, ' ');
-        runeButton.appendChild(name);
 
         runeButton.addEventListener('click', () => {
             const newRune = runeId === activeRune ? '' : runeId;

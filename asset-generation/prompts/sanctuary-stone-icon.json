@@ -1,0 +1,9 @@
+{
+    "asset_name": "sanctuary-stone-icon",
+    "asset_type": "ui_icon",
+    "description": "An icon for the sanctuary stone.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "llm_prompt": "An icon of a tall, slender obelisk made of smooth, light-colored stone. Ancient, glowing blue glyphs are carved in vertical lines down its surface. The obelisk radiates a gentle, protective aura."
+}

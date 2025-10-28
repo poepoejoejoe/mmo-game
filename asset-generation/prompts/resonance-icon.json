@@ -1,0 +1,9 @@
+{
+    "asset_name": "resonance-icon",
+    "asset_type": "ui_icon",
+    "description": "An icon for the resonance resource.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "llm_prompt": "An icon of a vibrant, light blue crystal pulsing with soft, glowing energy. Thin, ethereal wisps of light emanate from the crystal, suggesting a stored power. The crystal should be faceted and catch the light."
+}

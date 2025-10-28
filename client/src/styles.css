@@ -294,7 +294,7 @@ body {
 }
 
 .hud-icon {
-    height: 1.2em; /* Match font size */
+    height: 1.8em; /* Match font size */
     vertical-align: middle;
     margin-right: 4px;
 }
@@ -337,6 +337,11 @@ body {
     width: 100%;
     height: 100%;
     object-fit: contain;
+}
+
+#teleport-button img {
+    height: 80%;
+    width: 80%;
 }
 
 /* --- Info Panels --- */
@@ -405,7 +410,7 @@ body {
 
 #runes-view {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 10px;
     width: 100%;
 }
@@ -413,16 +418,17 @@ body {
 .rune-button {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
     padding: 8px;
     background-color: #444;
     border: 1px solid #666;
-    border-radius: 4px;
+    border-radius: 50%;
     cursor: pointer;
     transition: all 0.2s ease-out;
     color: #f0f0f0;
     font-size: 1em;
-    text-transform: capitalize;
 }
 
 .rune-button:hover {
@@ -437,8 +443,8 @@ body {
 }
 
 .rune-button img {
-    width: 32px;
-    height: 32px;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
 }
 

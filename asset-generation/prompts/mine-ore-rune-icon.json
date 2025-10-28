@@ -1,0 +1,10 @@
+{
+    "asset_name": "mine-ore-rune-icon",
+    "asset_type": "skill_icon",
+    "description": "An icon for the mine ore rune.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "image_dependency": "chop-trees-rune-icon",
+    "llm_prompt": "Change the symbol in the middle to a pickaxe."
+}

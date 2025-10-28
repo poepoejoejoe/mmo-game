@@ -1,0 +1,9 @@
+{
+    "asset_name": "runes-icon",
+    "asset_type": "ui_icon",
+    "description": "An icon for the runes system.",
+    "output_format": "png",
+    "size_hint": "small",
+    "transparent": true,
+    "llm_prompt": "An icon of a flat, circular grey stone tablet. Carved into the stone are glowing, neon-like glyphs. One prominent glyph glows with a vibrant blue light, while smaller, supporting glyphs have a warm orange glow. The glyphs should look ancient and mystical."
+}
