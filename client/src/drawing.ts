@@ -206,10 +206,16 @@ export function drawRockTile(ctx: CanvasRenderingContext2D, x: number, y: number
     }
 }
 
-export function drawSanctuaryStone(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, _time: number) {
+export function drawSanctuaryStone(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, time: number) {
     const rand = new SeededRandom(tileX * 1000 + tileY);
     const centerX = x * tileSize + tileSize / 2;
     const centerY = y * tileSize + tileSize / 2;
+
+    // --- Animation Values ---
+    const floatFrequency = 1000; // Time in ms for one full up-and-down cycle
+    const floatAmplitude = tileSize * 0.5; // How high it floats
+    const floatOffset = (Math.sin((time + tileX * 500) / floatFrequency) + 1) / 2; // Normalized 0-1 sine wave
+    const verticalOffset = -floatOffset * floatAmplitude;
 
     const obeliskWidth = tileSize * 0.4;
     const obeliskHeight = tileSize * 0.8;
@@ -222,13 +228,20 @@ export function drawSanctuaryStone(ctx: CanvasRenderingContext2D, x: number, y: 
     const pyramidHeight = obeliskHeight * 0.3;
 
     // --- Base position ---
-    const topY = centerY - obeliskHeight / 2;
+    const topY = centerY - obeliskHeight / 2 + verticalOffset;
     const leftX = centerX - obeliskWidth / 2;
 
     // --- Shadow ---
-    ctx.fillStyle = `rgba(0, 0, 0, 0.2)`;
+    const shadowY = centerY + obeliskHeight / 2;
+    const shadowBaseWidth = obeliskWidth * 0.6;
+    const shadowBaseHeight = obeliskWidth * 0.2;
+    const shadowWidth = shadowBaseWidth + floatOffset * shadowBaseWidth * 0.5;
+    const shadowHeight = shadowBaseHeight + floatOffset * shadowBaseHeight * 0.5;
+    const shadowOpacity = 0.2 - floatOffset * 0.15;
+
+    ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
     ctx.beginPath();
-    ctx.ellipse(centerX, centerY + obeliskHeight / 2, obeliskWidth * 0.6, obeliskWidth * 0.2, 0, 0, 2 * Math.PI);
+    ctx.ellipse(centerX, shadowY, shadowWidth, shadowHeight, 0, 0, 2 * Math.PI);
     ctx.fill();
 
     // --- Draw Main Body (3D effect) ---
