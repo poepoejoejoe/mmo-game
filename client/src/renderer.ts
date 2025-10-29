@@ -217,7 +217,6 @@ function drawSanctuaries(startX: number, startY: number, viewportWidth: number, 
         }
         
         const cracks = sanctuaryCracksCache.get(cacheKey)!;
-        const particles = sanctuaryDustCache.get(cacheKey)!;
         
         ctx.save();
         drawSmoothPath(ctx, midPoints);
@@ -377,7 +376,7 @@ function drawEntities(startX: number, startY: number, time: number) {
         // Draw the entity (player, item, etc.)
         const props = getEntityProperties(entity.type, entity, myPlayerId);
         if (props.draw) {
-            props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages);
+            props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages, props);
         } else if (props.asset && assetImages[props.asset]) {
             ctx.drawImage(assetImages[props.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
         } else {

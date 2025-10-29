@@ -13,6 +13,8 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+const LeashDistance = 5
+
 // StartAILoop begins the main game loop for processing NPC actions.
 func StartAILoop() {
 	log.Println("Starting AI loop...")
@@ -395,6 +397,94 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 		}
 	}
 
+	originX, _ := strconv.Atoi(npcData["originX"])
+	originY, _ := strconv.Atoi(npcData["originY"])
+	isLeashing, _ := strconv.ParseBool(npcData["isLeashing"])
+
+	npcX, npcY := GetEntityPosition(npcData)
+	distSq := (npcX-originX)*(npcX-originX) + (npcY-originY)*(npcY-originY)
+
+	if isLeashing {
+		if npcX == originX && npcY == originY {
+			rdb.HSet(ctx, npcID, "isLeashing", "false")
+		} else {
+			path := FindPath(npcX, npcY, originX, originY, tickCache)
+			if len(path) > 1 {
+				nextStep := path[1]
+				dx := nextStep.X - npcX
+				dy := nextStep.Y - npcY
+				var moveDir MoveDirection
+				if abs(dx) > abs(dy) {
+					if dx > 0 {
+						moveDir = MoveDirectionRight
+					} else {
+						moveDir = MoveDirectionLeft
+					}
+				} else {
+					if dy > 0 {
+						moveDir = MoveDirectionDown
+					} else {
+						moveDir = MoveDirectionUp
+					}
+				}
+				ProcessMove(npcID, moveDir)
+			} else {
+				// Cannot find path or already at the closest point.
+				// Set current location as new origin and stop leashing.
+				pipe := rdb.Pipeline()
+				pipe.HSet(ctx, npcID, "originX", npcX)
+				pipe.HSet(ctx, npcID, "originY", npcY)
+				pipe.HSet(ctx, npcID, "isLeashing", "false")
+				pipe.Exec(ctx)
+			}
+		}
+		cooldown, _ := strconv.ParseInt(npcData["moveCooldown"], 10, 64)
+		nextActionTime := time.Now().UnixMilli() + cooldown
+		rdb.HSet(ctx, npcID, "nextActionAt", nextActionTime)
+		return
+	}
+
+	if distSq > LeashDistance*LeashDistance {
+		// Leash triggered
+		npcType := NPCType(npcData["npcType"])
+		props := NPCDefs[npcType]
+		pipe := rdb.Pipeline()
+		pipe.HSet(ctx, npcID, "isLeashing", "true")
+		pipe.HSet(ctx, npcID, "health", props.Health)
+		pipe.Exec(ctx)
+		// Move towards origin
+		dx := originX - npcX
+		dy := originY - npcY
+		var moveDir MoveDirection
+		if abs(dx) > abs(dy) {
+			if dx > 0 {
+				moveDir = MoveDirectionRight
+			} else {
+				moveDir = MoveDirectionLeft
+			}
+		} else {
+			if dy > 0 {
+				moveDir = MoveDirectionDown
+			} else {
+				moveDir = MoveDirectionUp
+			}
+		}
+		ProcessMove(npcID, moveDir)
+		cooldown, _ := strconv.ParseInt(npcData["moveCooldown"], 10, 64)
+		nextActionTime := time.Now().UnixMilli() + cooldown
+		rdb.HSet(ctx, npcID, "nextActionAt", nextActionTime)
+
+		// Broadcast health update
+		healthUpdateMsg := map[string]interface{}{
+			"type":     string(ServerEventEntityUpdate),
+			"entityId": npcID,
+			"health":   props.Health,
+		}
+		PublishUpdate(healthUpdateMsg)
+
+		return
+	}
+
 	npcTypeStr, ok := npcData["npcType"]
 	if !ok {
 		log.Printf("[AI Error] NPC %s has no npcType field. Skipping.", npcID)
@@ -405,7 +495,6 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 		return // Wizards are friendly and do not move
 	}
 
-	npcX, npcY := GetEntityPosition(npcData)
 	aggroRange := 5.0
 
 	var targetID string
@@ -506,26 +595,30 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 				}
 			}
 		} else {
-			// Not adjacent, move towards the player (simple pathfinding)
-			dx := targetX - npcX
-			dy := targetY - npcY
-			var moveDir MoveDirection
+			// Not adjacent, find a path to the player
+			path := FindPathToAdjacent(npcX, npcY, targetX, targetY, tickCache)
+			if len(path) > 1 {
+				nextStep := path[1]
+				dx := nextStep.X - npcX
+				dy := nextStep.Y - npcY
+				var moveDir MoveDirection
 
-			// Move along the axis with the greater distance
-			if abs(dx) > abs(dy) {
-				if dx > 0 {
-					moveDir = MoveDirectionRight
+				if abs(dx) > abs(dy) {
+					if dx > 0 {
+						moveDir = MoveDirectionRight
+					} else {
+						moveDir = MoveDirectionLeft
+					}
 				} else {
-					moveDir = MoveDirectionLeft
+					if dy > 0 {
+						moveDir = MoveDirectionDown
+					} else {
+						moveDir = MoveDirectionUp
+					}
 				}
-			} else {
-				if dy > 0 {
-					moveDir = MoveDirectionDown
-				} else {
-					moveDir = MoveDirectionUp
-				}
+				ProcessMove(npcID, moveDir)
 			}
-			ProcessMove(npcID, moveDir)
+			// If no path, do nothing this tick.
 		}
 
 		// Set NPC's action cooldown and end turn

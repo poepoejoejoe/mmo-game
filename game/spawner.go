@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	targetSlimeCount     = 0
+	targetSlimeCount     = 10
 	targetRatCount       = 0
+	targetSlimeBossCount = 2
 	spawnerCheckInterval = 30 * time.Second
 )
 
@@ -40,6 +41,7 @@ func checkAndSpawnNPCs() {
 	currentSlimeCount := 0
 	currentRatCount := 0
 	currentWizardCount := 0
+	currentSlimeBossCount := 0
 	for _, entityID := range entityIDs {
 		if strings.HasPrefix(entityID, string(NPCSlimePrefix)) {
 			currentSlimeCount++
@@ -47,6 +49,8 @@ func checkAndSpawnNPCs() {
 			currentRatCount++
 		} else if strings.HasPrefix(entityID, string(NPCWizardPrefix)) {
 			currentWizardCount++
+		} else if strings.HasPrefix(entityID, string(NPCBossSlimePrefix)) {
+			currentSlimeBossCount++
 		}
 	}
 
@@ -62,6 +66,13 @@ func checkAndSpawnNPCs() {
 			// Stagger the spawns to make them feel more natural
 			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
 			spawnSlime()
+		}()
+	}
+
+	for i := currentSlimeBossCount; i < targetSlimeBossCount; i++ {
+		go func() {
+			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
+			spawnSlimeBoss()
 		}()
 	}
 

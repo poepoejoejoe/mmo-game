@@ -23,3 +23,13 @@ func UnlockTileForEntity(entityID string, x, y int) error {
 	}
 	return nil
 }
+
+// IsTileLocked checks if a tile is currently locked by any entity.
+func IsTileLocked(x, y int) bool {
+	tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
+	val, err := rdb.Exists(ctx, tileKey).Result()
+	if err != nil {
+		return true // Assume locked on error to be safe
+	}
+	return val == 1
+}

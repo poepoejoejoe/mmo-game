@@ -1208,7 +1208,7 @@ export function drawRat(ctx: CanvasRenderingContext2D, x: number, y: number, til
     ctx.restore();
 }
 
-export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number) {
+export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, _assetImages: { [key: string]: HTMLImageElement }, props: any) {
     const pixelSize = Math.max(1, Math.floor(tileSize / 16));
     const centerX = x + tileSize / 2;
     const centerY = y + tileSize / 2;
@@ -1217,9 +1217,17 @@ export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, t
     const wobble = isMoving ? Math.sin(time / 150) * pixelSize * 1.5 : 0;
     const stretch = isMoving ? Math.cos(time / 150) * pixelSize * 1.5 : 0;
 
+    // --- NEW: Use color from props ---
+    const baseColor = props.color || `rgba(100, 220, 120, 0.8)`;
+    // Create a darker, transparent version for the outline
+    const outlineR = parseInt(baseColor.slice(1, 3), 16) * 0.4;
+    const outlineG = parseInt(baseColor.slice(3, 5), 16) * 0.4;
+    const outlineB = parseInt(baseColor.slice(5, 7), 16) * 0.4;
+    const outlineColor = `rgba(${outlineR}, ${outlineG}, ${outlineB}, 0.9)`;
+
     const colors = {
-        bodyColor: `rgba(100, 220, 120, 0.8)`,
-        outlineColor: `rgba(40, 100, 50, 0.9)`,
+        bodyColor: baseColor,
+        outlineColor: outlineColor,
         eyeColor: '#FFFFFF',
         pupilColor: '#000000',
     };

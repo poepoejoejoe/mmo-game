@@ -5,6 +5,8 @@ import (
 	"mmo-game/game/utils"
 	"time"
 
+	"math/rand"
+
 	"github.com/go-redis/redis/v8"
 )
 
@@ -31,6 +33,9 @@ func SpawnNPC(entityID string, x, y int, npcType NPCType) {
 	pipe.HSet(ctx, entityID,
 		"x", x,
 		"y", y,
+		"originX", x,
+		"originY", y,
+		"isLeashing", "false",
 		"entityType", string(EntityTypeNPC),
 		"npcType", string(npcType),
 		"health", props.Health,
@@ -74,6 +79,75 @@ func spawnSlime() {
 		}
 		// Unlock the invalid tile if it was locked
 		UnlockTileForEntity(entityID, spawnX, spawnY)
+	}
+}
+
+// spawnSlimeBoss creates a new slime boss entity in the world.
+func spawnSlimeBoss() {
+	for i := 0; i < 100; i++ { // Try 100 times to find a valid spot
+		bossX, bossY := findRandomSpawnPoint()
+
+		// Define the relative positions for the 4 slimes in a dice-5 pattern
+		slimePositions := [][2]int{
+			{-1, -1}, {1, -1},
+			{-1, 1}, {1, 1},
+		}
+
+		// Check if the boss's tile and all slime tiles are valid
+		allValid := true
+		positionsToSpawn := [][2]int{{bossX, bossY}} // Include boss's position
+
+		for _, pos := range slimePositions {
+			x, y := bossX+pos[0], bossY+pos[1]
+			if !isSpawnPointValid(x, y) {
+				allValid = false
+				break
+			}
+			positionsToSpawn = append(positionsToSpawn, [2]int{x, y})
+		}
+
+		if allValid {
+			// Spawn the boss
+			bossID := string(NPCBossSlimePrefix) + utils.GenerateUniqueID()
+			SpawnNPC(bossID, bossX, bossY, NPCTypeSlimeBoss)
+
+			// Spawn the 4 slimes
+			for _, pos := range slimePositions {
+				slimeID := string(NPCSlimePrefix) + utils.GenerateUniqueID()
+				SpawnNPC(slimeID, bossX+pos[0], bossY+pos[1], NPCTypeSlime)
+			}
+			return // Exit after successful spawn
+		}
+	}
+}
+
+// isSpawnPointValid checks if a given coordinate is a valid place for an NPC to spawn.
+func isSpawnPointValid(x, y int) bool {
+	// Check world boundaries, collidability, and sanctuary status
+	tile, props, err := GetWorldTile(x, y)
+	if err != nil {
+		return false // Can't get tile info, assume invalid
+	}
+	if props.IsCollidable || tile.IsSanctuary {
+		return false
+	}
+	// Check if the tile is locked by another entity
+	if IsTileLocked(x, y) {
+		return false
+	}
+	return true
+}
+
+// findRandomSpawnPoint finds a random, unlocked, and walkable tile.
+func findRandomSpawnPoint() (int, int) {
+	// This is a simplified version. A real implementation might need to
+	// be more robust to avoid infinite loops if the map is full.
+	for {
+		x := rand.Intn(WorldSize*2) - WorldSize
+		y := rand.Intn(WorldSize*2) - WorldSize
+		if isSpawnPointValid(x, y) {
+			return x, y
+		}
 	}
 }
 

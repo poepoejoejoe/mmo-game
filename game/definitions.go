@@ -146,7 +146,8 @@ const (
 	RedisKeyResourcePositions RedisKey = "positions:resource"
 	RedisKeyWorldZone0        RedisKey = "world:zone:0"
 	NPCSlimePrefix            RedisKey = "npc:slime:" // <-- NEW
-	NPCRatPrefix              RedisKey = "npc:rat:"   // <-- NEW
+	NPCBossSlimePrefix        RedisKey = "npc:boss:slime:"
+	NPCRatPrefix              RedisKey = "npc:rat:" // <-- NEW
 	NPCWizardPrefix           RedisKey = "npc:wizard:"
 	ItemPrefix                RedisKey = "item:"
 	RedisKeySecretPrefix      RedisKey = "secret:"
@@ -183,9 +184,10 @@ type TileProperties struct {
 type NPCType string
 
 const (
-	NPCTypeSlime  NPCType = "slime"
-	NPCTypeRat    NPCType = "rat"
-	NPCTypeWizard NPCType = "wizard"
+	NPCTypeSlime     NPCType = "slime"
+	NPCTypeRat       NPCType = "rat"
+	NPCTypeWizard    NPCType = "wizard"
+	NPCTypeSlimeBoss NPCType = "slime_boss"
 )
 
 // NPCProperties defines the behavioral attributes of an NPC.
@@ -261,6 +263,12 @@ func init() {
 		XPOnHit:   5,
 		XPOnDealt: 2,
 	}
+	NPCDefs[NPCTypeSlimeBoss] = NPCProperties{
+		Health:    10,
+		Damage:    2,
+		XPOnHit:   10,
+		XPOnDealt: 5,
+	}
 	NPCDefs[NPCTypeRat] = NPCProperties{
 		Health:    2,
 		Damage:    2,
@@ -276,6 +284,10 @@ func init() {
 	NPCLootTables[NPCTypeSlime] = LootTable{
 		{ItemID: ItemGoop, Chance: 0.8, Min: 1, Max: 2},
 		{ItemID: ItemTreasureMap, Chance: 0.05, Min: 1, Max: 1},
+	}
+	NPCLootTables[NPCTypeSlimeBoss] = LootTable{
+		{ItemID: ItemGoop, Chance: 1.0, Min: 3, Max: 5},
+		{ItemID: ItemTreasureMap, Chance: 0.1, Min: 1, Max: 1},
 	}
 	NPCLootTables[NPCTypeRat] = LootTable{
 		{ItemID: ItemRatMeat, Chance: 0.8, Min: 1, Max: 1},
