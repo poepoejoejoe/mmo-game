@@ -336,16 +336,18 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 	return initialState
 }
 
+func getPlayerPosition(playerID string) (int, int, error) {
+	playerData, err := rdb.HGetAll(ctx, playerID).Result()
+	if err != nil {
+		return 0, 0, err
+	}
+	x, _ := strconv.Atoi(playerData["x"])
+	y, _ := strconv.Atoi(playerData["y"])
+	return x, y, nil
+}
+
 // (FindOpenSpawnPoint remains the same)
 func FindOpenSpawnPoint(entityID string) (int, int) {
-	// --- For Testing ---
-	// If no players exist, spawn the first one at 0,0 for easy testing.
-	players, _ := rdb.Keys(ctx, string(RedisKeyPlayerPrefix)+"*").Result()
-	if len(players) == 0 {
-		log.Println("First player spawning at 0,0 for testing.")
-		return 0, 0
-	}
-	// --- End For Testing ---
 
 	startX := mrand.Intn(WorldSize) - WorldSize/2
 	startY := mrand.Intn(WorldSize) - WorldSize/2
@@ -482,7 +484,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	item1, _ := json.Marshal(models.Item{ID: string(ItemStone), Quantity: 50})
 	inventory["slot_1"] = string(item1)
 	// Slot 2: 10 Wooden Walls
-	item2, _ := json.Marshal(models.Item{ID: string(ItemWoodenWall), Quantity: 10})
+	item2, _ := json.Marshal(models.Item{ID: string(ItemWoodenWall), Quantity: 200})
 	inventory["slot_2"] = string(item2)
 
 	// Slot 3: 1 Rat meat for testing

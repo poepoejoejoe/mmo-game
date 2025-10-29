@@ -35,6 +35,7 @@ import {
     hideChannelingBar
 } from './ui';
 import { showDamageIndicator } from './renderer';
+import { setPath } from './input';
 
 let ws: WebSocket;
 const stateUpdateListeners: (() => void)[] = [];
@@ -250,6 +251,15 @@ function handleMessage(event: MessageEvent) {
             onStateUpdate();
             break;
         }
+        case 'no-valid-path':
+            console.log("No valid path found.");
+            break;
+        case 'valid-path':
+            setPath(msg.payload.directions);
+            break;
+        case 'dead':
+            // handlePlayerDeath(msg.payload.message); // This function is not defined in the original file
+            break;
     }
 }
 

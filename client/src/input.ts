@@ -16,6 +16,36 @@ let interactionInterval: number | null = null;
 const pressedKeys: string[] = [];
 let isMouseDown = false;
 let lastMouseEvent: MouseEvent | null = null;
+let pathQueue: string[] = [];
+
+export function setPath(path: string[]) {
+    pathQueue = path;
+    pressedKeys.length = 0;
+}
+
+function clearPathQueue() {
+    pathQueue = [];
+}
+
+function getTileCoordinatesFromMouseEvent(e: MouseEvent): { x: number, y: number } | null {
+    const me = state.getMyEntity();
+    if (!me) return null;
+
+    const rect = gameCanvas.getBoundingClientRect();
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+
+    const tileGridX = Math.floor(canvasX / TILE_SIZE);
+    const tileGridY = Math.floor(canvasY / TILE_SIZE);
+
+    const viewportWidth = Math.ceil(rect.width / TILE_SIZE);
+    const viewportHeight = Math.ceil(rect.height / TILE_SIZE);
+
+    const startX = me.x - Math.floor(viewportWidth / 2);
+    const startY = me.y - Math.floor(viewportHeight / 2);
+    
+    return { x: tileGridX + startX, y: tileGridY + startY };
+}
 
 function sendMoveCommand(dx: number, dy: number, isContinuous: boolean = false) {
     if (dx === 0 && dy === 0) return;
@@ -130,6 +160,7 @@ function handleKeyDown(e: KeyboardEvent) {
 
     // Handle movement keys
     if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        clearPathQueue();
         if (!pressedKeys.includes(e.key)) {
             pressedKeys.push(e.key);
             console.log(`${new Date().toISOString()} handleKeyDown: updating movement.`);
@@ -154,21 +185,9 @@ function handleInteractionLogic() {
     if (!lastMouseEvent || !canPerformAction || !state.getMyEntity()) return;
 
     const me = state.getMyEntity()!;
-    const rect = gameCanvas.getBoundingClientRect();
-    const canvasX = lastMouseEvent.clientX - rect.left;
-    const canvasY = lastMouseEvent.clientY - rect.top;
-
-    const tileGridX = Math.floor(canvasX / TILE_SIZE);
-    const tileGridY = Math.floor(canvasY / TILE_SIZE);
-    
-    // Dynamically calculate viewport dimensions in CSS pixels
-    const viewportWidth = Math.ceil(rect.width / TILE_SIZE);
-    const viewportHeight = Math.ceil(rect.height / TILE_SIZE);
-
-    const startX = me.x - Math.floor(viewportWidth / 2);
-    const startY = me.y - Math.floor(viewportHeight / 2);
-    const tileX = tileGridX + startX;
-    const tileY = tileGridY + startY;
+    const coords = getTileCoordinatesFromMouseEvent(lastMouseEvent);
+    if (!coords) return;
+    const { x: tileX, y: tileY } = coords;
 
     // --- Build Mode Logic ---
     if (isBuildMode && buildItem) {
@@ -259,14 +278,48 @@ function handleInteractionLogic() {
 }
 
 function handleMouseDown(e: MouseEvent) {
-    if (e.button !== 0) return; // Only respond to left-click for interactions
+    if (e.button === 0) {
+        isMouseDown = true;
+        lastMouseEvent = e;
 
-    isMouseDown = true;
-    lastMouseEvent = e;
+        handleInteractionLogic();
+        
+        interactionInterval = setInterval(handleInteractionLogic, ACTION_COOLDOWN + 50);
+    } else if (e.button === 2) {
+        handleRightClick(e);
+    }
+}
 
-    handleInteractionLogic();
+function handleRightClick(e: MouseEvent) {
+    clearPathQueue();
+    const coords = getTileCoordinatesFromMouseEvent(e);
+    if (!coords) return;
+
+    const me = state.getMyEntity();
+    if (!me) return;
+
+    // 1. Immediate movement for responsiveness
+    const dx = coords.x - me.x;
+    const dy = coords.y - me.y;
+
+    let moveDx = 0;
+    let moveDy = 0;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+        moveDx = Math.sign(dx);
+    } else if (Math.abs(dy) > 0) {
+        moveDy = Math.sign(dy);
+    } else {
+        // Clicked on self, do nothing
+        return;
+    }
     
-    interactionInterval = setInterval(handleInteractionLogic, ACTION_COOLDOWN + 50);
+    if ((moveDx !== 0 || moveDy !== 0)) {
+        sendMoveCommand(moveDx, moveDy, false);
+    }
+
+    // 2. Send find-path request to server
+    network.send({ type: 'find-path', payload: { x: coords.x, y: coords.y } });
 }
 
 function handleMouseUpOrLeave() {
@@ -283,6 +336,25 @@ function startActionCooldown(duration: number) {
     canPerformAction = false;
     startCooldown(duration);
     setTimeout(() => { canPerformAction = true; }, duration);
+}
+
+function processPathMovement() {
+    if (pathQueue.length > 0 && canPerformAction) {
+        const direction = pathQueue.shift();
+        if (direction) {
+            let dx = 0;
+            let dy = 0;
+            switch (direction) {
+                case 'up': dy = -1; break;
+                case 'down': dy = 1; break;
+                case 'left': dx = -1; break;
+                case 'right': dx = 1; break;
+            }
+            if (dx !== 0 || dy !== 0) {
+                sendMoveCommand(dx, dy, false);
+            }
+        }
+    }
 }
 
 /**
@@ -304,11 +376,14 @@ export function initializeInput() {
     });
 
     // Replace the single 'click' listener with more detailed mouse events for click-and-hold
+    gameCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
     gameCanvas.addEventListener('mousedown', handleMouseDown);
     gameCanvas.addEventListener('mousemove', handleMouseMove);
     // Listen on the whole window to ensure we always catch the mouseup event
     window.addEventListener('mouseup', handleMouseUpOrLeave);
     gameCanvas.addEventListener('mouseleave', handleMouseUpOrLeave);
+
+    setInterval(processPathMovement, 100);
 
     inventoryView.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;

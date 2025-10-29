@@ -227,6 +227,11 @@ export interface ClientRegisterMessage {
     name: string;
 }
 
+export interface FindPathMessage {
+    type: 'find-path';
+    payload: { x: number, y: number };
+}
+
 
 // --- Server to Client ---
 export interface RegisteredMessage extends ServerMessage {
@@ -246,4 +251,13 @@ export interface DialogMessage extends ServerMessage {
 export interface DialogOption {
     text: string;
     action: string;
+}
+
+export interface NoValidPathMessage extends ServerMessage {
+    type: 'no-valid-path';
+}
+
+export interface ValidPathMessage extends ServerMessage {
+    type: 'valid-path';
+    payload: { directions: string[] };
 }

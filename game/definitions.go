@@ -89,6 +89,7 @@ const (
 	ClientEventToggleEcho   ClientEventType = "toggle_echo"
 	ClientEventSetRune      ClientEventType = "set_rune"
 	ClientEventTeleport     ClientEventType = "teleport"
+	ClientEventFindPath     ClientEventType = "find-path"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -118,6 +119,8 @@ const (
 	ServerEventActiveRuneUpdate        ServerEventType = "active_rune_update"
 	ServerEventTeleportChannelStart    ServerEventType = "teleport_channel_start"
 	ServerEventTeleportChannelEnd      ServerEventType = "teleport_channel_end"
+	ServerEventNoValidPath             ServerEventType = "no-valid-path"
+	ServerEventValidPath               ServerEventType = "valid-path"
 )
 
 // MoveDirection defines the valid move directions.

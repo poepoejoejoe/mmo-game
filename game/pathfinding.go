@@ -62,7 +62,7 @@ func isWalkable(x, y, endX, endY int, tickCache *TickCache) bool {
 	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
 
 	// 1. Check world boundaries
-	if x < -WorldSize/2 || x >= WorldSize/2 || y < -WorldSize/2 || y >= WorldSize/2 {
+	if x < -WorldSize || x > WorldSize || y < -WorldSize || y > WorldSize {
 		return false
 	}
 
@@ -176,7 +176,7 @@ func isActuallyWalkable(x, y int, tickCache *TickCache) bool {
 	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
 
 	// 1. Check world boundaries
-	if x < -WorldSize/2 || x >= WorldSize/2 || y < -WorldSize/2 || y >= WorldSize/2 {
+	if x < -WorldSize || x > WorldSize || y < -WorldSize || y > WorldSize {
 		return false
 	}
 

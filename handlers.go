@@ -205,6 +205,21 @@ func (c *Client) readPump() {
 				game.ProcessSetRune(c.id, msg.Payload)
 			case game.ClientEventTeleport:
 				game.ProcessTeleport(c.id, msg.Payload)
+			case game.ClientEventFindPath:
+				var findPathData models.FindPathPayload
+				if err := json.Unmarshal(msg.Payload, &findPathData); err != nil {
+					log.Printf("Error unmarshalling find_path payload: %v", err)
+					continue
+				}
+				noValidPathMsg, validPathMsg := game.ProcessFindPath(c.id, findPathData)
+				if noValidPathMsg != nil {
+					noValidPathJson, _ := json.Marshal(noValidPathMsg)
+					c.send <- noValidPathJson
+				}
+				if validPathMsg != nil {
+					validPathJson, _ := json.Marshal(validPathMsg)
+					c.send <- validPathJson
+				}
 			}
 		}
 	}

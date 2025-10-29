@@ -260,3 +260,21 @@ type PlayerQuests struct {
 	Quests          map[QuestID]*Quest `json:"quests"`
 	CompletedQuests map[QuestID]bool   `json:"completed_quests"`
 }
+
+type SetRunePayload struct {
+	Rune string `json:"rune"`
+}
+
+type FindPathPayload struct {
+	X int `json:"x"`
+	Y int `json:"y"`
+}
+
+type ValidPathPayload struct {
+	Directions []string `json:"directions"`
+}
+
+type TeleportPayload struct {
+	X int `json:"x"`
+	Y int `json:"y"`
+}
