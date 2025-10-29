@@ -259,19 +259,19 @@ func init() {
 
 	// --- NPC Definitions ---
 	NPCDefs[NPCTypeSlime] = NPCProperties{
-		Health:    3,
-		Damage:    1,
+		Health:    8,
+		Damage:    2,
 		XPOnHit:   5,
 		XPOnDealt: 2,
 	}
 	NPCDefs[NPCTypeSlimeBoss] = NPCProperties{
-		Health:    10,
-		Damage:    2,
+		Health:    20,
+		Damage:    4,
 		XPOnHit:   10,
 		XPOnDealt: 5,
 	}
 	NPCDefs[NPCTypeRat] = NPCProperties{
-		Health:    2,
+		Health:    6,
 		Damage:    2,
 		XPOnHit:   4,
 		XPOnDealt: 4,
