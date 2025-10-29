@@ -3,6 +3,13 @@ import { EntityState, WorldTile } from './types';
 import { itemDefinitions } from './definitions';
 import { SeededRandom } from './utils';
 
+interface EyeState {
+    lastMoveTime: number;
+    eyeDirection: 'center' | 'left' | 'right';
+    nextMoveDelay: number;
+}
+const entityEyeStates: { [id: string]: EyeState } = {};
+
 const noiseCanvasCache: { [key: string]: { canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D } } = {};
 
 export function drawQuestIndicator(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, time: number, questState: EntityState['questState']) {
@@ -58,7 +65,6 @@ const crackSVGs = [
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M8 8 L7 10 L5 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M8 8 L7 10 L5 11 L3 9 L1 11' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
-    "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e",
     "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M8 8 L6 6 L7 4 L5 2 M7 4 L9 3 L11 1 M9 3 L10 5 M1 15 L4 12 M8 8 L10 9 L12 11 L14 10 M12 11 L13 13 L15 15 M14 10 L16 8 M8 8 L7 10 L5 11 L3 9 L1 11 M5 11 L4 13 M1 2 L3 4' stroke='rgba(44,62,80,0.8)' stroke-width='0.7' fill='none'/%3e%3c/svg%3e"
 ];
 
@@ -1205,19 +1211,16 @@ export function drawItem(ctx: CanvasRenderingContext2D, x: number, y: number, ti
     ctx.fillText(itemDef.character, x + tileSize / 2, y + tileSize / 2);
 }
 
-function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: number, tailWag: number, colors: { [key: string]: string }) {
+function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: number, tailWag: number, colors: { [key: string]: string }, eyeDirection: 'center' | 'left' | 'right') {
     ctx.lineWidth = pixelSize;
 
     // --- Tail (drawn first) ---
-    ctx.strokeStyle = colors.outlineColor;
-    ctx.lineWidth = pixelSize * 2; // Fat tail outline
     ctx.beginPath();
     ctx.moveTo(0, pixelSize * 5); // Start at the back of the body
     ctx.quadraticCurveTo(
         tailWag, pixelSize * 8, // Control point sways side-to-side
         0, pixelSize * 11 // End of the tail
     );
-    ctx.stroke();
     // Inner tail color
     ctx.strokeStyle = colors.noseColor; // Use same pink as nose
     ctx.lineWidth = pixelSize;
@@ -1230,7 +1233,6 @@ function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: n
     ctx.beginPath();
     ctx.ellipse(0, 0, pixelSize * 3, pixelSize * 6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
 
     // --- Ears ---
     // Left Ear
@@ -1238,7 +1240,6 @@ function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: n
     ctx.beginPath();
     ctx.arc(-pixelSize * 3, -pixelSize * 3, pixelSize * 2.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
     ctx.fillStyle = colors.earInnerColor;
     ctx.beginPath();
     ctx.arc(-pixelSize * 2.8, -pixelSize * 3, pixelSize * 1.5, 0, Math.PI * 2);
@@ -1249,7 +1250,6 @@ function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: n
     ctx.beginPath();
     ctx.arc(pixelSize * 3, -pixelSize * 3, pixelSize * 2.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
     ctx.fillStyle = colors.earInnerColor;
     ctx.beginPath();
     ctx.arc(pixelSize * 2.8, -pixelSize * 3, pixelSize * 1.5, 0, Math.PI * 2);
@@ -1257,26 +1257,35 @@ function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: n
 
     // --- Eyes ---
     const eyeY = -pixelSize * 3;
+    let eyeOffsetX = 0;
+    const eyeOffsetAmount = pixelSize * 0.4;
+    if (eyeDirection === 'left') {
+        eyeOffsetX = -eyeOffsetAmount;
+    } else if (eyeDirection === 'right') {
+        eyeOffsetX = eyeOffsetAmount;
+    }
     // Left Eye
     ctx.fillStyle = 'white';
     ctx.beginPath();
-    ctx.arc(-pixelSize * 1.5 + jiggle, eyeY, pixelSize * 1.5, 0, Math.PI * 2);
+    ctx.arc(-pixelSize * 1.5, eyeY, pixelSize * 1.5, 0, Math.PI * 2);
     ctx.fill();
+    ctx.lineWidth = pixelSize * 0.5;
     ctx.stroke();
     ctx.fillStyle = 'black';
     ctx.beginPath();
-    ctx.arc(-pixelSize * 1.5 + jiggle * 2, eyeY - pixelSize * 0.5, pixelSize * 0.75, 0, Math.PI * 2);
+    ctx.arc(-pixelSize * 1.5 + eyeOffsetX, eyeY - pixelSize * 0.5, pixelSize * 0.75, 0, Math.PI * 2);
     ctx.fill();
 
     // Right Eye
     ctx.fillStyle = 'white';
     ctx.beginPath();
-    ctx.arc(pixelSize * 1.5 + jiggle, eyeY, pixelSize * 1.5, 0, Math.PI * 2);
+    ctx.arc(pixelSize * 1.5, eyeY, pixelSize * 1.5, 0, Math.PI * 2);
     ctx.fill();
+    ctx.lineWidth = pixelSize * 0.5;
     ctx.stroke();
     ctx.fillStyle = 'black';
     ctx.beginPath();
-    ctx.arc(pixelSize * 1.5 + jiggle * 2, eyeY - pixelSize * 0.5, pixelSize * 0.75, 0, Math.PI * 2);
+    ctx.arc(pixelSize * 1.5 + eyeOffsetX, eyeY - pixelSize * 0.5, pixelSize * 0.75, 0, Math.PI * 2);
     ctx.fill();
 
     // --- Nose ---
@@ -1284,7 +1293,6 @@ function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: n
     ctx.beginPath();
     ctx.arc(0, -pixelSize * 6, pixelSize * 1.8, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
 }
 
 export function drawRat(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number) {
@@ -1295,6 +1303,35 @@ export function drawRat(ctx: CanvasRenderingContext2D, x: number, y: number, til
     const isMoving = !!(entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200));
     const jiggle = isMoving ? Math.sin(time / 80) * pixelSize * 0.5 : 0;
     const tailWag = isMoving ? Math.sin(time / 150) * pixelSize * 4 : 0;
+
+    const now = Date.now();
+    if (entity.id && !entityEyeStates[entity.id]) {
+        entityEyeStates[entity.id] = {
+            lastMoveTime: now,
+            eyeDirection: 'center',
+            nextMoveDelay: 2000 + Math.random() * 3000 // 2-5 seconds
+        };
+    }
+
+    const eyeState = entity.id ? entityEyeStates[entity.id] : undefined;
+    if (eyeState && now - eyeState.lastMoveTime > eyeState.nextMoveDelay) {
+        eyeState.lastMoveTime = now;
+        if (eyeState.eyeDirection !== 'center') {
+            // If shifted, always go back to center
+            eyeState.eyeDirection = 'center';
+            eyeState.nextMoveDelay = 3000 + Math.random() * 4000; // Stay in center for 3-7 seconds
+        } else {
+            // If in center, occasionally shift
+            if (Math.random() < 0.3) { // 30% chance to shift
+                const directions: Array<'left' | 'right'> = ['left', 'right'];
+                eyeState.eyeDirection = directions[Math.floor(Math.random() * directions.length)];
+                eyeState.nextMoveDelay = 500 + Math.random() * 750; // Stay shifted for 0.5-1.25 seconds
+            } else {
+                // Stay in center, check again later
+                eyeState.nextMoveDelay = 1000 + Math.random() * 2000; // Check again in 1-3 seconds
+            }
+        }
+    }
 
     const colors = {
         bodyColor: '#8a8a8a',
@@ -1316,7 +1353,7 @@ export function drawRat(ctx: CanvasRenderingContext2D, x: number, y: number, til
     ctx.translate(centerX, centerY);
     ctx.rotate(rotation);
 
-    drawRatBody(ctx, pixelSize, jiggle, tailWag, colors);
+    drawRatBody(ctx, pixelSize, jiggle, tailWag, colors, eyeState?.eyeDirection || 'center');
 
     ctx.restore();
 }
@@ -1329,6 +1366,43 @@ export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, t
     const isMoving = !!(entity.lastMoveTime && (Date.now() - entity.lastMoveTime < 200));
     const wobble = isMoving ? Math.sin(time / 150) * pixelSize * 1.5 : 0;
     const stretch = isMoving ? Math.cos(time / 150) * pixelSize * 1.5 : 0;
+
+    const now = Date.now();
+    if (entity.id && !entityEyeStates[entity.id]) {
+        entityEyeStates[entity.id] = {
+            lastMoveTime: now,
+            eyeDirection: 'center',
+            nextMoveDelay: 2000 + Math.random() * 3000
+        };
+    }
+
+    const eyeState = entity.id ? entityEyeStates[entity.id] : undefined;
+    if (eyeState && now - eyeState.lastMoveTime > eyeState.nextMoveDelay) {
+        eyeState.lastMoveTime = now;
+        if (eyeState.eyeDirection !== 'center') {
+            // If shifted, always go back to center
+            eyeState.eyeDirection = 'center';
+            eyeState.nextMoveDelay = 3000 + Math.random() * 4000; // Stay in center for 3-7 seconds
+        } else {
+            // If in center, occasionally shift
+            if (Math.random() < 0.3) { // 30% chance to shift
+                const directions: Array<'left' | 'right'> = ['left', 'right'];
+                eyeState.eyeDirection = directions[Math.floor(Math.random() * directions.length)];
+                eyeState.nextMoveDelay = 500 + Math.random() * 750; // Stay shifted for 0.5-1.25 seconds
+            } else {
+                // Stay in center, check again later
+                eyeState.nextMoveDelay = 1000 + Math.random() * 2000; // Check again in 1-3 seconds
+            }
+        }
+    }
+
+    let eyeOffsetX = 0;
+    const eyeOffsetAmount = pixelSize * 0.4;
+    if (eyeState && eyeState.eyeDirection === 'left') {
+        eyeOffsetX = -eyeOffsetAmount;
+    } else if (eyeState && eyeState.eyeDirection === 'right') {
+        eyeOffsetX = eyeOffsetAmount;
+    }
 
     // --- NEW: Use color from props ---
     const baseColor = props.color || `rgba(100, 220, 120, 0.8)`;
@@ -1376,7 +1450,6 @@ export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, t
     ctx.strokeStyle = colors.outlineColor;
     ctx.lineWidth = pixelSize;
     ctx.fill();
-    ctx.stroke();
 
     // Reset shadow for other elements
     ctx.shadowColor = 'transparent';
@@ -1388,10 +1461,11 @@ export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, t
     ctx.beginPath();
     ctx.arc(-pixelSize * 2, eyeY, pixelSize * 1.5, 0, Math.PI * 2);
     ctx.fill();
+    ctx.lineWidth = pixelSize * 0.5;
     ctx.stroke();
     ctx.fillStyle = colors.pupilColor;
     ctx.beginPath();
-    ctx.arc(-pixelSize * 2.2, eyeY - pixelSize * 0.2, pixelSize * 0.75, 0, Math.PI * 2);
+    ctx.arc(-pixelSize * 2 + eyeOffsetX, eyeY - pixelSize * 0.2, pixelSize * 0.75, 0, Math.PI * 2);
     ctx.fill();
 
     // Right Eye
@@ -1399,10 +1473,11 @@ export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, t
     ctx.beginPath();
     ctx.arc(pixelSize * 2, eyeY, pixelSize * 1.5, 0, Math.PI * 2);
     ctx.fill();
+    ctx.lineWidth = pixelSize * 0.5;
     ctx.stroke();
     ctx.fillStyle = colors.pupilColor;
     ctx.beginPath();
-    ctx.arc(pixelSize * 1.8, eyeY - pixelSize * 0.2, pixelSize * 0.75, 0, Math.PI * 2);
+    ctx.arc(pixelSize * 2 + eyeOffsetX, eyeY - pixelSize * 0.2, pixelSize * 0.75, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
