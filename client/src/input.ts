@@ -13,14 +13,14 @@ let buildItem: 'wooden_wall' | 'fire' | null = null;
 
 // State for continuous interaction
 let interactionInterval: number | null = null;
-let moveInterval: number | null = null;
 const pressedKeys: string[] = [];
 let isMouseDown = false;
 let lastMouseEvent: MouseEvent | null = null;
 
-function sendMoveCommand(dx: number, dy: number) {
+function sendMoveCommand(dx: number, dy: number, isContinuous: boolean = false) {
     if (dx === 0 && dy === 0) return;
     if (!canPerformAction || !state.getMyEntity()) return;
+    console.log(`${new Date().toISOString()} sendMoveCommand: sending move command (${dx}, ${dy}, ${isContinuous}). canPerformAction: ${canPerformAction}`);
     
     const me = state.getMyEntity()!;
     const targetTile = state.getTileData(me.x + dx, me.y + dy);
@@ -56,10 +56,7 @@ function sendMoveCommand(dx: number, dy: number) {
 
 
 function updateMovement() {
-    if (moveInterval) {
-        clearInterval(moveInterval);
-        moveInterval = null;
-    }
+    console.log(`${new Date().toISOString()} updateMovement: pressedKeys: [${pressedKeys.join(', ')}]`);
 
     const lastKey = pressedKeys[pressedKeys.length - 1];
     if (!lastKey) return;
@@ -90,8 +87,8 @@ function updateMovement() {
     
     if (dx === 0 && dy === 0) return;
 
-    sendMoveCommand(dx, dy); // Send first command immediately
-    moveInterval = setInterval(() => sendMoveCommand(dx, dy), ACTION_COOLDOWN + 50);
+    console.log(`${new Date().toISOString()} updateMovement: sending move command (${dx}, ${dy}).`);
+    sendMoveCommand(dx, dy);
 }
 
 function handleMouseMove(e: MouseEvent) {
@@ -135,6 +132,7 @@ function handleKeyDown(e: KeyboardEvent) {
     if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         if (!pressedKeys.includes(e.key)) {
             pressedKeys.push(e.key);
+            console.log(`${new Date().toISOString()} handleKeyDown: updating movement.`);
             updateMovement();
         }
     }
@@ -148,7 +146,7 @@ function handleKeyUp(e: KeyboardEvent) {
     const index = pressedKeys.indexOf(e.key);
     if (index > -1) {
         pressedKeys.splice(index, 1);
-        updateMovement();
+        console.log(`${new Date().toISOString()} handleKeyUp: pressedKeys: [${pressedKeys.join(', ')}]`);
     }
 }
 

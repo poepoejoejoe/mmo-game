@@ -462,7 +462,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"moveCooldown", 100, // 100ms move cooldown for players
 		"shirtColor", utils.GenerateRandomColor(),
 		"loginTimestamp", time.Now().UnixMilli(),
-		"resonance", 1800,
+		"resonance", 0,
 		"isEcho", "false",
 		"echoUnlocked", "true",
 		"echoState", "idling",
