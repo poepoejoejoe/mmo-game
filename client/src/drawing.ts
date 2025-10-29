@@ -3,6 +3,8 @@ import { EntityState, WorldTile } from './types';
 import { itemDefinitions } from './definitions';
 import { SeededRandom } from './utils';
 
+const noiseCanvasCache: { [key: string]: { canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D } } = {};
+
 export function drawQuestIndicator(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, time: number, questState: EntityState['questState']) {
     const centerX = x + tileSize / 2;
     const baseY = y - tileSize * 0.4;
@@ -709,10 +711,15 @@ export function drawWaterGroup(ctx: CanvasRenderingContext2D, group: TileGroup, 
     const perimeterNodes = tracePerimeter(group);
     if (perimeterNodes.length < 3) return; // Cannot draw a shape
 
+    const startXInt = Math.floor(startX);
+    const startYInt = Math.floor(startY);
+    const offsetX = (startX - startXInt) * tileSize;
+    const offsetY = (startY - startYInt) * tileSize;
+
     // Convert corner nodes to screen coordinates
     const screenPoints = perimeterNodes.map(p => ({
-        x: (p.x - startX) * tileSize,
-        y: (p.y - startY) * tileSize,
+        x: (p.x - startXInt) * tileSize,
+        y: (p.y - startYInt) * tileSize,
     }));
 
     const simplifiedPoints = ramerDouglasPeucker(screenPoints, tileSize * 1.2);
@@ -725,66 +732,80 @@ export function drawWaterGroup(ctx: CanvasRenderingContext2D, group: TileGroup, 
         };
     });
 
-    ctx.save();
-
-    // --- 1. Create a smooth path for the shoreline ---
-    drawSmoothPath(ctx, midPoints);
-
-    // --- 2. Draw the base water color and shoreline ---
-    ctx.shadowColor = shoreColor;
-    ctx.shadowBlur = 20; // Increased blur for a softer effect
-    ctx.fillStyle = `rgb(${baseColor.r}, ${baseColor.g}, ${baseColor.b})`;
-    ctx.fill();
-
-    // Fill again to make the center opaque after the blur
-    ctx.shadowColor = 'transparent';
-    ctx.fill();
-
-    // --- 3. Animate the water surface with noise ---
-    ctx.clip(); // Confine the effect to the water body
     const boundingBox = group.tiles.reduce((acc, tile) => ({
         minX: Math.min(acc.minX, tile.x),
         minY: Math.min(acc.minY, tile.y),
         maxX: Math.max(acc.maxX, tile.x),
         maxY: Math.max(acc.maxY, tile.y),
     }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
-    const drawX = (boundingBox.minX - startX) * tileSize;
-    const drawY = (boundingBox.minY - startY) * tileSize;
-    const width = (boundingBox.maxX - boundingBox.minX + 1) * tileSize;
-    const height = (boundingBox.maxY - boundingBox.minY + 1) * tileSize;
-    
-    if (width <= 0 || height <= 0) {
-        ctx.restore();
-        return;
-    }
 
-    const imageData = ctx.getImageData(drawX, drawY, width, height);
-    const data = imageData.data;
+    const noiseCanvasWidth = (boundingBox.maxX - boundingBox.minX + 1) * tileSize;
+    const noiseCanvasHeight = (boundingBox.maxY - boundingBox.minY + 1) * tileSize;
 
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const i = (y * width + x) * 4;
-            
-            if (ctx.isPointInPath(drawX + x, drawY + y)) {
-                const noiseX1 = (drawX + x) / 30 + time * 0.00005;
-                const noiseY1 = (drawY + y) / 30 + time * 0.00005;
-                const noiseVal1 = noise.get(noiseX1, noiseY1);
+    if (noiseCanvasWidth <= 0 || noiseCanvasHeight <= 0) return;
 
-                const noiseX2 = (drawX + x) / 15 + time * 0.0001;
-                const noiseY2 = (drawY + y) / 15 + time * 0.0001;
-                const noiseVal2 = noise.get(noiseX2, noiseY2);
-
-                const totalNoise = (noiseVal1 + noiseVal2) * 0.5;
-                const brightness = totalNoise * 30; // How much to lighten/darken
-
-                data[i] = baseColor.r + brightness;
-                data[i + 1] = baseColor.g + brightness;
-                data[i + 2] = baseColor.b + brightness;
-                data[i + 3] = 255;
-            }
+    // Use a cached canvas if available
+    const cacheKey = `${noiseCanvasWidth}x${noiseCanvasHeight}`;
+    if (!noiseCanvasCache[cacheKey]) {
+        const canvas = document.createElement('canvas');
+        canvas.width = noiseCanvasWidth;
+        canvas.height = noiseCanvasHeight;
+        const noiseCtx = canvas.getContext('2d');
+        if (noiseCtx) {
+            noiseCanvasCache[cacheKey] = { canvas, ctx: noiseCtx };
         }
     }
-    ctx.putImageData(imageData, drawX, drawY);
+
+    const cached = noiseCanvasCache[cacheKey];
+    if (!cached) return;
+
+    const { canvas: noiseCanvas, ctx: noiseCtx } = cached;
+    const noiseImageData = noiseCtx.createImageData(noiseCanvasWidth, noiseCanvasHeight);
+    const noiseData = noiseImageData.data;
+
+    for (let y = 0; y < noiseCanvasHeight; y++) {
+        for (let x = 0; x < noiseCanvasWidth; x++) {
+            const i = (y * noiseCanvasWidth + x) * 4;
+            
+            const worldPixelX = boundingBox.minX * tileSize + x;
+            const worldPixelY = boundingBox.minY * tileSize + y;
+
+            const noiseX1 = worldPixelX / 30 + time * 0.00005;
+            const noiseY1 = worldPixelY / 30 + time * 0.00005;
+            const noiseVal1 = noise.get(noiseX1, noiseY1);
+
+            const noiseX2 = worldPixelX / 15 + time * 0.0001;
+            const noiseY2 = worldPixelY / 15 + time * 0.0001;
+            const noiseVal2 = noise.get(noiseX2, noiseY2);
+
+            const totalNoise = (noiseVal1 + noiseVal2) * 0.5;
+            const brightness = totalNoise * 30;
+
+            noiseData[i]     = baseColor.r + brightness;
+            noiseData[i + 1] = baseColor.g + brightness;
+            noiseData[i + 2] = baseColor.b + brightness;
+            noiseData[i + 3] = 255;
+        }
+    }
+    noiseCtx.putImageData(noiseImageData, 0, 0);
+
+    ctx.save();
+    ctx.translate(-offsetX, -offsetY);
+
+    // --- 1. Draw base water color and shore glow ---
+    drawSmoothPath(ctx, midPoints);
+    ctx.shadowColor = shoreColor;
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = `rgb(${baseColor.r}, ${baseColor.g}, ${baseColor.b})`;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.fill();
+
+    // --- 2. Draw the noise texture, clipped to the shape ---
+    ctx.clip();
+    const drawX = (boundingBox.minX - startXInt) * tileSize;
+    const drawY = (boundingBox.minY - startYInt) * tileSize;
+    ctx.drawImage(noiseCanvas, drawX, drawY);
 
     ctx.restore();
 }

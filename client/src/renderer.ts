@@ -171,9 +171,12 @@ function drawSanctuaries(startX: number, startY: number, viewportWidth: number, 
         const perimeterNodes = tracePerimeter(group);
         if (perimeterNodes.length < 3) continue;
 
+        const offsetX = (startX - startXInt) * TILE_SIZE;
+        const offsetY = (startY - startYInt) * TILE_SIZE;
+
         const screenPoints = perimeterNodes.map((p: { x: number, y: number }) => ({
-            x: (p.x - startX) * TILE_SIZE,
-            y: (p.y - startY) * TILE_SIZE,
+            x: (p.x - startXInt) * TILE_SIZE,
+            y: (p.y - startYInt) * TILE_SIZE,
         }));
 
         const simplifiedPoints = ramerDouglasPeucker(screenPoints, TILE_SIZE * 1.5);
@@ -224,6 +227,7 @@ function drawSanctuaries(startX: number, startY: number, viewportWidth: number, 
         const cracks = sanctuaryCracksCache.get(cacheKey)!;
         
         ctx.save();
+        ctx.translate(-offsetX, -offsetY);
         drawSmoothPath(ctx, midPoints);
 
         // 0. Fill the area

@@ -39,6 +39,7 @@
 - ad for designers
 
 ### minor backlog
+- remove the outline from the slime and rat. keep their eyes, but with a little thinner line
 - escape closes all open windows?
 - could use a better shield icon / defense icon
 
