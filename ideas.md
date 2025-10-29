@@ -31,13 +31,15 @@
 ### Current
 
 ### Alpha Backlog
-- player built items slowly decay
+- detached camera and smoother movement?
+- player constructed things like wooden wall slowly decay
 - hosting / deploys / monitoring (?)
 - pvp
 - discord
 - ad for designers
 
--- 
+### minor backlog
+- could use a better shield icon / defense icon
 
 ## Idea backlog
 

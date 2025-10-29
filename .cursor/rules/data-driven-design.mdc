@@ -1,7 +1,7 @@
 ---
 alwaysApply: true
 ---
-We should follow a data-driven design.
+We should follow a data-driven design. What this means is we should always look to define constants in a common place, no special values anywhere. We should also define concepts at a higher level and then enforce that each relevent entities defintion defines a value for that concept. Then our code should look like: if entity.isBlahBlah -> do logic, our code should not look like if entity.name == 'prince' || enity.name = 'queen'. it should look like entity.isRoyalty. 
 ideas.md has lots of context / information about the game
 To make icons, we need to create a asset-generation/prompts/<icon-name>-icon.json file. We should look at other's to get an example of how to make them. Before creating the llm prompt for the icon, you should review ideas.md to get an understanding of the overall game, as well as themes/game-style.json. To generate the new icons we need to run generate_image.py with --theme themes/<theme.json>. To make icons visually consistent, we can define an image dependency. The dependiences need to be created first, because this means that the images that depend on them will now be edits of that image so their prompts should describe how to change those images to create this new image.
-
+When we make a new set of icons, we should run X number of commands per each newly created icon. So like python asset_generation/generate_image.py asset_generation/prompts/prompt-1.json; python asset_generation/generate_image.py asset_generation/prompts/prompt-2.json; etc. and just put that in a big command to run. 
