@@ -110,7 +110,9 @@ function drawBackground(startX: number, startY: number) {
 function drawWorld(startX: number, startY: number, viewportWidth: number, viewportHeight: number, time: number) {
     if (!ctx) return;
 
-    const groups = findTileGroups(startX, startY, viewportWidth, viewportHeight);
+    const startXInt = Math.floor(startX);
+    const startYInt = Math.floor(startY);
+    const groups = findTileGroups(startXInt, startYInt, viewportWidth, viewportHeight);
 
     for (const group of groups) {
         if (group.type === 'water') {
@@ -159,7 +161,9 @@ const sanctuaryDustCache = new Map<string, { x: number, y: number, offset: numbe
 function drawSanctuaries(startX: number, startY: number, viewportWidth: number, viewportHeight: number, time: number) {
     if (!ctx) return;
 
-    const sanctuaryGroups = findSanctuaryGroups(startX, startY, viewportWidth, viewportHeight);
+    const startXInt = Math.floor(startX);
+    const startYInt = Math.floor(startY);
+    const sanctuaryGroups = findSanctuaryGroups(startXInt, startYInt, viewportWidth, viewportHeight);
 
     for (const group of sanctuaryGroups) {
         if (group.tiles.length === 0) continue;
@@ -282,7 +286,9 @@ function drawSanctuaries(startX: number, startY: number, viewportWidth: number, 
 function drawSanctuaryDust(startX: number, startY: number, viewportWidth: number, viewportHeight: number, time: number) {
     if (!ctx) return;
 
-    const sanctuaryGroups = findSanctuaryGroups(startX, startY, viewportWidth, viewportHeight);
+    const startXInt = Math.floor(startX);
+    const startYInt = Math.floor(startY);
+    const sanctuaryGroups = findSanctuaryGroups(startXInt, startYInt, viewportWidth, viewportHeight);
 
     for (const group of sanctuaryGroups) {
         if (group.tiles.length === 0) continue;
@@ -439,16 +445,24 @@ function render(time: number) {
 
     ctx.save();
 
-    const viewportWidth = Math.ceil(canvas.width / TILE_SIZE);
-    const viewportHeight = Math.ceil(canvas.height / TILE_SIZE);
+    const camera = state.getState().camera;
+    const smoothingFactor = 0.05;
+    camera.x += (me.x - camera.x) * smoothingFactor;
+    camera.y += (me.y - camera.y) * smoothingFactor;
 
-    const startX = me.x - Math.floor(viewportWidth / 2);
-    const startY = me.y - Math.floor(viewportHeight / 2);
+    const viewportWidth = canvas.width / TILE_SIZE;
+    const viewportHeight = canvas.height / TILE_SIZE;
+
+    const startX = camera.x - (viewportWidth / 2);
+    const startY = camera.y - (viewportHeight / 2);
+
+    const viewportWidthInt = Math.ceil(viewportWidth) + 1;
+    const viewportHeightInt = Math.ceil(viewportHeight) + 1;
 
     drawBackground(startX, startY);
-    drawSanctuaries(startX, startY, viewportWidth, viewportHeight, time);
-    drawSanctuaryDust(startX, startY, viewportWidth, viewportHeight, time);
-    drawWorld(startX, startY, viewportWidth, viewportHeight, time);
+    drawSanctuaries(startX, startY, viewportWidthInt, viewportHeightInt, time);
+    drawSanctuaryDust(startX, startY, viewportWidthInt, viewportHeightInt, time);
+    drawWorld(startX, startY, viewportWidthInt, viewportHeightInt, time);
     drawEntities(startX, startY, time);
     drawDamageIndicators(startX, startY);
 

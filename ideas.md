@@ -39,6 +39,7 @@
 - ad for designers
 
 ### minor backlog
+- escape closes all open windows?
 - could use a better shield icon / defense icon
 
 ## Idea backlog

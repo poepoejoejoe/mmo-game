@@ -63,6 +63,7 @@ export interface ClientState {
     runes: string[];
     activeRune: string;
     knownRecipes: Record<string, boolean>;
+    camera: { x: number, y: number };
 }
 
 export interface TileProperties {

@@ -17,6 +17,7 @@ const clientState: ClientState = {
     runes: [],
     activeRune: '',
     knownRecipes: {},
+    camera: { x: 0, y: 0 },
 };
 
 // --- State Accessors (Getters) ---
@@ -75,6 +76,11 @@ export function setInitialState(
         };
     }
     clientState.entities = processedEntities;
+
+    const me = processedEntities[playerId];
+    if (me) {
+        clientState.camera = { x: me.x, y: me.y };
+    }
 
     clientState.world = world;
     clientState.inventory = inventory;

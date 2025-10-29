@@ -29,22 +29,23 @@ function clearPathQueue() {
 
 function getTileCoordinatesFromMouseEvent(e: MouseEvent): { x: number, y: number } | null {
     const me = state.getMyEntity();
-    if (!me) return null;
+    const camera = state.getState().camera;
+    if (!me || !camera) return null;
 
     const rect = gameCanvas.getBoundingClientRect();
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
 
-    const tileGridX = Math.floor(canvasX / TILE_SIZE);
-    const tileGridY = Math.floor(canvasY / TILE_SIZE);
+    const viewportWidth = rect.width / TILE_SIZE;
+    const viewportHeight = rect.height / TILE_SIZE;
 
-    const viewportWidth = Math.ceil(rect.width / TILE_SIZE);
-    const viewportHeight = Math.ceil(rect.height / TILE_SIZE);
+    const startX = camera.x - (viewportWidth / 2);
+    const startY = camera.y - (viewportHeight / 2);
 
-    const startX = me.x - Math.floor(viewportWidth / 2);
-    const startY = me.y - Math.floor(viewportHeight / 2);
+    const tileX = Math.floor(startX + canvasX / TILE_SIZE);
+    const tileY = Math.floor(startY + canvasY / TILE_SIZE);
     
-    return { x: tileGridX + startX, y: tileGridY + startY };
+    return { x: tileX, y: tileY };
 }
 
 function sendMoveCommand(dx: number, dy: number, isContinuous: boolean = false) {
