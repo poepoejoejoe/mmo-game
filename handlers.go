@@ -195,6 +195,8 @@ func (c *Client) readPump() {
 				}
 			case game.ClientEventEat:
 				game.ProcessEat(c.id, msg.Payload)
+			case game.ClientEventLearnRecipe:
+				game.ProcessLearnRecipe(c.id, msg.Payload)
 			case game.ClientEventSendChat:
 				game.ProcessSendChat(c.id, msg.Payload)
 			case game.ClientEventDialogAction:

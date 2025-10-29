@@ -62,6 +62,37 @@ export interface ClientState {
     activeNpcId: string | null;
     runes: string[];
     activeRune: string;
+    knownRecipes: Record<string, boolean>;
+}
+
+export interface TileProperties {
+    isCollidable: boolean;
+    isGatherable: boolean;
+    isDestructible: boolean;
+    isBuildableOn: boolean;
+    movementPenalty: boolean;
+    gatherResource: string;
+    maxHealth: number;
+    color: string;
+    draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, time: number, tileData: WorldTile) => void;
+    asset?: string | string[];
+}
+
+export interface ItemProperties {
+    text?: string;
+    icon?: string;
+    character: string;
+    color: string;
+    asset?: string;
+    equippable?: { slot: string, damage?: number, defense?: number };
+    draw?: (ctx: CanvasRenderingContext2D, pixelSize: number, direction: string) => void;
+    kind?: 'recipe';
+}
+
+export interface EntityProperties {
+    isAttackable?: boolean;
+    asset?: string | string[];
+    draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }, props: EntityProperties) => void;
 }
 
 export interface NpcQuestStateUpdateMessage extends ServerMessage {
@@ -91,6 +122,12 @@ export interface InitialStateMessage extends ServerMessage {
     echoUnlocked?: boolean;
     runes: string[];
     activeRune: string;
+    knownRecipes: Record<string, boolean>;
+}
+
+export interface RecipeLearnedMessage extends ServerMessage {
+    type: 'recipe_learned';
+    recipeId: string;
 }
 
 export interface ActiveRuneUpdateMessage extends ServerMessage {

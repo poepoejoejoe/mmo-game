@@ -1,10 +1,11 @@
 import * as state from './state';
 import { TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
 // --- UPDATED ---
-import { getTileProperties, getEntityProperties, itemDefinitions, tileDefs, entityDefs } from './definitions';
+import { getTileProperties, getEntityProperties, itemDefinitions } from './definitions';
 import { findTileGroups, findSanctuaryGroups } from './grouper';
 import { drawWaterGroup, crackImages, drawQuestIndicator, tracePerimeter, drawSmoothPath, ramerDouglasPeucker } from './drawing';
 import { SeededRandom } from './utils';
+import { EntityProperties, ItemProperties, TileProperties } from './types';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -32,18 +33,18 @@ export function showDamageIndicator(x: number, y: number, damage: number) {
 
 // (Asset loading functions remain the same...)
 function loadAssets() {
-    const assetDefs = [
-        ...Object.values(tileDefs),
+    const assetDefs: (TileProperties | ItemProperties | EntityProperties)[] = [
+        ...Object.values(state.getState().world).map(tile => getTileProperties(tile.type)),
         ...Object.values(itemDefinitions),
-        ...Object.values(entityDefs),
+        ...Object.values(state.getState().entities).map(entity => getEntityProperties(entity.type, entity, state.getState().playerId)),
     ];
 
     const assetPaths = new Set<string>();
-    assetPaths.add('assets/agrass-texture.png');
+    assetPaths.add('assets/grass-texture.png');
     for (const def of assetDefs) {
         if (def.asset) {
             if (Array.isArray(def.asset)) {
-                def.asset.forEach(path => assetPaths.add(path));
+                def.asset.forEach((path: string) => assetPaths.add(path));
             } else {
                 assetPaths.add(def.asset);
             }
@@ -377,11 +378,8 @@ function drawEntities(startX: number, startY: number, time: number) {
         const props = getEntityProperties(entity.type, entity, myPlayerId);
         if (props.draw) {
             props.draw(ctx, screenX, screenY, TILE_SIZE, entity, time, assetImages, props);
-        } else if (props.asset && assetImages[props.asset]) {
-            ctx.drawImage(assetImages[props.asset], screenX, screenY, TILE_SIZE, TILE_SIZE);
         } else {
-            ctx.fillStyle = props.color;
-            ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+            // Fallback for entities without a draw function
         }
 
         ctx.restore();

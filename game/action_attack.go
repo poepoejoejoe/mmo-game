@@ -63,9 +63,6 @@ func ProcessAttack(playerID string, targetEntityID string) *models.EntityDamaged
 	}
 	npcType := NPCType(targetData["npcType"])
 	npcProps := NPCDefs[npcType]
-	if npcProps.XPOnHit > 0 {
-		AddExperience(playerID, models.SkillAttack, npcProps.XPOnHit)
-	}
 
 	damageMsg := &models.EntityDamagedMessage{
 		Type:     string(ServerEventEntityDamaged),
@@ -81,6 +78,8 @@ func ProcessAttack(playerID string, targetEntityID string) *models.EntityDamaged
 	} else {
 		// Entity is defeated
 		log.Printf("Entity %s defeated.", targetEntityID)
+		AddExperience(playerID, models.SkillAttack, npcProps.AttackXP)
+		AddExperience(playerID, models.SkillDefense, npcProps.DefenseXP)
 		cleanupAndDropLoot(targetEntityID, targetData)
 	}
 

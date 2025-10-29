@@ -40,7 +40,7 @@ func SpawnNPC(entityID string, x, y int, npcType NPCType, canWander bool, groupI
 		"canWander", strconv.FormatBool(canWander),
 		"entityType", string(EntityTypeNPC),
 		"npcType", string(npcType),
-		"health", props.Health,
+		"health", props.MaxHealth,
 		"nextActionAt", time.Now().UnixMilli(),
 		"moveCooldown", 750,
 	}

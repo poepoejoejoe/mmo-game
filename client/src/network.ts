@@ -20,7 +20,8 @@ import {
     DialogMessage,
     QuestUpdateMessage,
     NpcQuestStateUpdateMessage,
-    ActiveRuneUpdateMessage
+    ActiveRuneUpdateMessage,
+    RecipeLearnedMessage
 } from './types';
 import * as state from './state';
 import { 
@@ -74,6 +75,7 @@ function handleMessage(event: MessageEvent) {
                 initialState.echoUnlocked || false,
                 initialState.runes || [],
                 initialState.activeRune || '',
+                initialState.knownRecipes || {},
             );
             updateInventoryUI();
             const myEntity = state.getMyEntity();
@@ -243,6 +245,13 @@ function handleMessage(event: MessageEvent) {
             onStateUpdate();
             break;
         }
+        case 'recipe_learned': {
+            const recipeMsg = msg as RecipeLearnedMessage;
+            state.learnRecipe(recipeMsg.recipeId);
+            updateInventoryUI(); // This will trigger a crafting UI update
+            onStateUpdate();
+            break;
+        }
         case 'registered': {
             const regMsg = msg as RegisteredMessage;
             localStorage.setItem('secretKey', regMsg.secretKey);
@@ -289,4 +298,13 @@ export function initializeNetwork() {
     ws.onerror = (error) => {
         console.error('WebSocket Error:', error);
     };
+}
+
+export function sendLearnRecipe(inventorySlot: string) {
+    send({
+        type: 'learn_recipe',
+        payload: {
+            inventorySlot,
+        },
+    });
 }

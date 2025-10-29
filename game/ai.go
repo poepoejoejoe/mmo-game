@@ -423,13 +423,13 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 		props := NPCDefs[npcType]
 		pipe := rdb.Pipeline()
 		pipe.HSet(ctx, npcID, "isLeashing", "true")
-		pipe.HSet(ctx, npcID, "health", props.Health)
+		pipe.HSet(ctx, npcID, "health", props.MaxHealth)
 		pipe.Exec(ctx)
 
 		healthUpdateMsg := map[string]interface{}{
 			"type":     string(ServerEventEntityUpdate),
 			"entityId": npcID,
-			"health":   props.Health,
+			"health":   props.MaxHealth,
 		}
 		PublishUpdate(healthUpdateMsg)
 	}
@@ -605,43 +605,8 @@ func performNPCAttack(npcID, targetID string, npcData map[string]string) {
 
 	npcType := NPCType(npcData["npcType"])
 	props := NPCDefs[npcType]
-	damage := props.Damage
 
-	newHealth, err := rdb.HIncrBy(ctx, targetID, "health", int64(-damage)).Result()
-	if err != nil {
-		log.Printf("Error damaging player %s: %v", targetID, err)
-		return
-	}
-
-	if props.XPOnDealt > 0 {
-		AddExperience(targetID, models.SkillDefense, props.XPOnDealt)
-	}
-
-	damageMsg := models.EntityDamagedMessage{
-		Type:     string(ServerEventEntityDamaged),
-		EntityID: targetID,
-		Damage:   damage,
-		X:        targetX,
-		Y:        targetY,
-	}
-	PublishUpdate(damageMsg)
-
-	if newHealth <= 0 {
-		HandlePlayerDeath(targetID)
-	} else {
-		interruptTeleport(targetID)
-		h := int(newHealth)
-		mh := PlayerDefs.MaxHealth
-		statsUpdateMsg := models.PlayerStatsUpdateMessage{
-			Type:      string(ServerEventPlayerStatsUpdate),
-			Health:    &h,
-			MaxHealth: &mh,
-		}
-		statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
-		if sendDirectMessage != nil {
-			sendDirectMessage(targetID, statsUpdateJSON)
-		}
-	}
+	ApplyDamage(npcID, targetID, props.Attack)
 }
 
 // getRandomDirection selects a random cardinal direction.

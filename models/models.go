@@ -69,6 +69,7 @@ type InitialStateMessage struct {
 	EchoUnlocked bool                   `json:"echoUnlocked"`
 	Runes        []string               `json:"runes"`
 	ActiveRune   string                 `json:"activeRune"`
+	KnownRecipes map[string]bool        `json:"knownRecipes"`
 }
 
 type QuestUpdateMessage struct {
@@ -112,6 +113,10 @@ type PlaceItemPayload struct {
 	Item string `json:"item"`
 	X    int    `json:"x"`
 	Y    int    `json:"y"`
+}
+
+type LearnRecipePayload struct {
+	InventorySlot string `json:"inventorySlot"`
 }
 
 type AttackPayload struct {
@@ -178,6 +183,11 @@ type RegisteredMessage struct {
 	SecretKey string `json:"secretKey"`
 	PlayerId  string `json:"playerId"`
 	Name      string `json:"name"`
+}
+
+type RecipeLearnedMessage struct {
+	Type     string `json:"type"`
+	RecipeID string `json:"recipeId"`
 }
 
 type NotificationMessage struct {

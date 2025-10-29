@@ -298,6 +298,10 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 	json.Unmarshal([]byte(runesJSON), &runes)
 	activeRune, _ := rdb.HGet(ctx, playerID, "activeRune").Result()
 
+	knownRecipesJSON, _ := rdb.HGet(ctx, playerID, "knownRecipes").Result()
+	var knownRecipes map[string]bool
+	json.Unmarshal([]byte(knownRecipesJSON), &knownRecipes)
+
 	initialState := &models.InitialStateMessage{
 		Type:         string(ServerEventInitialState),
 		PlayerId:     playerID,
@@ -312,6 +316,7 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		EchoUnlocked: echoUnlocked,
 		Runes:        runes,
 		ActiveRune:   activeRune,
+		KnownRecipes: knownRecipes,
 	}
 
 	playerHealth, _ := strconv.Atoi(playerData["health"])
@@ -472,6 +477,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"echoPath", "",
 		"runes", `["chop_trees", "mine_ore"]`,
 		"activeRune", "",
+		"knownRecipes", `{"wooden_wall":true, "fire":true, "cooked_rat_meat":true, "crude_axe":true}`,
 	)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
 
@@ -499,8 +505,16 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	item5, _ := json.Marshal(models.Item{ID: string(ItemCrudeAxe), Quantity: 1})
 	inventory["slot_5"] = string(item5)
 
+	// iron helmet recipe for testing
+	item6, _ := json.Marshal(models.Item{ID: string(ItemRecipeIronHelmet), Quantity: 1})
+	inventory["slot_6"] = string(item6)
+
+	// iron ore for testing
+	item7, _ := json.Marshal(models.Item{ID: string(ItemIronOre), Quantity: 20})
+	inventory["slot_7"] = string(item7)
+
 	// Initialize remaining slots as empty
-	for i := 6; i < 10; i++ {
+	for i := 8; i < 10; i++ {
 		inventory["slot_"+strconv.Itoa(i)] = "" // Empty string signifies an empty slot
 	}
 	pipe.HSet(ctx, inventoryKey, inventory)

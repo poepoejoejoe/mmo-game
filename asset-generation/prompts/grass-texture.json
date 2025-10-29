@@ -1,8 +1,0 @@
-{
-  "asset_name": "grass-texture",
-  "asset_type": "texture",
-  "description": "A seamless, top-down, stylized grass texture for a fantasy MMO game. The grass should be green, with small wildflowers scattered throughout.",
-  "output_format": "png",
-  "size_hint": "large",
-  "llm_prompt": "A seamless and tileable texture of lush green grass with small, charming wildflowers. The grass blades should be distinct but not overly detailed, suitable for a repeating background in a video game."
-}

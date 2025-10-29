@@ -1,0 +1,9 @@
+{
+  "asset_name": "recipe-iron-helmet-icon",
+  "asset_type": "icon",
+  "description": "An inventory icon for a crafting recipe scroll.",
+  "output_format": "png",
+  "size_hint": "small",
+  "transparent": true,
+  "llm_prompt": "A clear and simple icon of a rolled-up parchment scroll, tied with a simple ribbon. This represents a crafting recipe in a fantasy game inventory."
+}

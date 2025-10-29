@@ -1,0 +1,10 @@
+{
+  "asset_name": "iron-ore-icon",
+  "asset_type": "icon",
+  "description": "An inventory icon for a piece of iron ore.",
+  "output_format": "png",
+  "size_hint": "small",
+  "transparent": true,
+  "dependencies": ["stone-icon"],
+  "llm_prompt": "A clear and simple icon of a piece of iron ore for a fantasy game inventory. It should look like the stone icon, but with metallic, rust-colored veins and speckles, indicating it is iron."
+}

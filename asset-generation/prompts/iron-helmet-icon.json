@@ -1,0 +1,9 @@
+{
+  "asset_name": "iron-helmet-icon",
+  "asset_type": "icon",
+  "description": "An inventory icon for a simple iron helmet.",
+  "output_format": "png",
+  "size_hint": "small",
+  "transparent": true,
+  "llm_prompt": "A clear and simple icon of a basic, functional iron helmet for a fantasy game inventory. It should be easily recognizable as head armor, with a metallic grey color and a simple design."
+}

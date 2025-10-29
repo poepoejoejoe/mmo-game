@@ -16,6 +16,7 @@ const clientState: ClientState = {
     echoUnlocked: false,
     runes: [],
     activeRune: '',
+    knownRecipes: {},
 };
 
 // --- State Accessors (Getters) ---
@@ -61,6 +62,7 @@ export function setInitialState(
     echoUnlocked: boolean,
     runes: string[],
     activeRune: string,
+    knownRecipes: Record<string, boolean>,
 ) {
     clientState.playerId = playerId;
     
@@ -84,6 +86,7 @@ export function setInitialState(
     clientState.echoUnlocked = echoUnlocked;
     clientState.runes = runes;
     clientState.activeRune = activeRune;
+    clientState.knownRecipes = knownRecipes;
 }
 
 export function setEntityPosition(entityId: string, x: number, y: number, direction?: 'up' | 'down' | 'left' | 'right') {
@@ -109,6 +112,10 @@ export function setEntityPosition(entityId: string, x: number, y: number, direct
             lastMoveTime: positionChanged ? Date.now() : entity.lastMoveTime
         };
     }
+}
+
+export function learnRecipe(recipeId: string) {
+    clientState.knownRecipes[recipeId] = true;
 }
 
 // --- UPDATED ---

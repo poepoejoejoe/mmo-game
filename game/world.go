@@ -117,10 +117,13 @@ func GenerateWorld() {
 			} else {
 				// Standard terrain generation for non-sanctuary tiles
 				noiseVal := p.Noise2D(float64(x)/10.0, float64(y)/10.0)
+				oreNoiseVal := p.Noise2D(float64(x)/8.0, float64(y)/8.0)
 
 				tileType := TileTypeGround
 				if noiseVal < -0.5 {
 					tileType = TileTypeWater
+				} else if oreNoiseVal > 0.65 {
+					tileType = TileTypeIronRock
 				} else if noiseVal > 0.60 {
 					tileType = TileTypeRock
 				} else if noiseVal > 0.55 {

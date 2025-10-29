@@ -28,6 +28,7 @@ const (
 	TileTypeWater          TileType = "water"
 	TileTypeTree           TileType = "tree"
 	TileTypeRock           TileType = "rock"
+	TileTypeIronRock       TileType = "iron_rock"
 	TileTypeWoodenWall     TileType = "wooden_wall"
 	TileTypeFire           TileType = "fire"
 	TileTypeSanctuaryStone TileType = "sanctuary_stone"
@@ -37,16 +38,19 @@ const (
 type ItemID string
 
 const (
-	ItemWood          ItemID = "wood"
-	ItemStone         ItemID = "stone" // Renamed from ItemRock for consistency
-	ItemWoodenWall    ItemID = "wooden_wall"
-	ItemGoop          ItemID = "goop"
-	ItemRatMeat       ItemID = "rat_meat"
-	ItemCookedRatMeat ItemID = "cooked_rat_meat"
-	ItemSliceOfPizza  ItemID = "slice_of_pizza"
-	ItemTreasureMap   ItemID = "treasure_map"
-	ItemFire          ItemID = "fire"
-	ItemCrudeAxe      ItemID = "crude_axe"
+	ItemWood             ItemID = "wood"
+	ItemStone            ItemID = "stone" // Renamed from ItemRock for consistency
+	ItemIronOre          ItemID = "iron_ore"
+	ItemIronHelmet       ItemID = "iron_helmet"
+	ItemRecipeIronHelmet ItemID = "recipe_iron_helmet"
+	ItemWoodenWall       ItemID = "wooden_wall"
+	ItemGoop             ItemID = "goop"
+	ItemRatMeat          ItemID = "rat_meat"
+	ItemCookedRatMeat    ItemID = "cooked_rat_meat"
+	ItemSliceOfPizza     ItemID = "slice_of_pizza"
+	ItemTreasureMap      ItemID = "treasure_map"
+	ItemFire             ItemID = "fire"
+	ItemCrudeAxe         ItemID = "crude_axe"
 )
 
 // RuneType defines the string literals for runes.
@@ -57,17 +61,27 @@ const (
 	RuneTypeMineOre   RuneType = "mine_ore"
 )
 
+type ItemKind string
+
+const (
+	ItemKindNormal ItemKind = "normal"
+	ItemKindRecipe ItemKind = "recipe"
+)
+
 // ItemProperties defines the static properties of an item type.
 type ItemProperties struct {
 	Stackable  bool
 	MaxStack   int
 	Equippable *EquippableProperties
+	Kind       ItemKind
+	RecipeID   ItemID
 }
 
 // EquippableProperties defines properties for items that can be equipped.
 type EquippableProperties struct {
-	Slot   string // e.g., "weapon", "shield", "head"
-	Damage int    // Bonus damage
+	Slot    string // e.g., "weapon", "shield", "head"
+	Damage  int    // Bonus damage
+	Defense int    // Bonus defense
 }
 
 // ClientEventType defines incoming WebSocket message types.
@@ -82,6 +96,7 @@ const (
 	ClientEventPlaceItem    ClientEventType = "place_item"
 	ClientEventAttack       ClientEventType = "attack"
 	ClientEventEat          ClientEventType = "eat"
+	ClientEventLearnRecipe  ClientEventType = "learn_recipe"
 	ClientEventSendChat     ClientEventType = "send_chat"
 	ClientEventLogin        ClientEventType = "login"
 	ClientEventRegister     ClientEventType = "register"
@@ -110,6 +125,7 @@ const (
 	ServerEventItemDropped             ServerEventType = "item_dropped"
 	ServerEventGearUpdate              ServerEventType = "gear_update"
 	ServerEventCraftSuccess            ServerEventType = "craft_success"
+	ServerEventRecipeLearned           ServerEventType = "recipe_learned"
 	ServerEventRegistered              ServerEventType = "registered"
 	ServerEventPlayerAppearanceChanged ServerEventType = "player_appearance_changed"
 	ServerEventNotification            ServerEventType = "notification"
@@ -193,10 +209,14 @@ const (
 
 // NPCProperties defines the behavioral attributes of an NPC.
 type NPCProperties struct {
-	Health    int
-	Damage    int
-	XPOnHit   float64
-	XPOnDealt float64
+	MaxHealth  int
+	Attack     int
+	AttackXP   float64
+	DefenseXP  float64
+	LootTable  LootTable
+	IsAggro    bool   // Does this NPC attack on sight?
+	AggroRange int    // How far does it see players?
+	Movement   string // "still", "wander"
 }
 
 type LootEntry struct {
@@ -259,41 +279,52 @@ func init() {
 
 	// --- NPC Definitions ---
 	NPCDefs[NPCTypeSlime] = NPCProperties{
-		Health:    8,
-		Damage:    2,
-		XPOnHit:   5,
-		XPOnDealt: 2,
+		MaxHealth:  15,
+		Attack:     2,
+		AttackXP:   15,
+		DefenseXP:  10,
+		LootTable:  NPCLootTables[NPCTypeSlime],
+		IsAggro:    true,
+		AggroRange: 4,
+		Movement:   "wander",
 	}
 	NPCDefs[NPCTypeSlimeBoss] = NPCProperties{
-		Health:    20,
-		Damage:    4,
-		XPOnHit:   10,
-		XPOnDealt: 5,
+		MaxHealth:  100,
+		Attack:     5,
+		AttackXP:   100,
+		DefenseXP:  50,
+		LootTable:  NPCLootTables[NPCTypeSlimeBoss],
+		IsAggro:    true,
+		AggroRange: 8,
+		Movement:   "wander",
 	}
 	NPCDefs[NPCTypeRat] = NPCProperties{
-		Health:    6,
-		Damage:    2,
-		XPOnHit:   4,
-		XPOnDealt: 4,
+		MaxHealth:  10,
+		Attack:     1,
+		AttackXP:   10,
+		DefenseXP:  5,
+		LootTable:  NPCLootTables[NPCTypeRat],
+		IsAggro:    true,
+		AggroRange: 5,
+		Movement:   "wander",
 	}
 	NPCDefs[NPCTypeWizard] = NPCProperties{
-		Health: 100,
-		Damage: 0,
+		MaxHealth: 100,
+		Attack:    0,
+		Movement:  "still",
 	}
 	// --- END NEW ---
 
 	NPCLootTables[NPCTypeSlime] = LootTable{
 		{ItemID: ItemGoop, Chance: 0.8, Min: 1, Max: 2},
-		{ItemID: ItemTreasureMap, Chance: 0.05, Min: 1, Max: 1},
 	}
 	NPCLootTables[NPCTypeSlimeBoss] = LootTable{
 		{ItemID: ItemGoop, Chance: 1.0, Min: 3, Max: 5},
-		{ItemID: ItemTreasureMap, Chance: 0.1, Min: 1, Max: 1},
+		{ItemID: ItemRecipeIronHelmet, Chance: 0.5, Min: 1, Max: 1},
 	}
 	NPCLootTables[NPCTypeRat] = LootTable{
 		{ItemID: ItemRatMeat, Chance: 0.8, Min: 1, Max: 1},
 		{ItemID: ItemSliceOfPizza, Chance: 0.1, Min: 1, Max: 1},
-		{ItemID: ItemTreasureMap, Chance: 0.05, Min: 1, Max: 1},
 	}
 
 	// --- Item Definitions ---
@@ -312,6 +343,24 @@ func init() {
 	ItemDefs[ItemGoop] = ItemProperties{
 		Stackable: true,
 		MaxStack:  50,
+	}
+	ItemDefs[ItemIronOre] = ItemProperties{
+		Stackable: true,
+		MaxStack:  50,
+	}
+	ItemDefs[ItemRecipeIronHelmet] = ItemProperties{
+		Stackable: false,
+		MaxStack:  1,
+		Kind:      ItemKindRecipe,
+		RecipeID:  ItemIronHelmet,
+	}
+	ItemDefs[ItemIronHelmet] = ItemProperties{
+		Stackable: false,
+		MaxStack:  1,
+		Equippable: &EquippableProperties{
+			Slot:    "head-slot",
+			Defense: 1,
+		},
 	}
 	ItemDefs[ItemRatMeat] = ItemProperties{
 		Stackable: true,
@@ -367,6 +416,14 @@ func init() {
 		GatherXP:       10,
 		MaxHealth:      4,
 	}
+	TileDefs[TileTypeIronRock] = TileProperties{
+		IsCollidable:   true,
+		IsGatherable:   true,
+		GatherResource: ItemIronOre,
+		GatherSkill:    models.SkillMining,
+		GatherXP:       20,
+		MaxHealth:      8,
+	}
 	TileDefs[TileTypeWoodenWall] = TileProperties{
 		IsCollidable:   true,
 		IsDestructible: true,
@@ -397,6 +454,12 @@ func init() {
 		Yield:         1,
 		CraftingSkill: models.SkillConstruction,
 		CraftingXP:    10,
+	}
+	RecipeDefs[ItemIronHelmet] = Recipe{
+		Ingredients:   map[ItemID]int{ItemIronOre: 5},
+		Yield:         1,
+		CraftingSkill: models.SkillSmithing,
+		CraftingXP:    50,
 	}
 	RecipeDefs[ItemCookedRatMeat] = Recipe{
 		Ingredients:   map[ItemID]int{ItemRatMeat: 1},

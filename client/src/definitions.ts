@@ -1,20 +1,18 @@
 // This file is the single source of truth for all game object properties.
 
-import { drawCrudeAxe, drawPlayer, drawRat, drawRockTile, drawSanctuaryStone, drawSlime, drawTree, drawItem, drawWizard } from './drawing';
-import { EntityState } from './types';
-
-export interface TileProperties {
-    isCollidable: boolean;
-    isGatherable: boolean;
-    isDestructible: boolean;
-    isBuildableOn: boolean;
-    movementPenalty: boolean;
-    gatherResource?: string;
-    maxHealth: number;
-    color: string; // Add color here for rendering
-    asset?: string | string[];
-    draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, tileX: number, tileY: number, time: number, tileData: any) => void;
-}
+import { 
+    drawRockTile, 
+    drawTree, 
+    drawPlayer, 
+    drawItem, 
+    drawWizard,
+    drawRat,
+    drawSlime,
+    drawSanctuaryStone,
+    drawIronRockTile,
+    drawCrudeAxe,
+} from './drawing';
+import { TileProperties, ItemProperties, EntityProperties, EntityState } from './types';
 
 // The master definition map for all tile types.
 export const tileDefs: Record<string, TileProperties> = {
@@ -26,6 +24,8 @@ export const tileDefs: Record<string, TileProperties> = {
         movementPenalty: false,
         maxHealth: 0,
         color: '#000',
+        gatherResource: '',
+        draw: undefined
     },
     'ground': {
         isCollidable: false,
@@ -36,6 +36,8 @@ export const tileDefs: Record<string, TileProperties> = {
         maxHealth: 0,
         color: '#6B8E23',
         asset: undefined,
+        gatherResource: '',
+        draw: undefined
     },
     'water': {
         isCollidable: false,
@@ -45,6 +47,8 @@ export const tileDefs: Record<string, TileProperties> = {
         movementPenalty: true,
         maxHealth: 0,
         color: '#4682B4',
+        gatherResource: '',
+        draw: undefined
     },
     'tree': {
         isCollidable: true,
@@ -68,6 +72,17 @@ export const tileDefs: Record<string, TileProperties> = {
         color: '#A9A9A9',
         draw: drawRockTile,
     },
+    'iron_rock': {
+        isCollidable: true,
+        isGatherable: true,
+        isDestructible: false,
+        isBuildableOn: false,
+        movementPenalty: false,
+        gatherResource: 'iron',
+        maxHealth: 8,
+        color: '#8a8a8a',
+        draw: drawIronRockTile,
+    },
     'wooden_wall': {
         isCollidable: true,
         isGatherable: false,
@@ -77,6 +92,8 @@ export const tileDefs: Record<string, TileProperties> = {
         maxHealth: 10,
         color: '#A0522D',
         asset: 'assets/wooden-wall-icon.png',
+        gatherResource: '',
+        draw: undefined
     },
     'fire': {
         isCollidable: false,
@@ -87,6 +104,8 @@ export const tileDefs: Record<string, TileProperties> = {
         maxHealth: 0,
         color: '#FF4500',
         asset: 'assets/fire-icon.png',
+        gatherResource: '',
+        draw: undefined
     },
     'sanctuary_stone': {
         isCollidable: false,
@@ -97,6 +116,7 @@ export const tileDefs: Record<string, TileProperties> = {
         maxHealth: 0,
         color: '#808080',
         draw: drawSanctuaryStone,
+        gatherResource: ''
     },
 };
 
@@ -107,30 +127,33 @@ export function getTileProperties(type: string): TileProperties {
     return tileDefs[type] || tileDefs['void'];
 }
 
-export const itemDefinitions: { [key: string]: { text?: string, icon?: string, character: string, color: string, asset?: string, equippable?: { slot: string, damage?: number }, draw?: (ctx: CanvasRenderingContext2D, pixelSize: number, direction: string) => void } } = {
-    'wood': { text: 'Wood', icon: '🌲', character: 'W', color: '#8B4513', asset: 'assets/wood-icon.png' },
-    'stone': { text: 'Stone', icon: '🪨', character: 'S', color: '#808080', asset: 'assets/stone-icon.png' },
-    'goop': { text: 'Goop', icon: '💧', character: 'G', color: '#90EE90', asset: 'assets/goop-icon.png' },
-    'rat_meat': { text: 'Rat Meat', icon: '🍖', character: 'M', color: '#DC143C', asset: 'assets/rat-meat-icon.png' },
-    'cooked_rat_meat': { text: 'Cooked Meat', icon: '🥩', character: 'M', color: '#A52A2A', asset: 'assets/cooked-meat-icon.png' },
-    'treasure_map': { text: 'Treasure Map', icon: '🗺️', character: 'M', color: '#FFD700', asset: 'assets/treasure-map-icon.png' },
-    'slice_of_pizza': { text: 'Slice of Pizza', icon: '🍕', character: 'P', color: '#FFD700', asset: 'assets/pizza-slice-icon.png' },
-    'fire': { text: 'Fire', icon: '🔥', character: 'F', color: '#FF4500', asset: 'assets/fire-icon.png' },
-    'wooden_wall': { text: 'Wooden Wall', icon: '🧱', character: '#', color: '#A0522D', asset: 'assets/wooden-wall-icon.png' },
-    'crude_axe': {
-        text: 'Crude Axe',
-        icon: '🪓',
-        character: 'A',
-        color: '#b5a642',
-        asset: 'assets/crude-axe-icon.png',
-        draw: drawCrudeAxe,
-        equippable: {
-            slot: 'weapon-slot',
-            damage: 2,
-        },
-    },
+export const itemDefinitions: { [key: string]: ItemProperties } = {
+    'wood': { text: 'Wood', icon: '🌲', character: 'w', color: '#8b4513', asset: 'assets/wood-icon.png' },
+    'stone': { text: 'Stone', icon: '🪨', character: 's', color: '#808080', asset: 'assets/stone-icon.png' },
+    'goop': { text: 'Goop', icon: '💧', character: 'g', color: '#90ee90', asset: 'assets/goop-icon.png' },
+    'rat_meat': { text: 'Rat Meat', icon: '🍖', character: 'm', color: '#dc143c', asset: 'assets/rat-meat-icon.png' },
+    'cooked_rat_meat': { text: 'Cooked Meat', icon: '🥩', character: 'm', color: '#a52a2a', asset: 'assets/cooked-meat-icon.png' },
+    'treasure_map': { text: 'Treasure Map', icon: '🗺️', character: 'm', color: '#ffd700', asset: 'assets/treasure-map-icon.png' },
+    'slice_of_pizza': { text: 'Slice of Pizza', icon: '🍕', character: 'p', color: '#ffd700', asset: 'assets/pizza-slice-icon.png' },
+    'fire': { text: 'Fire', icon: '🔥', character: 'f', color: '#ff4500', asset: 'assets/fire-icon.png' },
+    'wooden_wall': { text: 'Wooden Wall', icon: '🧱', character: '#', color: '#a0522d', asset: 'assets/wooden-wall-icon.png' },
+    'crude_axe': { text: 'Crude Axe', icon: '⛏️', character: 'a', color: '#a0a0a0', asset: 'assets/crude-axe-icon.png', equippable: { slot: 'weapon-slot', damage: 1 }, draw: drawCrudeAxe },
+    'iron_ore': { text: 'Iron Ore', icon: '⚒️', character: 'o', color: '#8a8a8a', asset: 'assets/iron-ore-icon.png' },
+    'iron_helmet': { text: 'Iron Helmet', icon: '🎩', character: '^', color: '#c0c0c0', asset: 'assets/iron-helmet-icon.png', equippable: { slot: 'head-slot', defense: 1 } },
+    'recipe_iron_helmet': { text: 'Recipe: Iron Helmet', icon: '📜', character: '?', color: '#ffffff', asset: 'assets/recipe-iron-helmet-icon.png', kind: 'recipe' },
     'default': { text: 'Unknown Item', icon: '❓', character: '?', color: '#FFFFFF' },
 };
+
+export const gearSlots = ['head-slot', 'weapon-slot'];
+
+export const recipeDefs: { [key: string]: { [key: string]: number } } = {
+    'wooden_wall': { 'wood': 10 },
+    'fire': { 'wood': 10 },
+    'cooked_rat_meat': { 'rat_meat': 1 },
+    'crude_axe': { 'wood': 10, 'stone': 10, 'goop': 5 },
+    'iron_helmet': { 'iron_ore': 5 },
+};
+
 
 export const edibleDefs: { [key: string]: { healAmount: number } } = {
     'cooked_rat_meat': { healAmount: 2 },
@@ -140,45 +163,31 @@ export const edibleDefs: { [key: string]: { healAmount: number } } = {
 
 // --- NEW: Entity Definitions ---
 
-export interface EntityProperties {
-    color: string;
-    isAttackable?: boolean;
-    asset?: string;
-    draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }, props: EntityProperties) => void;
-}
-
 // The master definition map for all entity types.
 export const entityDefs: Record<string, EntityProperties> = {
     'player': {
-        color: '#3498db', // Blue
         draw: drawPlayer,
     },
     'slime': {
-        color: '#b3db45ff', // Green
         isAttackable: true,
         draw: drawSlime,
     },
     'slime_boss': {
-        color: '#556B2F', // Darker Green
         isAttackable: true,
         draw: drawSlime,
     },
     'rat': {
-        color: '#800080', // Purple
         isAttackable: true,
         draw: drawRat,
     },
     'wizard': {
-        color: '#3498db',
         isAttackable: false,
         draw: drawWizard,
     },
     'item': {
-        color: 'transparent', // We'll render items with text instead
         draw: drawItem,
     },
     'default': {
-        color: '#e74c3c', // Red (for other players/unknown)
     }
 };
 

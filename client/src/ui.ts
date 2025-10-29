@@ -1,6 +1,6 @@
 import * as state from './state';
-import { edibleDefs, itemDefinitions } from './definitions';
-import { send } from './network';
+import { edibleDefs, itemDefinitions, recipeDefs, gearSlots } from './definitions';
+import { send, sendLearnRecipe } from './network';
 
 const skillIcons: Record<string, string> = {
     woodcutting: 'assets/woodcutting-icon.png',
@@ -329,19 +329,10 @@ export function startCooldown(duration: number): void {
 }
 
 export function updateCraftingUI(): void {
-    const inventory = state.getState().inventory;
+    const s = state.getState();
+    const inventory = s.inventory;
+    const knownRecipes = s.knownRecipes || {};
     craftingView.innerHTML = '<h2>Crafting</h2>';
-
-    // Define a type for recipe requirements
-    type RecipeRequirements = { [key: string]: number };
-
-    // Example recipes (can be moved to definitions.ts)
-    const recipes = [
-        { id: 'craft-wall-btn', text: 'Wall', req: { wood: 10 } as RecipeRequirements, item: 'wooden_wall' },
-        { id: 'craft-fire-btn', text: 'Fire', req: { wood: 10 } as RecipeRequirements, item: 'fire' },
-        { id: 'cook-rat-meat-btn', text: 'Cook Meat', req: { rat_meat: 1 } as RecipeRequirements, item: 'cooked_rat_meat' },
-        { id: 'craft-axe-btn', text: 'Axe', req: { wood: 10, stone: 10, goop: 5 } as RecipeRequirements, item: 'crude_axe' },
-    ];
 
     const counts: { [key: string]: number } = {};
     for (const slot in inventory) {
@@ -350,25 +341,35 @@ export function updateCraftingUI(): void {
         }
     }
 
-    recipes.forEach(recipe => {
-        const canCraft = Object.keys(recipe.req).every(itemId => counts[itemId] >= recipe.req[itemId]);
+    let hasKnownRecipes = false;
+    for (const itemIdToCraft in recipeDefs) {
+        if (knownRecipes[itemIdToCraft]) {
+            hasKnownRecipes = true;
+            const recipeReqs = recipeDefs[itemIdToCraft];
+            const canCraft = Object.keys(recipeReqs).every(reqItemId => (counts[reqItemId] || 0) >= recipeReqs[reqItemId]);
 
-        const itemDef = itemDefinitions[recipe.item] || itemDefinitions['default'];
-        
-        const button = document.createElement('button');
-        button.id = recipe.id;
-        button.classList.add('crafting-recipe');
-        button.disabled = !canCraft;
-        button.dataset.item = recipe.item; // Store the item to be crafted
+            const itemDef = itemDefinitions[itemIdToCraft] || itemDefinitions['default'];
+            
+            const button = document.createElement('button');
+            button.id = `craft-${itemIdToCraft}-btn`;
+            button.classList.add('crafting-recipe');
+            button.disabled = !canCraft;
+            button.dataset.item = itemIdToCraft;
 
-        const iconEl = createIconElement(itemDef);
-        button.appendChild(iconEl);
+            const iconEl = createIconElement(itemDef);
+            button.appendChild(iconEl);
+            
+            const recipeForTooltip = { item: itemIdToCraft, req: recipeReqs };
+            button.addEventListener('mouseenter', () => showCraftingTooltip(button, recipeForTooltip));
+            button.addEventListener('mouseleave', hideCraftingTooltip);
+            
+            craftingView.appendChild(button);
+        }
+    }
 
-        button.addEventListener('mouseenter', () => showCraftingTooltip(button, recipe));
-        button.addEventListener('mouseleave', hideCraftingTooltip);
-        
-        craftingView.appendChild(button);
-    });
+    if (!hasKnownRecipes) {
+        craftingView.innerHTML += '<p>You have not learned any crafting recipes.</p>';
+    }
 }
 
 function showCraftingTooltip(button: HTMLButtonElement, recipe: any) {
@@ -438,8 +439,9 @@ function showInventoryTooltip(slotEl: HTMLElement, item: any) {
     
     const edible = edibleDefs[item.id];
     const equippable = itemDef.equippable;
+    const isRecipe = itemDef.kind === 'recipe';
 
-    if (edible || equippable) {
+    if (edible || equippable || isRecipe) {
         content += '<hr>';
     }
 
@@ -448,11 +450,18 @@ function showInventoryTooltip(slotEl: HTMLElement, item: any) {
         if (equippable.damage) {
             content += `<p class="tooltip-stat">+${equippable.damage} Damage</p>`;
         }
+        if (equippable.defense) {
+            content += `<p class="tooltip-stat">+${equippable.defense} Defense</p>`;
+        }
     }
     
     if (edible) {
         content += `<p class="tooltip-action">Eat ${itemDef.text || item.id}</p>`;
         content += `<p class="tooltip-stat">+${edible.healAmount} Health</p>`;
+    }
+
+    if (isRecipe) {
+        content += `<p class="tooltip-action">Learn Recipe</p>`;
     }
 
     tooltip.innerHTML = content;
@@ -486,6 +495,9 @@ function showGearTooltip(slotEl: HTMLElement, item: any) {
 
     if (itemDef.equippable?.damage) {
         content += `<p class="tooltip-stat">+${itemDef.equippable.damage} Damage</p>`;
+    }
+    if (itemDef.equippable?.defense) {
+        content += `<p class="tooltip-stat">+${itemDef.equippable.defense} Defense</p>`;
     }
     
     tooltip.innerHTML = content;
@@ -530,9 +542,7 @@ export function updateGearUI(): void {
     const gear = state.getState().gear;
     gearView.innerHTML = '<h2>Gear</h2>';
 
-    let hasSlots = false;
-    for (const slot in gear) {
-        hasSlots = true;
+    gearSlots.forEach(slot => {
         const item = gear[slot];
 
         const slotEl = document.createElement('div');
@@ -551,17 +561,11 @@ export function updateGearUI(): void {
         } else {
             const nameEl = document.createElement('div');
             nameEl.classList.add('item-name');
-            nameEl.textContent = slot; // e.g. "hand", "head"
+            nameEl.textContent = slot.replace('-slot', ''); // e.g. "weapon", "head"
             slotEl.appendChild(nameEl);
         }
         gearView.appendChild(slotEl);
-    }
-
-    if (!hasSlots) {
-        const p = document.createElement('p');
-        p.textContent = 'No gear slots available.';
-        gearView.appendChild(p);
-    }
+    });
 }
 
 export function updateInventoryUI(): void {
@@ -597,6 +601,11 @@ export function updateInventoryUI(): void {
                 slotEl.dataset.slot = slotKey;
             }
             
+            if (itemDef.kind === 'recipe') {
+                slotEl.classList.add('learnable');
+                slotEl.dataset.slot = slotKey;
+            }
+            
             slotEl.addEventListener('mouseenter', () => showInventoryTooltip(slotEl, item));
             slotEl.addEventListener('mouseleave', hideInventoryTooltip);
         } else {
@@ -611,6 +620,28 @@ export function updateInventoryUI(): void {
     updateExperienceUI();
     updateEchoUI();
     updateRunesUI();
+
+    document.body.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const slot = target.closest('.inventory-slot') as HTMLElement | null;
+
+        if (slot) {
+            if (slot.classList.contains('equippable')) {
+                send({ type: 'equip', payload: { inventorySlot: slot.dataset.slot } });
+            } else if (slot.classList.contains('edible')) {
+                send({ type: 'eat', payload: { item: slot.dataset.item } });
+            } else if (slot.classList.contains('learnable')) {
+                sendLearnRecipe(slot.dataset.slot!);
+            } else if (slot.classList.contains('unequippable')) {
+                send({ type: 'unequip', payload: { gearSlot: slot.dataset.slot } });
+            }
+        }
+
+        const craftButton = target.closest('.crafting-recipe') as HTMLElement | null;
+        if (craftButton) {
+            send({ type: 'craft', payload: { item: craftButton.dataset.item } });
+        }
+    });
 }
 
 export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {

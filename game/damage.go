@@ -126,3 +126,81 @@ func parseCoordKey(coordKey string) (int, int) {
 	y, _ := strconv.Atoi(parts[1])
 	return x, y
 }
+
+func ApplyDamage(attackerID, defenderID string, baseDamage int) {
+	defenderData, err := rdb.HGetAll(ctx, defenderID).Result()
+	if err != nil {
+		log.Printf("Could not get defender data for ID %s: %v", defenderID, err)
+		return
+	}
+
+	currentHealth, err := strconv.Atoi(defenderData["health"])
+	if err != nil {
+		log.Printf("Could not parse health for defender %s: %v", defenderID, err)
+		return
+	}
+
+	// Calculate defense from gear
+	totalDefense := 0
+	gear, err := GetGear(defenderID)
+	if err == nil {
+		for _, item := range gear {
+			if item.ID != "" {
+				itemProps := ItemDefs[ItemID(item.ID)]
+				if itemProps.Equippable != nil {
+					totalDefense += itemProps.Equippable.Defense
+				}
+			}
+		}
+	}
+
+	finalDamage := baseDamage - totalDefense
+	if finalDamage < 1 {
+		finalDamage = 1 // Always do at least 1 damage
+	}
+
+	newHealth := currentHealth - finalDamage
+	rdb.HSet(ctx, defenderID, "health", newHealth)
+
+	defenderX, _ := strconv.Atoi(defenderData["x"])
+	defenderY, _ := strconv.Atoi(defenderData["y"])
+
+	damageMsg := models.EntityDamagedMessage{
+		Type:     string(ServerEventEntityDamaged),
+		EntityID: defenderID,
+		Damage:   finalDamage,
+		X:        defenderX,
+		Y:        defenderY,
+	}
+	PublishUpdate(damageMsg)
+
+	if newHealth <= 0 {
+		if strings.HasPrefix(defenderID, "player:") {
+			HandlePlayerDeath(defenderID)
+		} else {
+			cleanupAndDropLoot(defenderID, defenderData)
+		}
+		// Grant experience to the attacker if they are a player
+		if strings.HasPrefix(attackerID, "player:") {
+			if npcTypeStr, ok := defenderData["npcType"]; ok {
+				if npcDef, ok := NPCDefs[NPCType(npcTypeStr)]; ok {
+					AddExperience(attackerID, models.SkillAttack, npcDef.AttackXP)
+					AddExperience(attackerID, models.SkillDefense, npcDef.DefenseXP)
+				}
+			}
+		}
+	} else if strings.HasPrefix(defenderID, "player:") {
+		interruptTeleport(defenderID)
+		h := newHealth
+		mh := PlayerDefs.MaxHealth
+		statsUpdateMsg := models.PlayerStatsUpdateMessage{
+			Type:      string(ServerEventPlayerStatsUpdate),
+			Health:    &h,
+			MaxHealth: &mh,
+		}
+		statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
+		if sendDirectMessage != nil {
+			sendDirectMessage(defenderID, statsUpdateJSON)
+		}
+	}
+}
