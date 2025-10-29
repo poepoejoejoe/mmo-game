@@ -389,6 +389,8 @@ func findNearestResource(x, y int, tileType TileType, tickCache *TickCache) (int
 // processNPCAction contains the core logic for an individual NPC's turn.
 func processNPCAction(npcID string, tickCache *TickCache) {
 	npcData := tickCache.EntityData[npcID]
+
+	// 1. Cooldown Check
 	if nextActionAtStr, ok := npcData["nextActionAt"]; ok {
 		if nextActionAt, err := strconv.ParseInt(nextActionAtStr, 10, 64); err == nil {
 			if time.Now().UnixMilli() < nextActionAt {
@@ -397,94 +399,7 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 		}
 	}
 
-	originX, _ := strconv.Atoi(npcData["originX"])
-	originY, _ := strconv.Atoi(npcData["originY"])
-	isLeashing, _ := strconv.ParseBool(npcData["isLeashing"])
-
-	npcX, npcY := GetEntityPosition(npcData)
-	distSq := (npcX-originX)*(npcX-originX) + (npcY-originY)*(npcY-originY)
-
-	if isLeashing {
-		if npcX == originX && npcY == originY {
-			rdb.HSet(ctx, npcID, "isLeashing", "false")
-		} else {
-			path := FindPath(npcX, npcY, originX, originY, tickCache)
-			if len(path) > 1 {
-				nextStep := path[1]
-				dx := nextStep.X - npcX
-				dy := nextStep.Y - npcY
-				var moveDir MoveDirection
-				if abs(dx) > abs(dy) {
-					if dx > 0 {
-						moveDir = MoveDirectionRight
-					} else {
-						moveDir = MoveDirectionLeft
-					}
-				} else {
-					if dy > 0 {
-						moveDir = MoveDirectionDown
-					} else {
-						moveDir = MoveDirectionUp
-					}
-				}
-				ProcessMove(npcID, moveDir)
-			} else {
-				// Cannot find path or already at the closest point.
-				// Set current location as new origin and stop leashing.
-				pipe := rdb.Pipeline()
-				pipe.HSet(ctx, npcID, "originX", npcX)
-				pipe.HSet(ctx, npcID, "originY", npcY)
-				pipe.HSet(ctx, npcID, "isLeashing", "false")
-				pipe.Exec(ctx)
-			}
-		}
-		cooldown, _ := strconv.ParseInt(npcData["moveCooldown"], 10, 64)
-		nextActionTime := time.Now().UnixMilli() + cooldown
-		rdb.HSet(ctx, npcID, "nextActionAt", nextActionTime)
-		return
-	}
-
-	if distSq > LeashDistance*LeashDistance {
-		// Leash triggered
-		npcType := NPCType(npcData["npcType"])
-		props := NPCDefs[npcType]
-		pipe := rdb.Pipeline()
-		pipe.HSet(ctx, npcID, "isLeashing", "true")
-		pipe.HSet(ctx, npcID, "health", props.Health)
-		pipe.Exec(ctx)
-		// Move towards origin
-		dx := originX - npcX
-		dy := originY - npcY
-		var moveDir MoveDirection
-		if abs(dx) > abs(dy) {
-			if dx > 0 {
-				moveDir = MoveDirectionRight
-			} else {
-				moveDir = MoveDirectionLeft
-			}
-		} else {
-			if dy > 0 {
-				moveDir = MoveDirectionDown
-			} else {
-				moveDir = MoveDirectionUp
-			}
-		}
-		ProcessMove(npcID, moveDir)
-		cooldown, _ := strconv.ParseInt(npcData["moveCooldown"], 10, 64)
-		nextActionTime := time.Now().UnixMilli() + cooldown
-		rdb.HSet(ctx, npcID, "nextActionAt", nextActionTime)
-
-		// Broadcast health update
-		healthUpdateMsg := map[string]interface{}{
-			"type":     string(ServerEventEntityUpdate),
-			"entityId": npcID,
-			"health":   props.Health,
-		}
-		PublishUpdate(healthUpdateMsg)
-
-		return
-	}
-
+	// 2. Gather NPC state
 	npcTypeStr, ok := npcData["npcType"]
 	if !ok {
 		log.Printf("[AI Error] NPC %s has no npcType field. Skipping.", npcID)
@@ -492,35 +407,178 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 	}
 	npcType := NPCType(npcTypeStr)
 	if npcType == NPCTypeWizard {
-		return // Wizards are friendly and do not move
+		return // Wizards are static and friendly
 	}
 
-	aggroRange := 5.0
+	npcX, npcY := GetEntityPosition(npcData)
+	originX, _ := strconv.Atoi(npcData["originX"])
+	originY, _ := strconv.Atoi(npcData["originY"])
+	isLeashing, _ := strconv.ParseBool(npcData["isLeashing"])
+	groupID, hasGroup := npcData["groupID"]
 
+	// 3. Leash Check & State Trigger
+	distToOriginSq := (npcX-originX)*(npcX-originX) + (npcY-originY)*(npcY-originY)
+	if !isLeashing && distToOriginSq > LeashDistance*LeashDistance {
+		isLeashing = true
+		props := NPCDefs[npcType]
+		pipe := rdb.Pipeline()
+		pipe.HSet(ctx, npcID, "isLeashing", "true")
+		pipe.HSet(ctx, npcID, "health", props.Health)
+		pipe.Exec(ctx)
+
+		healthUpdateMsg := map[string]interface{}{
+			"type":     string(ServerEventEntityUpdate),
+			"entityId": npcID,
+			"health":   props.Health,
+		}
+		PublishUpdate(healthUpdateMsg)
+	}
+
+	// 4. Determine Action based on State (Leashing > Combat > Idle)
+	var finalTargetX, finalTargetY int
+	var hasTarget bool
+	var targetID string // New: keep track of the target's ID
+
+	// State 1: Leashing takes highest priority
+	if isLeashing {
+		if npcX == originX && npcY == originY {
+			rdb.HSet(ctx, npcID, "isLeashing", "false")
+			if hasGroup {
+				rdb.Del(ctx, string(GroupTargetPrefix)+groupID)
+			}
+		} else {
+			hasTarget = true
+			finalTargetX, finalTargetY = originX, originY
+		}
+	} else {
+		// State 2: Combat
+		var targetFound bool
+		// Priority 2a: Check for a shared group target
+		if hasGroup {
+			groupTargetID, err := rdb.Get(ctx, string(GroupTargetPrefix)+groupID).Result()
+			if err == nil && groupTargetID != "" {
+				targetData, inCache := tickCache.EntityData[groupTargetID]
+				if inCache {
+					pX, pY := GetEntityPosition(targetData)
+					targetID = groupTargetID
+					finalTargetX, finalTargetY = pX, pY
+					targetFound = true
+					hasTarget = true
+				} else {
+					// Target is not in cache (maybe disconnected/dead), clear group target
+					rdb.Del(ctx, string(GroupTargetPrefix)+groupID)
+				}
+			}
+		}
+
+		// Priority 2b: Find a new target if no group target
+		if !targetFound {
+			foundPlayerID, pX, pY, found := findClosestPlayer(npcID, npcData, tickCache)
+			if found {
+				targetID = foundPlayerID
+				finalTargetX, finalTargetY = pX, pY
+				targetFound = true
+				hasTarget = true
+				// If in a group, "shout" the new target to the group
+				if hasGroup {
+					rdb.Set(ctx, string(GroupTargetPrefix)+groupID, targetID, 10*time.Second) // Target expires after 10s
+				}
+			}
+		}
+
+		// If a target is set (either from group or new), decide action
+		if targetFound {
+			if IsAdjacent(npcX, npcY, finalTargetX, finalTargetY) {
+				performNPCAttack(npcID, targetID, npcData)
+				hasTarget = false // Attack is the action, no need to move
+			}
+			// if not adjacent, hasTarget is already true, so it will move
+		} else {
+			// State 3: Idle Behavior (no target, not leashing)
+			canWander, _ := strconv.ParseBool(npcData["canWander"])
+			if !canWander && (npcX != originX || npcY != originY) {
+				// Return to origin
+				hasTarget = true
+				finalTargetX, finalTargetY = originX, originY
+			} else if canWander && rand.Intn(100) < 40 {
+				// Wander randomly
+				dir := getRandomDirection()
+				ProcessMove(npcID, dir)
+			}
+		}
+	}
+
+	// 5. Execute move action if a target was set
+	if hasTarget {
+		// Pathfind to the final target (could be player, origin, etc.)
+		path := FindPath(npcX, npcY, finalTargetX, finalTargetY, tickCache)
+		if len(path) > 1 {
+			moveAlongPath(npcID, path)
+		} else if isLeashing {
+			// If leashing and can't find path, set new origin
+			pipe := rdb.Pipeline()
+			pipe.HSet(ctx, npcID, "originX", npcX)
+			pipe.HSet(ctx, npcID, "originY", npcY)
+			pipe.HSet(ctx, npcID, "isLeashing", "false")
+			pipe.Exec(ctx)
+		}
+	}
+
+	// 6. Set cooldown
+	cooldown, _ := strconv.ParseInt(npcData["moveCooldown"], 10, 64)
+	nextActionTime := time.Now().UnixMilli() + cooldown
+	rdb.HSet(ctx, npcID, "nextActionAt", nextActionTime)
+}
+
+// moveAlongPath moves an NPC one step along a given path.
+func moveAlongPath(npcID string, path []*Node) {
+	if len(path) < 2 {
+		return
+	}
+	currentX, _ := rdb.HGet(ctx, npcID, "x").Int()
+	currentY, _ := rdb.HGet(ctx, npcID, "y").Int()
+
+	nextStep := path[1]
+	dx := nextStep.X - currentX
+	dy := nextStep.Y - currentY
+	var moveDir MoveDirection
+	if abs(dx) > abs(dy) {
+		if dx > 0 {
+			moveDir = MoveDirectionRight
+		} else {
+			moveDir = MoveDirectionLeft
+		}
+	} else {
+		if dy > 0 {
+			moveDir = MoveDirectionDown
+		} else {
+			moveDir = MoveDirectionUp
+		}
+	}
+	ProcessMove(npcID, moveDir)
+}
+
+// findClosestPlayer finds the nearest attackable player within aggro range.
+func findClosestPlayer(npcID string, npcData map[string]string, tickCache *TickCache) (string, int, int, bool) {
+	npcX, npcY := GetEntityPosition(npcData)
+	aggroRange := 5.0
 	var targetID string
 	var targetX, targetY int
 	var targetFound bool
 	var closestDistSq float64 = -1
 
-	// Find the closest player in range from the cache
 	for entityID, entityData := range tickCache.EntityData {
 		if !strings.HasPrefix(entityID, "player:") {
-			continue // Not a player
+			continue
 		}
-
-		// Check if target has health, might be in a weird state
 		if _, ok := entityData["health"]; !ok {
 			continue
 		}
-
 		pX, pY := GetEntityPosition(entityData)
-
-		// --- NEW: Check if the target player is in a sanctuary ---
 		targetTile, _, err := GetWorldTile(pX, pY)
 		if err == nil && targetTile.IsSanctuary {
-			continue // Player is in a sanctuary, ignore them.
+			continue
 		}
-		// --- END NEW ---
 
 		dx := float64(npcX - pX)
 		dy := float64(npcY - pY)
@@ -536,102 +594,53 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 			}
 		}
 	}
+	return targetID, targetX, targetY, targetFound
+}
 
-	// 2. If a player is found, decide whether to attack or move towards them
-	if targetFound {
-		log.Printf("target found. %s is attacking player %s", npcID, targetID)
-		// If adjacent, attack
-		if IsAdjacent(npcX, npcY, targetX, targetY) {
-			UpdateEntityDirection(npcID, targetX, targetY)
-			log.Printf("NPC %s is attacking player %s", npcID, targetID)
-			npcTypeStr, ok := npcData["npcType"]
-			if !ok {
-				log.Printf("[AI Error] NPC %s has no npcType field. Skipping.", npcID)
-				return
-			}
+// performNPCAttack handles the logic for an NPC attacking a player.
+func performNPCAttack(npcID, targetID string, npcData map[string]string) {
+	targetX, _ := rdb.HGet(ctx, targetID, "x").Int()
+	targetY, _ := rdb.HGet(ctx, targetID, "y").Int()
+	UpdateEntityDirection(npcID, targetX, targetY)
 
-			npcType := NPCType(npcTypeStr)
-			props, ok := NPCDefs[npcType]
-			if !ok {
-				log.Printf("[AI Error] Unknown NPC type %s for NPC %s. Skipping.", npcType, npcID)
-				return
-			}
-			damage := props.Damage
-			newHealth, err := rdb.HIncrBy(ctx, targetID, "health", int64(-damage)).Result()
-			if err != nil {
-				log.Printf("Error damaging player %s: %v", targetID, err)
-				return
-			}
+	npcType := NPCType(npcData["npcType"])
+	props := NPCDefs[npcType]
+	damage := props.Damage
 
-			if props.XPOnDealt > 0 {
-				AddExperience(targetID, models.SkillDefense, props.XPOnDealt)
-			}
-
-			// Broadcast damage message
-			damageMsg := models.EntityDamagedMessage{
-				Type:     string(ServerEventEntityDamaged),
-				EntityID: targetID,
-				Damage:   damage,
-				X:        targetX,
-				Y:        targetY,
-			}
-			PublishUpdate(damageMsg)
-
-			if newHealth <= 0 {
-				HandlePlayerDeath(targetID)
-			} else {
-				interruptTeleport(targetID)
-				// Also send a stats update to the player who was damaged
-				h := int(newHealth)
-				mh := PlayerDefs.MaxHealth
-				statsUpdateMsg := models.PlayerStatsUpdateMessage{
-					Type:      string(ServerEventPlayerStatsUpdate),
-					Health:    &h,
-					MaxHealth: &mh,
-				}
-				statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
-				if sendDirectMessage != nil {
-					sendDirectMessage(targetID, statsUpdateJSON)
-				}
-			}
-		} else {
-			// Not adjacent, find a path to the player
-			path := FindPathToAdjacent(npcX, npcY, targetX, targetY, tickCache)
-			if len(path) > 1 {
-				nextStep := path[1]
-				dx := nextStep.X - npcX
-				dy := nextStep.Y - npcY
-				var moveDir MoveDirection
-
-				if abs(dx) > abs(dy) {
-					if dx > 0 {
-						moveDir = MoveDirectionRight
-					} else {
-						moveDir = MoveDirectionLeft
-					}
-				} else {
-					if dy > 0 {
-						moveDir = MoveDirectionDown
-					} else {
-						moveDir = MoveDirectionUp
-					}
-				}
-				ProcessMove(npcID, moveDir)
-			}
-			// If no path, do nothing this tick.
-		}
-
-		// Set NPC's action cooldown and end turn
-		cooldown, _ := strconv.ParseInt(npcData["moveCooldown"], 10, 64)
-		nextActionTime := time.Now().UnixMilli() + cooldown
-		rdb.HSet(ctx, npcID, "nextActionAt", nextActionTime)
+	newHealth, err := rdb.HIncrBy(ctx, targetID, "health", int64(-damage)).Result()
+	if err != nil {
+		log.Printf("Error damaging player %s: %v", targetID, err)
 		return
 	}
 
-	// 3. If no player is found, wander randomly
-	if rand.Intn(100) < 40 {
-		dir := getRandomDirection()
-		ProcessMove(npcID, dir)
+	if props.XPOnDealt > 0 {
+		AddExperience(targetID, models.SkillDefense, props.XPOnDealt)
+	}
+
+	damageMsg := models.EntityDamagedMessage{
+		Type:     string(ServerEventEntityDamaged),
+		EntityID: targetID,
+		Damage:   damage,
+		X:        targetX,
+		Y:        targetY,
+	}
+	PublishUpdate(damageMsg)
+
+	if newHealth <= 0 {
+		HandlePlayerDeath(targetID)
+	} else {
+		interruptTeleport(targetID)
+		h := int(newHealth)
+		mh := PlayerDefs.MaxHealth
+		statsUpdateMsg := models.PlayerStatsUpdateMessage{
+			Type:      string(ServerEventPlayerStatsUpdate),
+			Health:    &h,
+			MaxHealth: &mh,
+		}
+		statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
+		if sendDirectMessage != nil {
+			sendDirectMessage(targetID, statsUpdateJSON)
+		}
 	}
 }
 

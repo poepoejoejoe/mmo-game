@@ -58,7 +58,7 @@ func checkForEntitiesOnFire(x, y int) {
 				entityY, _ := strconv.Atoi(entityData["y"])
 
 				if entityX == x && entityY == y {
-					applyFireDamage(key, entityData)
+					applyFireDamage(key, entityData, x, y)
 				}
 			}
 
@@ -70,7 +70,7 @@ func checkForEntitiesOnFire(x, y int) {
 	}
 }
 
-func applyFireDamage(entityID string, entityData map[string]string) {
+func applyFireDamage(entityID string, entityData map[string]string, x, y int) {
 	fireProps := TileDefs[TileTypeFire]
 	newHealth, err := rdb.HIncrBy(ctx, entityID, "health", int64(-fireProps.Damage)).Result()
 	if err != nil {
@@ -82,6 +82,8 @@ func applyFireDamage(entityID string, entityData map[string]string) {
 		Type:     string(ServerEventEntityDamaged),
 		EntityID: entityID,
 		Damage:   fireProps.Damage,
+		X:        x,
+		Y:        y,
 	}
 	PublishUpdate(damageMsg)
 

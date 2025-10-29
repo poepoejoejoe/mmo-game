@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"math/rand"
+	"strconv"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -19,7 +20,7 @@ func InitializeNPCs() {
 }
 
 // SpawnNPC creates a new NPC of a given type at a specific location.
-func SpawnNPC(entityID string, x, y int, npcType NPCType) {
+func SpawnNPC(entityID string, x, y int, npcType NPCType, canWander bool, groupID string) {
 	// Lock the tile for the NPC before creating it
 	locked, err := LockTileForEntity(entityID, x, y)
 	if err != nil || !locked {
@@ -30,18 +31,24 @@ func SpawnNPC(entityID string, x, y int, npcType NPCType) {
 	props := NPCDefs[npcType]
 
 	pipe := rdb.Pipeline()
-	pipe.HSet(ctx, entityID,
+	hsetArgs := []interface{}{
 		"x", x,
 		"y", y,
 		"originX", x,
 		"originY", y,
 		"isLeashing", "false",
+		"canWander", strconv.FormatBool(canWander),
 		"entityType", string(EntityTypeNPC),
 		"npcType", string(npcType),
 		"health", props.Health,
 		"nextActionAt", time.Now().UnixMilli(),
 		"moveCooldown", 750,
-	)
+	}
+	if groupID != "" {
+		hsetArgs = append(hsetArgs, "groupID", groupID)
+	}
+	pipe.HSet(ctx, entityID, hsetArgs...)
+
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
 		Name:      entityID,
 		Longitude: float64(x),
@@ -74,7 +81,7 @@ func spawnSlime() {
 		spawnX, spawnY := FindOpenSpawnPoint(entityID)
 		tile, _, err := GetWorldTile(spawnX, spawnY)
 		if err == nil && !tile.IsSanctuary {
-			SpawnNPC(entityID, spawnX, spawnY, NPCTypeSlime)
+			SpawnNPC(entityID, spawnX, spawnY, NPCTypeSlime, true, "")
 			return
 		}
 		// Unlock the invalid tile if it was locked
@@ -109,12 +116,13 @@ func spawnSlimeBoss() {
 		if allValid {
 			// Spawn the boss
 			bossID := string(NPCBossSlimePrefix) + utils.GenerateUniqueID()
-			SpawnNPC(bossID, bossX, bossY, NPCTypeSlimeBoss)
+			groupID := "slimegroup:" + utils.GenerateUniqueID()
+			SpawnNPC(bossID, bossX, bossY, NPCTypeSlimeBoss, false, groupID)
 
 			// Spawn the 4 slimes
 			for _, pos := range slimePositions {
 				slimeID := string(NPCSlimePrefix) + utils.GenerateUniqueID()
-				SpawnNPC(slimeID, bossX+pos[0], bossY+pos[1], NPCTypeSlime)
+				SpawnNPC(slimeID, bossX+pos[0], bossY+pos[1], NPCTypeSlime, false, groupID)
 			}
 			return // Exit after successful spawn
 		}
@@ -158,7 +166,7 @@ func spawnRat() {
 		spawnX, spawnY := FindOpenSpawnPoint(entityID)
 		tile, _, err := GetWorldTile(spawnX, spawnY)
 		if err == nil && !tile.IsSanctuary {
-			SpawnNPC(entityID, spawnX, spawnY, NPCTypeRat)
+			SpawnNPC(entityID, spawnX, spawnY, NPCTypeRat, true, "")
 			return
 		}
 		// Unlock the invalid tile if it was locked
@@ -168,5 +176,5 @@ func spawnRat() {
 
 func spawnWizard() {
 	entityID := string(NPCWizardPrefix) + utils.GenerateUniqueID()
-	SpawnNPC(entityID, 4, 0, NPCTypeWizard)
+	SpawnNPC(entityID, 4, 0, NPCTypeWizard, false, "")
 }

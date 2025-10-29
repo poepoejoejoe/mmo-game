@@ -151,6 +151,7 @@ const (
 	NPCWizardPrefix           RedisKey = "npc:wizard:"
 	ItemPrefix                RedisKey = "item:"
 	RedisKeySecretPrefix      RedisKey = "secret:"
+	GroupTargetPrefix         RedisKey = "group:target:"
 )
 
 // --- END NEW CONSTANTS ---

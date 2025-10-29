@@ -31,6 +31,7 @@
 ### Current
 
 ### Alpha Backlog
+- player built items slowly decay
 - hosting / deploys / monitoring (?)
 - pvp
 - discord
