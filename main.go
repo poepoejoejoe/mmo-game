@@ -124,7 +124,6 @@ func main() {
 	game.Init(rdb, SendDirectMessage, isPlayerOnline)
 	game.GenerateWorld()
 	game.IndexWorldResources()
-	game.InitializeNPCs()
 	// --- For Testing: Spawn some NPCs ---
 	// game.SpawnNPC("npc:slime:"+utils.GenerateUniqueID(), 1, 2, game.NPCTypeSlime)
 	// game.SpawnNPC("npc:rat:"+utils.GenerateUniqueID(), -2, -3, game.NPCTypeRat)

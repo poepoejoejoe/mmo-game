@@ -5,11 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log"
-	mrand "math/rand"
 	"mmo-game/game/utils"
 	"mmo-game/models"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -351,39 +349,6 @@ func getPlayerPosition(playerID string) (int, int, error) {
 	return x, y, nil
 }
 
-// (FindOpenSpawnPoint remains the same)
-func FindOpenSpawnPoint(entityID string) (int, int) {
-
-	startX := mrand.Intn(WorldSize) - WorldSize/2
-	startY := mrand.Intn(WorldSize) - WorldSize/2
-
-	x, y, dx, dy := startX, startY, 0, -1
-	for i := 0; i < (WorldSize * 2); i++ {
-		for j := 0; j < (i/2 + 1); j++ {
-			if isTileAvailable(x, y) {
-				log.Printf("Found open spawn for %s at (%d, %d)", entityID, x, y)
-				return x, y
-			}
-			x, y = x+dx, y+dy
-		}
-		dx, dy = -dy, dx
-	}
-	log.Printf("Could not find open spawn point, defaulting to (%d,%d) for entity %s", startX, startY, entityID)
-	return startX, startY
-}
-
-func isTileUncollidable(x, y int) bool {
-	tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), strconv.Itoa(x)+","+strconv.Itoa(y)).Result()
-	if err != nil {
-		return false // Tile doesn't exist in world data.
-	}
-
-	var tile models.WorldTile
-	json.Unmarshal([]byte(tileJSON), &tile)
-	props := TileDefs[TileType(tile.Type)]
-	return !props.IsCollidable
-}
-
 func isTileAvailable(x, y int) bool {
 	tileKey := string(RedisKeyLockTile) + strconv.Itoa(x) + "," + strconv.Itoa(y)
 	lockExists, _ := rdb.Exists(ctx, tileKey).Result()
@@ -402,49 +367,10 @@ func isTileAvailable(x, y int) bool {
 	return !props.IsCollidable
 }
 
-func GetPlayerSpawnPoint(playerID string, playerData map[string]string) (int, int) {
-	binding, ok := playerData["binding"]
-	if ok && binding != "" {
-		parts := strings.Split(binding, ",")
-		if len(parts) == 2 {
-			x, errX := strconv.Atoi(parts[0])
-			y, errY := strconv.Atoi(parts[1])
-			if errX == nil && errY == nil {
-				radius := 5
-				for r := 1; r <= radius; r++ {
-					var availablePoints [][2]int
-					for i := -r; i <= r; i++ {
-						for j := -r; j <= r; j++ {
-							// Only check the perimeter of the square for this radius
-							if i != r && i != -r && j != r && j != -r {
-								continue
-							}
-							checkX, checkY := x+i, y+j
-							if isTileUncollidable(checkX, checkY) {
-								availablePoints = append(availablePoints, [2]int{checkX, checkY})
-							}
-						}
-					}
-
-					if len(availablePoints) > 0 {
-						// Pick a random point from the available ones
-						randomIndex := mrand.Intn(len(availablePoints))
-						point := availablePoints[randomIndex]
-						log.Printf("Found open spawn for player:%s near binding at (%d, %d)", playerID, point[0], point[1])
-						return point[0], point[1]
-					}
-				}
-			}
-		}
-	}
-	// Fallback to finding any open spawn point if binding is not set or no spot is found
-	log.Printf("Could not find open spawn near binding for player:%s, finding random spawn", playerID)
-	return FindOpenSpawnPoint(playerID)
-}
-
 func InitializePlayer(playerID string) *models.InitialStateMessage {
 	log.Printf("Initializing player %s.", playerID)
-	spawnX, spawnY := FindOpenSpawnPoint(playerID)
+	playerData, _ := rdb.HGetAll(ctx, playerID).Result()
+	spawnX, spawnY := SpawnPlayer(playerID, playerData)
 
 	// Lock the spawn tile for the player
 	locked, err := LockTileForEntity(playerID, spawnX, spawnY)
@@ -550,7 +476,10 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	}
 
 	// Announce the new player's arrival to everyone else
-	playerData, _ := rdb.HGetAll(ctx, playerID).Result()
+	playerData, redisGetAllPlayerError := rdb.HGetAll(ctx, playerID).Result()
+	if redisGetAllPlayerError != nil {
+		log.Printf("Error getting player data for announcement %s: %v", playerID, redisGetAllPlayerError)
+	}
 	updateMsg := map[string]interface{}{
 		"type":       string(ServerEventEntityJoined),
 		"entityId":   playerID,

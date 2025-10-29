@@ -68,7 +68,7 @@ func completeTeleport(playerID string, expectedCompleteTime time.Time) {
 	// Clear the teleporting state
 	rdb.HDel(ctx, playerID, "teleportingUntil")
 
-	destX, destY := GetPlayerSpawnPoint(playerID, playerData)
+	destX, destY := SpawnPlayer(playerID, playerData)
 
 	oldX, _ := strconv.Atoi(playerData["x"])
 	oldY, _ := strconv.Atoi(playerData["y"])

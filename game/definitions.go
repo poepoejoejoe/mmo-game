@@ -238,6 +238,13 @@ type PlayerProperties struct {
 	MaxHealth int
 }
 
+// Sanctuary defines the properties of a sanctuary.
+type Sanctuary struct {
+	X, Y, Radius int
+}
+
+var Sanctuaries []Sanctuary
+
 // --- END NEW ---
 
 // TileDefs is our master map of all tile definitions.
@@ -274,6 +281,10 @@ func init() {
 	// --- Player Definitions ---
 	PlayerDefs = PlayerProperties{
 		MaxHealth: 10,
+	}
+	Sanctuaries = []Sanctuary{
+		{X: 0, Y: 1, Radius: 8},   // Starting sanctuary at origin
+		{X: 20, Y: 20, Radius: 5}, // Second sanctuary for testing
 	}
 	// --- END NEW ---
 

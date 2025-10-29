@@ -76,23 +76,17 @@ func GenerateWorld() {
 	p := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, perlinSeed)
 	pipe := rdb.Pipeline()
 
-	// Define sanctuary locations and sizes
-	sanctuaries := []struct{ x, y, radius int }{
-		{0, 1, 8},   // Starting sanctuary at origin
-		{20, 20, 5}, // Second sanctuary for testing
-	}
-
 	isSanctuaryTile := func(x, y int) (bool, bool) {
-		for _, s := range sanctuaries {
-			if x == s.x && y == s.y {
+		for _, s := range Sanctuaries {
+			if x == s.X && y == s.Y {
 				return true, true // This is the center stone
 			}
 
 			// Use perlin noise to make the radius variable and the shape irregular
 			noise := p.Noise2D(float64(x)/15.0, float64(y)/15.0)
-			variableRadius := float64(s.radius) * (0.7 + (noise+1)/2*0.6) // Vary radius between 70% and 130%
+			variableRadius := float64(s.Radius) * (0.7 + (noise+1)/2*0.6) // Vary radius between 70% and 130%
 
-			distSq := float64((x-s.x)*(x-s.x) + (y-s.y)*(y-s.y))
+			distSq := float64((x-s.X)*(x-s.X) + (y-s.Y)*(y-s.Y))
 			if distSq < variableRadius*variableRadius {
 				return true, false // It's a sanctuary tile, but not the center stone
 			}
