@@ -12,11 +12,12 @@ import (
 )
 
 // findRandomOpenTile attempts to find a random, un-collidable, and unlocked tile.
-func findRandomOpenTile() (int, int) {
+func findRandomOpenTile(occupied map[string]bool) (int, int) {
 	for i := 0; i < 100; i++ { // Try 100 times to find a valid spot
 		x := rand.Intn(WorldSize*2) - WorldSize
 		y := rand.Intn(WorldSize*2) - WorldSize
-		if isTileAvailable(x, y) {
+		coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
+		if isTileAvailable(x, y) && !occupied[coordKey] {
 			tile, _, err := GetWorldTile(x, y)
 			if err == nil && !tile.IsSanctuary {
 				return x, y
@@ -73,24 +74,17 @@ func SpawnPlayer(playerID string, playerData map[string]string) (int, int) {
 	return findNearbyOpenTile(randomSanctuary.X, randomSanctuary.Y, randomSanctuary.Radius)
 }
 
-func spawnNPC(entityID string, x, y int, npcType NPCType, canWander bool, groupID string) {
-	// Lock the tile for the NPC before creating it
-	locked, err := LockTileForEntity(entityID, x, y)
-	if err != nil || !locked {
-		log.Printf("Failed to lock spawn tile for NPC %s at %d,%d. Aborting spawn.", entityID, x, y)
-		return
-	}
-
+func spawnPreLockedNPC(entityID string, x, y int, npcType NPCType, groupID string, originX, originY int, wanderDistance int) {
 	props := NPCDefs[npcType]
 
 	pipe := rdb.Pipeline()
 	hsetArgs := []interface{}{
 		"x", x,
 		"y", y,
-		"originX", x,
-		"originY", y,
+		"originX", originX,
+		"originY", originY,
 		"isLeashing", "false",
-		"canWander", strconv.FormatBool(canWander),
+		"wanderDistance", wanderDistance,
 		"entityType", string(EntityTypeNPC),
 		"npcType", string(npcType),
 		"health", props.MaxHealth,
@@ -100,6 +94,7 @@ func spawnNPC(entityID string, x, y int, npcType NPCType, canWander bool, groupI
 	if groupID != "" {
 		hsetArgs = append(hsetArgs, "groupID", groupID)
 	}
+	log.Printf("[Debug] HSET for %s: %v", entityID, hsetArgs)
 	pipe.HSet(ctx, entityID, hsetArgs...)
 
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
@@ -108,7 +103,7 @@ func spawnNPC(entityID string, x, y int, npcType NPCType, canWander bool, groupI
 		Latitude:  float64(y),
 	})
 
-	_, err = pipe.Exec(ctx)
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Failed to spawn %s %s: %v", npcType, entityID, err)
 		// If spawning fails, unlock the tile
@@ -127,46 +122,130 @@ func spawnNPC(entityID string, x, y int, npcType NPCType, canWander bool, groupI
 	PublishUpdate(joinMsg)
 }
 
+func spawnNPC(entityID string, x, y int, npcType NPCType, groupID string, originX, originY int, wanderDistance int) {
+	// Lock the tile for the NPC before creating it
+	locked, err := LockTileForEntity(entityID, x, y)
+	if err != nil || !locked {
+		log.Printf("Failed to lock spawn tile for NPC %s at %d,%d. Aborting spawn.", entityID, x, y)
+		return
+	}
+	spawnPreLockedNPC(entityID, x, y, npcType, groupID, originX, originY, wanderDistance)
+}
+
 // spawnSlime creates a new slime entity in the world.
 func spawnSlime() {
 	entityID := string(NPCSlimePrefix) + utils.GenerateUniqueID()
-	spawnX, spawnY := findRandomOpenTile()
-	spawnNPC(entityID, spawnX, spawnY, NPCTypeSlime, true, "")
+	spawnX, spawnY := findRandomOpenTile(nil)
+	spawnNPC(entityID, spawnX, spawnY, NPCTypeSlime, "", spawnX, spawnY, NPCDefs[NPCTypeSlime].WanderDistance)
 }
 
-// spawnSlimeBoss creates a new slime boss entity in the world.
-func spawnSlimeBoss() {
-	for i := 0; i < 100; i++ { // Try 100 times to find a valid spot
-		bossX, bossY := findRandomOpenTile()
+func findGroupSpawn(numMembers int, formation [][2]int) ([][2]int, bool) {
+	for i := 0; i < 100; i++ {
+		centerX, centerY := findRandomOpenTile(nil)
 
-		// Define the relative positions for the 4 slimes in a dice-5 pattern
-		slimePositions := [][2]int{
-			{-1, -1}, {1, -1},
-			{-1, 1}, {1, 1},
+		// Check distance from all sanctuaries
+		tooClose := false
+		for _, s := range Sanctuaries {
+			dx := centerX - s.X
+			dy := centerY - s.Y
+			// Using Chebyshev distance (max of absolute differences)
+			if dx < 0 {
+				dx = -dx
+			}
+			if dy < 0 {
+				dy = -dy
+			}
+			var dist int
+			if dx > dy {
+				dist = dx
+			} else {
+				dist = dy
+			}
+
+			if dist < 8 {
+				tooClose = true
+				break
+			}
+		}
+		if tooClose {
+			continue // Try a new spot
 		}
 
-		// Check if the boss's tile and all slime tiles are valid
+		// Check 3x3 grid around the center
 		allValid := true
-		for _, pos := range slimePositions {
-			x, y := bossX+pos[0], bossY+pos[1]
-			if !isTileAvailable(x, y) {
-				allValid = false
+		for dx := -1; dx <= 1; dx++ {
+			for dy := -1; dy <= 1; dy++ {
+				checkX, checkY := centerX+dx, centerY+dy
+				tile, _, err := GetWorldTile(checkX, checkY)
+				if err != nil || !isTileAvailable(checkX, checkY) || (tile != nil && tile.IsSanctuary) {
+					allValid = false
+					break
+				}
+			}
+			if !allValid {
 				break
 			}
 		}
 
 		if allValid {
-			// Spawn the boss
-			bossID := string(NPCBossSlimePrefix) + utils.GenerateUniqueID()
-			groupID := "slimegroup:" + utils.GenerateUniqueID()
-			spawnNPC(bossID, bossX, bossY, NPCTypeSlimeBoss, false, groupID)
-
-			// Spawn the 4 slimes
-			for _, pos := range slimePositions {
-				slimeID := string(NPCSlimePrefix) + utils.GenerateUniqueID()
-				spawnNPC(slimeID, bossX+pos[0], bossY+pos[1], NPCTypeSlime, false, groupID)
+			// All checks passed, calculate final positions
+			positions := [][2]int{{centerX, centerY}}
+			for _, offset := range formation {
+				positions = append(positions, [2]int{centerX + offset[0], centerY + offset[1]})
 			}
-			return // Exit after successful spawn
+			return positions, true
+		}
+	}
+	return nil, false
+}
+
+// spawnSlimeBoss creates a new slime boss entity in the world.
+func spawnSlimeBoss() {
+	formation := [][2]int{
+		{-1, -1}, {1, -1}, // Top-left, Top-right
+		{-1, 1}, {1, 1}, // Bottom-left, Bottom-right
+	}
+
+	positions, found := findGroupSpawn(5, formation)
+	if !found {
+		log.Println("Could not find a valid spawn location for slime boss group after 100 attempts.")
+		return
+	}
+
+	bossPosition := positions[0]
+	bossX, bossY := bossPosition[0], bossPosition[1]
+
+	bossID := string(NPCBossSlimePrefix) + utils.GenerateUniqueID()
+	slimeIDs := make([]string, 4)
+	for i := 0; i < 4; i++ {
+		slimeIDs[i] = string(NPCSlimePrefix) + utils.GenerateUniqueID()
+	}
+
+	entityIDs := append([]string{bossID}, slimeIDs...)
+	var lockedTiles [][2]int
+	allLocked := true
+
+	for i, pos := range positions {
+		entityID := entityIDs[i]
+		locked, err := LockTileForEntity(entityID, pos[0], pos[1])
+		if err != nil || !locked {
+			allLocked = false
+			break
+		}
+		lockedTiles = append(lockedTiles, pos)
+	}
+
+	if allLocked {
+		groupID := "slimegroup:" + utils.GenerateUniqueID()
+		spawnPreLockedNPC(bossID, bossX, bossY, NPCTypeSlimeBoss, groupID, bossX, bossY, NPCDefs[NPCTypeSlimeBoss].WanderDistance)
+
+		for i, slimeID := range slimeIDs {
+			minionPos := positions[i+1]
+			spawnPreLockedNPC(slimeID, minionPos[0], minionPos[1], NPCTypeSlime, groupID, minionPos[0], minionPos[1], 1)
+		}
+	} else {
+		for i, pos := range lockedTiles {
+			UnlockTileForEntity(entityIDs[i], pos[0], pos[1])
 		}
 	}
 }
@@ -174,11 +253,11 @@ func spawnSlimeBoss() {
 // spawnRat creates a new rat entity in the world.
 func spawnRat() {
 	entityID := string(NPCRatPrefix) + utils.GenerateUniqueID()
-	spawnX, spawnY := findRandomOpenTile()
-	spawnNPC(entityID, spawnX, spawnY, NPCTypeRat, true, "")
+	spawnX, spawnY := findRandomOpenTile(nil)
+	spawnNPC(entityID, spawnX, spawnY, NPCTypeRat, "", spawnX, spawnY, NPCDefs[NPCTypeRat].WanderDistance)
 }
 
 func spawnWizard() {
 	entityID := string(NPCWizardPrefix) + utils.GenerateUniqueID()
-	spawnNPC(entityID, 4, 0, NPCTypeWizard, false, "")
+	spawnNPC(entityID, 4, 0, NPCTypeWizard, "", 4, 0, NPCDefs[NPCTypeWizard].WanderDistance)
 }

@@ -409,6 +409,7 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 	if npcType == NPCTypeWizard {
 		return // Wizards are static and friendly
 	}
+	props := NPCDefs[npcType]
 
 	npcX, npcY := GetEntityPosition(npcData)
 	originX, _ := strconv.Atoi(npcData["originX"])
@@ -420,7 +421,6 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 	distToOriginSq := (npcX-originX)*(npcX-originX) + (npcY-originY)*(npcY-originY)
 	if !isLeashing && distToOriginSq > LeashDistance*LeashDistance {
 		isLeashing = true
-		props := NPCDefs[npcType]
 		pipe := rdb.Pipeline()
 		pipe.HSet(ctx, npcID, "isLeashing", "true")
 		pipe.HSet(ctx, npcID, "health", props.MaxHealth)
@@ -473,15 +473,21 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 
 		// Priority 2b: Find a new target if no group target
 		if !targetFound {
-			foundPlayerID, pX, pY, found := findClosestPlayer(npcID, npcData, tickCache)
-			if found {
-				targetID = foundPlayerID
-				finalTargetX, finalTargetY = pX, pY
-				targetFound = true
-				hasTarget = true
-				// If in a group, "shout" the new target to the group
-				if hasGroup {
-					rdb.Set(ctx, string(GroupTargetPrefix)+groupID, targetID, 10*time.Second) // Target expires after 10s
+			canAcquireTarget := props.IsAggro
+			if hasGroup && npcType != NPCTypeSlimeBoss {
+				canAcquireTarget = false
+			}
+			if canAcquireTarget {
+				foundPlayerID, pX, pY, found := findClosestPlayer(npcID, npcData, props.AggroRange, tickCache)
+				if found {
+					targetID = foundPlayerID
+					finalTargetX, finalTargetY = pX, pY
+					targetFound = true
+					hasTarget = true
+					// If in a group, "shout" the new target to the group
+					if hasGroup {
+						rdb.Set(ctx, string(GroupTargetPrefix)+groupID, targetID, 10*time.Second) // Target expires after 10s
+					}
 				}
 			}
 		}
@@ -495,15 +501,32 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 			// if not adjacent, hasTarget is already true, so it will move
 		} else {
 			// State 3: Idle Behavior (no target, not leashing)
-			canWander, _ := strconv.ParseBool(npcData["canWander"])
-			if !canWander && (npcX != originX || npcY != originY) {
-				// Return to origin
+			wanderDistanceStr, _ := npcData["wanderDistance"]
+			wanderDistance, _ := strconv.Atoi(wanderDistanceStr)
+			distToOriginSq := (npcX-originX)*(npcX-originX) + (npcY-originY)*(npcY-originY)
+
+			if wanderDistance > 0 {
+				if distToOriginSq >= wanderDistance*wanderDistance {
+					// At or beyond wander distance, must return
+					hasTarget = true
+					finalTargetX, finalTargetY = originX, originY
+				} else {
+					// Within wander distance, small chance to move
+					if distToOriginSq > 0 && rand.Intn(100) < 20 { // Return to origin
+						hasTarget = true
+						finalTargetX, finalTargetY = originX, originY
+					} else if rand.Intn(100) < 10 { // Wander further
+						dir := getRandomDirection()
+						ProcessMove(npcID, dir)
+					} else if rand.Intn(100) < 30 { // Just rotate
+						dir := getRandomDirection()
+						UpdateEntityDirection(npcID, npcX+getDirectionOffset(dir)[0], npcY+getDirectionOffset(dir)[1])
+					}
+				}
+			} else if npcX != originX || npcY != originY {
+				// If not allowed to wander, always return to origin
 				hasTarget = true
 				finalTargetX, finalTargetY = originX, originY
-			} else if canWander && rand.Intn(100) < 40 {
-				// Wander randomly
-				dir := getRandomDirection()
-				ProcessMove(npcID, dir)
 			}
 		}
 	}
@@ -559,9 +582,8 @@ func moveAlongPath(npcID string, path []*Node) {
 }
 
 // findClosestPlayer finds the nearest attackable player within aggro range.
-func findClosestPlayer(npcID string, npcData map[string]string, tickCache *TickCache) (string, int, int, bool) {
+func findClosestPlayer(npcID string, npcData map[string]string, aggroRange int, tickCache *TickCache) (string, int, int, bool) {
 	npcX, npcY := GetEntityPosition(npcData)
-	aggroRange := 5.0
 	var targetID string
 	var targetX, targetY int
 	var targetFound bool
@@ -584,7 +606,7 @@ func findClosestPlayer(npcID string, npcData map[string]string, tickCache *TickC
 		dy := float64(npcY - pY)
 		distSq := dx*dx + dy*dy
 
-		if distSq <= aggroRange*aggroRange {
+		if distSq <= float64(aggroRange*aggroRange) {
 			if !targetFound || distSq < closestDistSq {
 				targetFound = true
 				closestDistSq = distSq
@@ -618,6 +640,20 @@ func getRandomDirection() MoveDirection {
 		MoveDirectionRight,
 	}
 	return directions[rand.Intn(len(directions))]
+}
+
+func getDirectionOffset(dir MoveDirection) [2]int {
+	switch dir {
+	case MoveDirectionUp:
+		return [2]int{0, -1}
+	case MoveDirectionDown:
+		return [2]int{0, 1}
+	case MoveDirectionLeft:
+		return [2]int{-1, 0}
+	case MoveDirectionRight:
+		return [2]int{1, 0}
+	}
+	return [2]int{0, 0}
 }
 
 // abs is a simple helper function to get the absolute value of an integer.

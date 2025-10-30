@@ -199,8 +199,16 @@ export function getEntityProperties(type: string, entity: EntityState, myPlayerI
         return entityDefs['player'];
     }
     // For NPCs, we use their name (e.g., "slime", "rat") as the key.
-    if (type === 'npc' && entity.name && entityDefs[entity.name]) {
-        return entityDefs[entity.name];
+    if (type === 'npc' && entity.name) {
+        if (entity.name === 'slime_boss') {
+            return {
+                ...entityDefs['slime'],
+                color: 'rgb(15, 104, 28)',
+            }
+        }
+        if (entityDefs[entity.name]) {
+            return entityDefs[entity.name];
+        }
     }
     if (entityDefs[type]) {
         return entityDefs[type];

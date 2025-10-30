@@ -94,6 +94,7 @@ export interface EntityProperties {
     isAttackable?: boolean;
     asset?: string | string[];
     draw?: (ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number, assetImages: { [key: string]: HTMLImageElement }, props: EntityProperties) => void;
+    color?: string;
 }
 
 export interface NpcQuestStateUpdateMessage extends ServerMessage {

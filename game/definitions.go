@@ -209,14 +209,14 @@ const (
 
 // NPCProperties defines the behavioral attributes of an NPC.
 type NPCProperties struct {
-	MaxHealth  int
-	Attack     int
-	AttackXP   float64
-	DefenseXP  float64
-	LootTable  LootTable
-	IsAggro    bool   // Does this NPC attack on sight?
-	AggroRange int    // How far does it see players?
-	Movement   string // "still", "wander"
+	MaxHealth      int
+	Attack         int
+	AttackXP       float64
+	DefenseXP      float64
+	LootTable      LootTable
+	IsAggro        bool // Does this NPC attack on sight?
+	AggroRange     int  // How far does it see players?
+	WanderDistance int
 }
 
 type LootEntry struct {
@@ -290,39 +290,39 @@ func init() {
 
 	// --- NPC Definitions ---
 	NPCDefs[NPCTypeSlime] = NPCProperties{
-		MaxHealth:  15,
-		Attack:     2,
-		AttackXP:   15,
-		DefenseXP:  10,
-		LootTable:  NPCLootTables[NPCTypeSlime],
-		IsAggro:    true,
-		AggroRange: 4,
-		Movement:   "wander",
+		MaxHealth:      15,
+		Attack:         2,
+		AttackXP:       15,
+		DefenseXP:      10,
+		LootTable:      NPCLootTables[NPCTypeSlime],
+		IsAggro:        true,
+		AggroRange:     4,
+		WanderDistance: 3,
 	}
 	NPCDefs[NPCTypeSlimeBoss] = NPCProperties{
-		MaxHealth:  100,
-		Attack:     5,
-		AttackXP:   100,
-		DefenseXP:  50,
-		LootTable:  NPCLootTables[NPCTypeSlimeBoss],
-		IsAggro:    true,
-		AggroRange: 8,
-		Movement:   "wander",
+		MaxHealth:      100,
+		Attack:         5,
+		AttackXP:       100,
+		DefenseXP:      50,
+		LootTable:      NPCLootTables[NPCTypeSlimeBoss],
+		IsAggro:        true,
+		AggroRange:     8,
+		WanderDistance: 1,
 	}
 	NPCDefs[NPCTypeRat] = NPCProperties{
-		MaxHealth:  10,
-		Attack:     1,
-		AttackXP:   10,
-		DefenseXP:  5,
-		LootTable:  NPCLootTables[NPCTypeRat],
-		IsAggro:    true,
-		AggroRange: 5,
-		Movement:   "wander",
+		MaxHealth:      10,
+		Attack:         1,
+		AttackXP:       10,
+		DefenseXP:      5,
+		LootTable:      NPCLootTables[NPCTypeRat],
+		IsAggro:        true,
+		AggroRange:     5,
+		WanderDistance: 5,
 	}
 	NPCDefs[NPCTypeWizard] = NPCProperties{
-		MaxHealth: 100,
-		Attack:    0,
-		Movement:  "still",
+		MaxHealth:      100,
+		Attack:         0,
+		WanderDistance: 0,
 	}
 	// --- END NEW ---
 

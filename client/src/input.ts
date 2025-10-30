@@ -51,7 +51,6 @@ function getTileCoordinatesFromMouseEvent(e: MouseEvent): { x: number, y: number
 function sendMoveCommand(dx: number, dy: number, isContinuous: boolean = false) {
     if (dx === 0 && dy === 0) return;
     if (!canPerformAction || !state.getMyEntity()) return;
-    console.log(`${new Date().toISOString()} sendMoveCommand: sending move command (${dx}, ${dy}, ${isContinuous}). canPerformAction: ${canPerformAction}`);
     
     const me = state.getMyEntity()!;
     const targetTile = state.getTileData(me.x + dx, me.y + dy);
@@ -87,8 +86,6 @@ function sendMoveCommand(dx: number, dy: number, isContinuous: boolean = false) 
 
 
 function updateMovement() {
-    console.log(`${new Date().toISOString()} updateMovement: pressedKeys: [${pressedKeys.join(', ')}]`);
-
     const lastKey = pressedKeys[pressedKeys.length - 1];
     if (!lastKey) return;
 
@@ -118,7 +115,6 @@ function updateMovement() {
     
     if (dx === 0 && dy === 0) return;
 
-    console.log(`${new Date().toISOString()} updateMovement: sending move command (${dx}, ${dy}).`);
     sendMoveCommand(dx, dy);
 }
 
@@ -164,7 +160,6 @@ function handleKeyDown(e: KeyboardEvent) {
         clearPathQueue();
         if (!pressedKeys.includes(e.key)) {
             pressedKeys.push(e.key);
-            console.log(`${new Date().toISOString()} handleKeyDown: updating movement.`);
             updateMovement();
         }
     }
@@ -178,7 +173,6 @@ function handleKeyUp(e: KeyboardEvent) {
     const index = pressedKeys.indexOf(e.key);
     if (index > -1) {
         pressedKeys.splice(index, 1);
-        console.log(`${new Date().toISOString()} handleKeyUp: pressedKeys: [${pressedKeys.join(', ')}]`);
     }
 }
 

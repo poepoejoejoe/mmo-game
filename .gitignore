@@ -3,6 +3,7 @@
 # Go / Backend specific
 # Ignore the compiled executable file for Windows
 mmo-game.exe
+mmo-game.exe~
 # Ignore executables for other OS's just in case
 mmo-game
 

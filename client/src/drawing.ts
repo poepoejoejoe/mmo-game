@@ -1211,7 +1211,7 @@ export function drawItem(ctx: CanvasRenderingContext2D, x: number, y: number, ti
     ctx.fillText(itemDef.character, x + tileSize / 2, y + tileSize / 2);
 }
 
-function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, jiggle: number, tailWag: number, colors: { [key: string]: string }, eyeDirection: 'center' | 'left' | 'right') {
+function drawRatBody(ctx: CanvasRenderingContext2D, pixelSize: number, _jiggle: number, tailWag: number, colors: { [key: string]: string }, eyeDirection: 'center' | 'left' | 'right') {
     ctx.lineWidth = pixelSize;
 
     // --- Tail (drawn first) ---

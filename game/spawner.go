@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	targetSlimeCount     = 25
-	targetRatCount       = 15
+	targetSlimeCount     = 0
+	targetRatCount       = 0
 	targetSlimeBossCount = 4
 	spawnerCheckInterval = 30 * time.Second
 )
