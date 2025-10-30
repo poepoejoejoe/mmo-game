@@ -7,3 +7,12 @@ To make icons, we need to create a asset-generation/prompts/<icon-name>-icon.jso
 When we make a new set of icons, we should run X number of commands per each newly created icon. So like python asset_generation/generate_image.py asset_generation/prompts/prompt-1.json; python asset_generation/generate_image.py asset_generation/prompts/prompt-2.json; etc. and just put that in a big command to run. 
 Whenever you are done with .go file changes and you are ready to respond to the user to try it out, run the go build command and fix the compile errors
 Whenever you are done editing .ts files, check the project for ts linter errors
+
+1. Critical Loops Must Be Non-Blocking
+High-frequency, critical loops (like the main AI tick) are the heartbeat of the server and must never be blocked. Any intentional delays, staggering, or long-running operations should be offloaded to background goroutines.
+Bad: Placing a time.Sleep inside a synchronous for loop that iterates over all entities. This will halt the entire tick and create artificial lag that scales with the number of entities.
+Good: Launching a separate goroutine for each entity's logic and placing the time.Sleep inside that goroutine. This allows the main loop to complete instantly while still achieving the desired staggering effect in the background.
+2. Avoid Full Scans; Query with Precision
+Never iterate over a large dataset (like the entire world map) just to find a small number of items. This is inefficient and scales poorly. Instead, design your data structures to allow for precise, targeted queries.
+Bad: The decay and fire systems were fetching the entire world hash from Redis every tick and looping through thousands of tiles to find the few that were active.
+Good: Maintain secondary indexes, such as a Redis SET for active_decay or active_fire. When an object is created, add its coordinates to the set. Now, the background systems can fetch a small, precise list of items to process instead of scanning the entire world.

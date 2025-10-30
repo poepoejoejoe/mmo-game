@@ -161,6 +161,7 @@ const (
 	RedisKeyZone0Positions    RedisKey = "positions:zone:0"
 	RedisKeyResourcePositions RedisKey = "positions:resource"
 	RedisKeyWorldZone0        RedisKey = "world:zone:0"
+	RedisKeyActiveDecay       RedisKey = "active_decay"
 	NPCSlimePrefix            RedisKey = "npc:slime:" // <-- NEW
 	NPCBossSlimePrefix        RedisKey = "npc:boss:slime:"
 	NPCRatPrefix              RedisKey = "npc:rat:" // <-- NEW

@@ -6,6 +6,8 @@ import (
 	"mmo-game/models"
 	"strconv"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
@@ -170,6 +172,7 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 		if TileType(originalTileType) == TileTypeWoodenWall {
 			log.Printf("Wall at %s destroyed, removing lock.", targetCoordKey)
 			rdb.Del(ctx, string(RedisKeyLockTile)+targetCoordKey)
+			rdb.SRem(ctx, string(RedisKeyActiveDecay), targetCoordKey)
 		}
 
 		newTileJSON, _ := json.Marshal(groundTile)
@@ -269,6 +272,7 @@ func handlePlaceWoodenWall(playerID string, currentX, currentY, targetX, targetY
 	}
 
 	pipe.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
+	pipe.SAdd(ctx, string(RedisKeyActiveDecay), targetCoordKey)
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		rdb.Del(ctx, targetTileLockKey)
@@ -337,6 +341,14 @@ func handlePlaceFire(playerID string, currentX, currentY, targetX, targetY int) 
 	}
 	PublishUpdate(worldUpdate)
 
+	// Add the fire to the resource positions set so the damage system can find it.
+	member := string(TileTypeFire) + ":" + targetCoordKey
+	rdb.GeoAdd(ctx, string(RedisKeyResourcePositions), &redis.GeoLocation{
+		Name:      member,
+		Longitude: float64(targetX),
+		Latitude:  float64(targetY),
+	})
+
 	inventoryUpdateMsg := getInventoryUpdateMessage(inventoryKey)
 
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
@@ -368,6 +380,10 @@ func expireFire(x, y int) {
 		tile.Type = string(TileTypeGround)
 		newTileJSON, _ := json.Marshal(tile)
 		rdb.HSet(ctx, string(RedisKeyWorldZone0), coordKey, string(newTileJSON))
+
+		// Remove the fire from the resource positions set
+		member := string(TileTypeFire) + ":" + coordKey
+		rdb.ZRem(ctx, string(RedisKeyResourcePositions), member)
 
 		worldUpdate := models.WorldUpdateMessage{
 			Type: string(ServerEventWorldUpdate),

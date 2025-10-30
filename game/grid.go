@@ -20,15 +20,16 @@ type TickCache struct {
 	CollisionGrid map[string]bool
 }
 
-// BuildCollisionGrid scans the world state from Redis and populates a local,
+// InitializeCollisionGrid scans the world state from Redis and populates a local,
 // in-memory grid of all collidable tiles for fast pathfinding checks.
-func BuildCollisionGrid() map[string]bool {
-	collisionGrid := make(map[string]bool)
+// This should be called once at server startup.
+func InitializeCollisionGrid() {
+	CollisionGrid = make(map[string]bool)
 
 	worldData, err := rdb.HGetAll(ctx, string(RedisKeyWorldZone0)).Result()
 	if err != nil {
-		log.Printf("Failed to get world data for collision grid: %v", err)
-		return collisionGrid // Return empty grid on error
+		log.Fatalf("FATAL: Failed to get world data for collision grid: %v", err)
+		return
 	}
 
 	for coord, tileJSON := range worldData {
@@ -40,9 +41,18 @@ func BuildCollisionGrid() map[string]bool {
 
 		if props, ok := TileDefs[TileType(tile.Type)]; ok {
 			if props.IsCollidable {
-				collisionGrid[coord] = true
+				CollisionGrid[coord] = true
 			}
 		}
 	}
-	return collisionGrid
+	log.Printf("Successfully built and cached collision grid with %d collidable tiles.", len(CollisionGrid))
+}
+
+// BuildCollisionGrid now simply returns the pre-built, cached grid.
+func BuildCollisionGrid() map[string]bool {
+	if CollisionGrid == nil {
+		log.Println("Warning: Collision grid accessed before initialization.")
+		return make(map[string]bool)
+	}
+	return CollisionGrid
 }

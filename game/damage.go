@@ -8,9 +8,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
-func handleFireDamage() {
+func StartDamageSystem() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -20,15 +22,24 @@ func handleFireDamage() {
 }
 
 func checkFires() {
-	worldData, err := rdb.HGetAll(ctx, string(RedisKeyWorldZone0)).Result()
+	// Use GEORADIUS to find only fire tiles, instead of scanning the whole world.
+	// We search from the center of the map with a radius large enough to cover everything.
+	const searchRadiusKm = 20000
+	query := &redis.GeoRadiusQuery{
+		Radius: searchRadiusKm,
+		Unit:   "km",
+	}
+	locations, err := rdb.GeoRadius(ctx, string(RedisKeyResourcePositions), 0, 0, query).Result()
 	if err != nil {
-		log.Printf("Failed to get world data for fire check: %v", err)
+		log.Printf("Failed to get resource locations for fire check: %v", err)
 		return
 	}
 
-	for coordKey, tileJSON := range worldData {
-		var tile models.WorldTile
-		if err := json.Unmarshal([]byte(tileJSON), &tile); err == nil && TileType(tile.Type) == TileTypeFire {
+	for _, loc := range locations {
+		// The member name is "tileType:x,y". We only care about fires.
+		if strings.HasPrefix(loc.Name, string(TileTypeFire)+":") {
+			log.Println("Found fire tile in resource set:", loc.Name)
+			coordKey := strings.Split(loc.Name, ":")[1]
 			x, y := utils.ParseCoordKey(coordKey)
 			checkForEntitiesOnFire(x, y)
 		}
@@ -36,42 +47,30 @@ func checkFires() {
 }
 
 func checkForEntitiesOnFire(x, y int) {
-	// Use a SCAN to find entities at the fire's location. This is more efficient
-	// than fetching all entities. We'll check for both players and NPCs.
-	entityTypes := []string{"player:*", "npc:*"}
+	// Use a precise GEORADIUS query to find entities at the exact location of the fire.
+	// This is much more efficient than scanning all entities.
+	query := &redis.GeoRadiusQuery{
+		Radius: 50, // A large radius to cover the entire "degree" tile
+		Unit:   "km",
+	}
 
-	for _, pattern := range entityTypes {
-		var cursor uint64
-		for {
-			keys, nextCursor, err := rdb.Scan(ctx, cursor, pattern, 100).Result()
-			if err != nil {
-				log.Printf("Error scanning for entities: %v", err)
-				break
-			}
+	locations, err := rdb.GeoRadius(ctx, string(RedisKeyZone0Positions), float64(x), float64(y), query).Result()
+	if err != nil {
+		log.Printf("Error getting entities at fire location (%d, %d): %v", x, y, err)
+		return
+	}
 
-			for _, key := range keys {
-				entityData, err := rdb.HGetAll(ctx, key).Result()
-				if err != nil {
-					continue
-				}
-
-				entityX, _ := strconv.Atoi(entityData["x"])
-				entityY, _ := strconv.Atoi(entityData["y"])
-
-				if entityX == x && entityY == y {
-					applyFireDamage(key, entityData, x, y)
-				}
-			}
-
-			if nextCursor == 0 {
-				break
-			}
-			cursor = nextCursor
+	for _, loc := range locations {
+		// loc.Name is the entity ID
+		entityData, err := rdb.HGetAll(ctx, loc.Name).Result()
+		if err == nil {
+			applyFireDamage(loc.Name, entityData, x, y)
 		}
 	}
 }
 
 func applyFireDamage(entityID string, entityData map[string]string, x, y int) {
+	log.Printf("Applying fire damage to entity %s", entityID)
 	fireProps := TileDefs[TileTypeFire]
 	newHealth, err := rdb.HIncrBy(ctx, entityID, "health", int64(-fireProps.Damage)).Result()
 	if err != nil {

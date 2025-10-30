@@ -125,6 +125,7 @@ func main() {
 	game.GenerateWorld()
 	game.IndexWorldResources()
 	game.IndexPotentialSpawnPoints()
+	game.InitializeCollisionGrid()
 	// --- For Testing: Spawn some NPCs ---
 	// game.SpawnNPC("npc:slime:"+utils.GenerateUniqueID(), 1, 2, game.NPCTypeSlime)
 	// game.SpawnNPC("npc:rat:"+utils.GenerateUniqueID(), -2, -3, game.NPCTypeRat)

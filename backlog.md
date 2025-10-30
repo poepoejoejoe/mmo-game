@@ -27,20 +27,21 @@
 - make the third quest not about chopping trees but about being stronger to kill slimes better.
 - have the 4th quest explain better how resonance and echo form work. when you log out your echo will take over. any experience you gather throughout noria will resonate with you, or as you resonate with the land and gain experience this will charge your echo
 - path finding movement for player
-- detached camera and smoother movement?
+- detached camera and smoother movement
+- player constructed things like wooden wall slowly decay
+- resources replenish
+- remove the outline from the slime and rat. keep their eyes, but with a little thinner line
 
 ### Current
 
 ### Alpha Backlog
-- player constructed things like wooden wall slowly decay
 - hosting / deploys / monitoring (?)
 - pvp
 - discord
 - ad for designers
-- a few simple talents?
+- a few simple talents
 
 ### minor backlog
-- remove the outline from the slime and rat. keep their eyes, but with a little thinner line
 - escape closes all open windows?
 - could use a better shield icon / defense icon
 

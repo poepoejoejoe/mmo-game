@@ -39,6 +39,7 @@ const (
 
 // runAIActions fetches all entities and processes their next action if they are AI-controlled.
 func runAIActions() {
+	startTime := time.Now()
 	tickCache, err := buildTickCache()
 	if err != nil {
 		log.Printf("Error building tick cache for AI loop: %v", err)
@@ -46,9 +47,6 @@ func runAIActions() {
 	}
 
 	for entityID, entityData := range tickCache.EntityData {
-		// Stagger AI ticks to smooth out server load.
-		time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
-
 		// Check the entity type and process accordingly
 		if strings.HasPrefix(entityID, "npc:") {
 			go processNPCAction(entityID, tickCache)
@@ -58,6 +56,12 @@ func runAIActions() {
 				go runEchoAI(entityID, tickCache)
 			}
 		}
+	}
+	duration := time.Since(startTime)
+	if duration > 750*time.Millisecond {
+		log.Printf("AI tick took longer than tick rate: %s", duration)
+	} else {
+		log.Printf("AI tick processed in: %s", duration)
 	}
 }
 
@@ -73,6 +77,22 @@ func buildTickCache() (*TickCache, error) {
 	entityIDs, err := rdb.ZRange(ctx, string(RedisKeyZone0Positions), 0, -1).Result()
 	if err != nil {
 		return nil, err
+	}
+
+	// --- Pre-fetch locked tiles using SCAN to avoid blocking with KEYS ---
+	var lockedTileKeys []string
+	var cursor uint64
+	for {
+		keys, nextCursor, err := rdb.Scan(ctx, cursor, string(RedisKeyLockTile)+"*", 100).Result()
+		if err != nil {
+			log.Printf("Error scanning for locked tiles: %v", err)
+			break // Exit on error
+		}
+		lockedTileKeys = append(lockedTileKeys, keys...)
+		if nextCursor == 0 {
+			break // We're done
+		}
+		cursor = nextCursor
 	}
 
 	pipe := rdb.Pipeline()
@@ -97,12 +117,6 @@ func buildTickCache() (*TickCache, error) {
 			}
 			resourceCmds[tileType] = pipe.GeoRadius(ctx, string(RedisKeyResourcePositions), 0, 0, query)
 		}
-	}
-
-	// 4. Queue SCAN for all locked tiles
-	lockedTileKeys, err := rdb.Keys(ctx, string(RedisKeyLockTile)+"*").Result()
-	if err != nil {
-		log.Printf("Could not get locked tiles using KEYS, falling back to empty set: %v", err)
 	}
 
 	// Execute all queued commands
@@ -148,6 +162,8 @@ func buildTickCache() (*TickCache, error) {
 
 // runEchoAI handles the logic for a player's Echo.
 func runEchoAI(playerID string, tickCache *TickCache) {
+	// Stagger AI ticks to smooth out server load.
+	time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
 	playerData := tickCache.EntityData[playerID]
 	if nextActionAtStr, ok := playerData["nextActionAt"]; ok {
 		if nextActionAt, err := strconv.ParseInt(nextActionAtStr, 10, 64); err == nil {
@@ -376,6 +392,8 @@ func findNearestResource(x, y int, tileType TileType, tickCache *TickCache) (int
 
 // processNPCAction contains the core logic for an individual NPC's turn.
 func processNPCAction(npcID string, tickCache *TickCache) {
+	// Stagger AI ticks to smooth out server load.
+	time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
 	npcData := tickCache.EntityData[npcID]
 
 	// 1. Cooldown Check
