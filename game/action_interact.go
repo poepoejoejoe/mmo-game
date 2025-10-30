@@ -153,35 +153,32 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 	}
 
 	if tile.Health <= 0 {
-		// Use TileType constant
-		tile.Type = string(TileTypeGround)
 		groundTile := models.WorldTile{Type: string(TileTypeGround), Health: 0}
 		worldUpdateMsg := models.WorldUpdateMessage{
-			Type: string(ServerEventWorldUpdate), // Use ServerEventType constant
+			Type: string(ServerEventWorldUpdate),
 			X:    targetX,
 			Y:    targetY,
 			Tile: groundTile,
 		}
 		PublishUpdate(worldUpdateMsg)
 
-		// --- NEW: Remove from resource index ---
 		if props.IsGatherable {
 			member := originalTileType + ":" + targetCoordKey
 			rdb.ZRem(ctx, string(RedisKeyResourcePositions), member)
 		}
-		// --- END NEW ---
 
-		// Use TileType constant
 		if TileType(originalTileType) == TileTypeWoodenWall {
 			log.Printf("Wall at %s destroyed, removing lock.", targetCoordKey)
-			// Use RedisKey constant
 			rdb.Del(ctx, string(RedisKeyLockTile)+targetCoordKey)
 		}
+
+		newTileJSON, _ := json.Marshal(groundTile)
+		rdb.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
+	} else {
+		newTileJSON, _ := json.Marshal(tile)
+		rdb.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
 	}
 
-	newTileJSON, _ := json.Marshal(tile)
-	// Use RedisKey constant
-	rdb.HSet(ctx, string(RedisKeyWorldZone0), targetCoordKey, string(newTileJSON))
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
 
 	return nil, inventoryUpdateMsg

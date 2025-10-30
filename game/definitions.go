@@ -249,6 +249,13 @@ type Sanctuary struct {
 }
 
 var Sanctuaries []Sanctuary
+var ResourceTargets map[TileType]int
+
+var resourceFillPercentage = map[TileType]float64{
+	TileTypeTree:     0.9,
+	TileTypeRock:     0.65,
+	TileTypeIronRock: 0.5,
+}
 
 // --- END NEW ---
 

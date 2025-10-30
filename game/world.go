@@ -17,7 +17,36 @@ const (
 	perlinBeta  = 2.
 	perlinN     = 3
 	perlinSeed  = 100
+	noiseOffset = 10000.5 // A large offset to sample noise away from the origin, avoiding artifacts.
 )
+
+var p *perlin.Perlin
+
+func init() {
+	p = perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, perlinSeed)
+}
+
+// GetNaturalTileType determines the natural tile type for a given coordinate using Perlin noise.
+func GetNaturalTileType(x, y int) TileType {
+	noiseVal := p.Noise2D((float64(x)+noiseOffset)/10.0, (float64(y)+noiseOffset)/10.0)
+	oreNoiseVal := p.Noise2D((float64(x)+noiseOffset)/8.0, (float64(y)+noiseOffset)/8.0)
+
+	if noiseVal < -0.5 {
+		return TileTypeWater
+	} else if oreNoiseVal > 0.60 {
+		return TileTypeIronRock
+	} else if noiseVal > 0.58 {
+		return TileTypeRock
+	} else if noiseVal > 0.55 {
+		return TileTypeTree
+	}
+
+	if rand.Float64() > 0.98 {
+		return TileTypeTree
+	}
+
+	return TileTypeGround
+}
 
 // GenerateSanctuary creates a sanctuary stone and a blob of sanctuary tiles around it.
 // This function can be called after the initial world generation to add more sanctuaries.
@@ -73,7 +102,6 @@ func GenerateWorld() {
 		return
 	}
 
-	p := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, perlinSeed)
 	pipe := rdb.Pipeline()
 
 	isSanctuaryTile := func(x, y int) (bool, bool) {
@@ -109,25 +137,7 @@ func GenerateWorld() {
 				tile.Type = string(TileTypeGround)
 				tile.IsSanctuary = true
 			} else {
-				// Standard terrain generation for non-sanctuary tiles
-				noiseVal := p.Noise2D(float64(x)/10.0, float64(y)/10.0)
-				oreNoiseVal := p.Noise2D(float64(x)/8.0, float64(y)/8.0)
-
-				tileType := TileTypeGround
-				if noiseVal < -0.5 {
-					tileType = TileTypeWater
-				} else if oreNoiseVal > 0.65 {
-					tileType = TileTypeIronRock
-				} else if noiseVal > 0.60 {
-					tileType = TileTypeRock
-				} else if noiseVal > 0.55 {
-					tileType = TileTypeTree
-				} else {
-					if rand.Float64() > 0.98 {
-						tileType = TileTypeTree
-					}
-				}
-				tile.Type = string(tileType)
+				tile.Type = string(GetNaturalTileType(x, y))
 			}
 
 			props := TileDefs[TileType(tile.Type)]
@@ -181,6 +191,38 @@ func IndexWorldResources() {
 		log.Printf("Error indexing world resources: %v", err)
 	}
 	log.Printf("Indexed %d resource locations.", count)
+}
+
+func IndexPotentialSpawnPoints() {
+	log.Println("Indexing potential resource spawn points...")
+	pipe := rdb.Pipeline()
+	potentialCounts := make(map[TileType]int)
+	ResourceTargets = make(map[TileType]int)
+
+	for x := -WorldSize; x <= WorldSize; x++ {
+		for y := -WorldSize; y <= WorldSize; y++ {
+			naturalType := GetNaturalTileType(x, y)
+			props, ok := TileDefs[naturalType]
+			if ok && props.IsGatherable {
+				coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
+				redisKey := "potential_spawns:" + string(naturalType)
+				pipe.SAdd(ctx, redisKey, coordKey)
+				potentialCounts[naturalType]++
+			}
+		}
+	}
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		log.Printf("Error indexing potential spawn points: %v", err)
+	}
+
+	for tileType, count := range potentialCounts {
+		fillPercentage := resourceFillPercentage[tileType]
+		ResourceTargets[tileType] = int(float64(count) * fillPercentage)
+	}
+
+	log.Printf("Indexed potential spawn points: %v", potentialCounts)
+	log.Printf("Calculated resource targets: %v", ResourceTargets)
 }
 
 // GetWorldTile retrieves a single tile and its properties from the world data.
