@@ -94,7 +94,6 @@ func spawnPreLockedNPC(entityID string, x, y int, npcType NPCType, groupID strin
 	if groupID != "" {
 		hsetArgs = append(hsetArgs, "groupID", groupID)
 	}
-	log.Printf("[Debug] HSET for %s: %v", entityID, hsetArgs)
 	pipe.HSet(ctx, entityID, hsetArgs...)
 
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{

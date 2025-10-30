@@ -193,11 +193,9 @@ func runEchoAI(playerID string, tickCache *TickCache) {
 				"isEcho":   false,
 			}
 			PublishUpdate(updateMsg)
-			log.Printf("Echo for %s expired while online. Control returned.", playerID)
 		} else {
 			// Player is offline, so despawn the Echo completely.
 			rdb.ZRem(ctx, string(RedisKeyZone0Positions), playerID)
-			log.Printf("Echo for %s expired while offline. Despawning.", playerID)
 		}
 		return // Stop further AI processing
 	}
@@ -215,8 +213,6 @@ func runEchoAI(playerID string, tickCache *TickCache) {
 }
 
 func handleEchoIdling(playerID string, playerData map[string]string, tickCache *TickCache) {
-	log.Printf("[Echo AI] %s is idling, deciding on action based on active rune.", playerID)
-
 	activeRune := RuneType(playerData["activeRune"])
 	var resourceType TileType
 
@@ -226,24 +222,19 @@ func handleEchoIdling(playerID string, playerData map[string]string, tickCache *
 	case RuneTypeMineOre:
 		resourceType = TileTypeRock
 	default: // No active rune, or an unknown rune
-		log.Printf("[Echo AI] %s has no active rune. Wandering.", playerID)
 		if rand.Intn(100) < 40 {
 			dir := getRandomDirection()
 			ProcessMove(playerID, dir)
 		}
 		return
 	}
-	log.Printf("[Echo AI] %s is using rune: %s", playerID, activeRune)
 
 	currentX, currentY := GetEntityPosition(playerData)
 	targetX, targetY, found := findNearestResource(currentX, currentY, resourceType, tickCache)
 
 	if found {
-		log.Printf("[Echo AI] %s found nearest %s at %d,%d. Pathfinding...", playerID, resourceType, targetX, targetY)
-
 		// First, check if we're already adjacent.
 		if IsAdjacent(currentX, currentY, targetX, targetY) {
-			log.Printf("[Echo AI] %s is already adjacent to %d,%d. Gathering...", playerID, targetX, targetY)
 			pipe := rdb.Pipeline()
 			pipe.HSet(ctx, playerID, "echoState", string(EchoStateGathering))
 			pipe.HSet(ctx, playerID, "echoTarget", strconv.Itoa(targetX)+","+strconv.Itoa(targetY))
@@ -260,12 +251,9 @@ func handleEchoIdling(playerID string, playerData map[string]string, tickCache *
 			pipe.HSet(ctx, playerID, "echoPath", string(pathJSON))
 			pipe.HSet(ctx, playerID, "echoTarget", strconv.Itoa(targetX)+","+strconv.Itoa(targetY))
 			pipe.Exec(ctx)
-			log.Printf("[Echo AI] %s started moving to %d,%d.", playerID, targetX, targetY)
 		} else {
-			log.Printf("[Echo AI] %s could not find a path to %d,%d.", playerID, targetX, targetY)
 		}
 	} else {
-		log.Printf("[Echo AI] %s could not find any %s. Wandering.", playerID, resourceType)
 		// Wander if no resources are found
 		if rand.Intn(100) < 40 {
 			dir := getRandomDirection()

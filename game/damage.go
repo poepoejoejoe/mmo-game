@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"log"
+	"mmo-game/game/utils"
 	"mmo-game/models"
 	"strconv"
 	"strings"
@@ -28,7 +29,7 @@ func checkFires() {
 	for coordKey, tileJSON := range worldData {
 		var tile models.WorldTile
 		if err := json.Unmarshal([]byte(tileJSON), &tile); err == nil && TileType(tile.Type) == TileTypeFire {
-			x, y := parseCoordKey(coordKey)
+			x, y := utils.ParseCoordKey(coordKey)
 			checkForEntitiesOnFire(x, y)
 		}
 	}
@@ -115,16 +116,6 @@ func applyFireDamage(entityID string, entityData map[string]string, x, y int) {
 			sendDirectMessage(entityID, statsUpdateJSON)
 		}
 	}
-}
-
-func parseCoordKey(coordKey string) (int, int) {
-	parts := strings.Split(coordKey, ",")
-	if len(parts) != 2 {
-		return 0, 0
-	}
-	x, _ := strconv.Atoi(parts[0])
-	y, _ := strconv.Atoi(parts[1])
-	return x, y
 }
 
 func ApplyDamage(attackerID, defenderID string, baseDamage int) {

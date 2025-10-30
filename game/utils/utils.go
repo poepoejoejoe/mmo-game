@@ -3,6 +3,8 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"strconv"
+	"strings"
 )
 
 // GenerateUniqueID creates a cryptographically secure random string for use as a unique ID.
@@ -21,4 +23,14 @@ func GenerateRandomColor() string {
 		return "#000000" // Fallback to black
 	}
 	return "#" + hex.EncodeToString(bytes)
+}
+
+func ParseCoordKey(coordKey string) (int, int) {
+	parts := strings.Split(coordKey, ",")
+	if len(parts) != 2 {
+		return 0, 0
+	}
+	x, _ := strconv.Atoi(parts[0])
+	y, _ := strconv.Atoi(parts[1])
+	return x, y
 }

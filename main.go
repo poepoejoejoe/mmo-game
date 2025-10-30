@@ -132,6 +132,7 @@ func main() {
 	go game.StartAILoop()
 	go game.StartSpawnerLoop()
 	go game.StartDamageSystem()
+	go game.StartDecaySystem()
 
 	go subscribeToWorldUpdates()
 

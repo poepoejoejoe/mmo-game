@@ -194,6 +194,11 @@ type TileProperties struct {
 	Damage          int
 	DamageInterval  int64
 	Duration        int64
+
+	// Decay properties
+	Decays               bool
+	DecayChancePerSecond float64
+	DecayAmount          int
 }
 
 // --- NEW ---
@@ -436,9 +441,12 @@ func init() {
 		MaxHealth:      8,
 	}
 	TileDefs[TileTypeWoodenWall] = TileProperties{
-		IsCollidable:   true,
-		IsDestructible: true,
-		MaxHealth:      10,
+		IsCollidable:         true,
+		IsDestructible:       true,
+		MaxHealth:            10,
+		Decays:               true,
+		DecayChancePerSecond: 1.0 / (90.0 * 60.0 / 10.0), // ~1.5 hour lifetime for 10HP
+		DecayAmount:          1,
 	}
 	TileDefs[TileTypeFire] = TileProperties{
 		IsCollidable:   false,

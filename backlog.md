@@ -32,7 +32,6 @@
 ### Current
 
 ### Alpha Backlog
-
 - player constructed things like wooden wall slowly decay
 - hosting / deploys / monitoring (?)
 - pvp
