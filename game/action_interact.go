@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"log"
+	"mmo-game/game/utils"
 	"mmo-game/models"
 	"strconv"
 	"time"
@@ -343,10 +344,14 @@ func handlePlaceFire(playerID string, currentX, currentY, targetX, targetY int) 
 
 	// Add the fire to the resource positions set so the damage system can find it.
 	member := string(TileTypeFire) + ":" + targetCoordKey
+	x, y := utils.ParseCoordKey(targetCoordKey)
+
+	// Update the resource's geo-position.
+	lon, lat := NormalizeCoords(x, y)
 	rdb.GeoAdd(ctx, string(RedisKeyResourcePositions), &redis.GeoLocation{
 		Name:      member,
-		Longitude: float64(targetX),
-		Latitude:  float64(targetY),
+		Longitude: lon,
+		Latitude:  lat,
 	})
 
 	inventoryUpdateMsg := getInventoryUpdateMessage(inventoryKey)

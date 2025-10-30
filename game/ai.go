@@ -60,8 +60,6 @@ func runAIActions() {
 	duration := time.Since(startTime)
 	if duration > 750*time.Millisecond {
 		log.Printf("AI tick took longer than tick rate: %s", duration)
-	} else {
-		log.Printf("AI tick processed in: %s", duration)
 	}
 }
 

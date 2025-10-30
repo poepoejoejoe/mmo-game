@@ -31,12 +31,16 @@ func HandlePlayerDeath(playerID string) {
 
 	// Reset health and set new position in Redis
 	pipe := rdb.Pipeline()
-	pipe.HSet(ctx, playerID, "health", PlayerDefs.MaxHealth, "x", spawnX, "y", spawnY)
+	pipe.HSet(ctx, playerID, "x", spawnX, "y", spawnY)
+
+	// --- Player position in Geo set ---
+	lon, lat := NormalizeCoords(spawnX, spawnY)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
 		Name:      playerID,
-		Longitude: float64(spawnX),
-		Latitude:  float64(spawnY),
+		Longitude: lon,
+		Latitude:  lat,
 	})
+
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("Error respawning player %s: %v", playerID, err)

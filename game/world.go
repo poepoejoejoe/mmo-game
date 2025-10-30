@@ -177,10 +177,11 @@ func IndexWorldResources() {
 
 			// Member format: "tileType:x,y" e.g., "tree:10,20"
 			member := tile.Type + ":" + coord
+			lon, lat := NormalizeCoords(x, y)
 			pipe.GeoAdd(ctx, string(RedisKeyResourcePositions), &redis.GeoLocation{
 				Name:      member,
-				Longitude: float64(x),
-				Latitude:  float64(y),
+				Longitude: lon,
+				Latitude:  lat,
 			})
 			count++
 		}

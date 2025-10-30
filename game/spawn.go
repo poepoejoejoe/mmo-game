@@ -96,10 +96,11 @@ func spawnPreLockedNPC(entityID string, x, y int, npcType NPCType, groupID strin
 	}
 	pipe.HSet(ctx, entityID, hsetArgs...)
 
+	lon, lat := NormalizeCoords(x, y)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
 		Name:      entityID,
-		Longitude: float64(x),
-		Latitude:  float64(y),
+		Longitude: lon,
+		Latitude:  lat,
 	})
 
 	_, err := pipe.Exec(ctx)

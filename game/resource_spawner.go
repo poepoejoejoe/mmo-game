@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"mmo-game/game/utils"
+
 	"github.com/go-redis/redis/v8"
 )
 
@@ -77,9 +79,7 @@ func spawnResources(tileType TileType, count int) {
 			break
 		}
 
-		coords := strings.Split(coordKey, ",")
-		x, _ := strconv.Atoi(coords[0])
-		y, _ := strconv.Atoi(coords[1])
+		x, y := utils.ParseCoordKey(coordKey)
 
 		tile, _, err := GetWorldTile(x, y)
 		if err == nil && tile.Type == string(TileTypeGround) && !tile.IsSanctuary {
@@ -106,11 +106,13 @@ func spawnResourceAt(x, y int, tileType TileType) {
 	pipe := rdb.Pipeline()
 	pipe.HSet(ctx, string(RedisKeyWorldZone0), coordKey, string(newTileJSON))
 
+	// Member format: "tileType:x,y" e.g., "tree:10,20"
 	member := string(tileType) + ":" + coordKey
+	lon, lat := NormalizeCoords(x, y)
 	pipe.GeoAdd(ctx, string(RedisKeyResourcePositions), &redis.GeoLocation{
 		Name:      member,
-		Longitude: float64(x),
-		Latitude:  float64(y),
+		Longitude: lon,
+		Latitude:  lat,
 	})
 
 	_, err := pipe.Exec(ctx)

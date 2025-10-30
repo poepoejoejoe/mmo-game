@@ -38,7 +38,6 @@ func checkFires() {
 	for _, loc := range locations {
 		// The member name is "tileType:x,y". We only care about fires.
 		if strings.HasPrefix(loc.Name, string(TileTypeFire)+":") {
-			log.Println("Found fire tile in resource set:", loc.Name)
 			coordKey := strings.Split(loc.Name, ":")[1]
 			x, y := utils.ParseCoordKey(coordKey)
 			checkForEntitiesOnFire(x, y)
@@ -70,7 +69,6 @@ func checkForEntitiesOnFire(x, y int) {
 }
 
 func applyFireDamage(entityID string, entityData map[string]string, x, y int) {
-	log.Printf("Applying fire damage to entity %s", entityID)
 	fireProps := TileDefs[TileTypeFire]
 	newHealth, err := rdb.HIncrBy(ctx, entityID, "health", int64(-fireProps.Damage)).Result()
 	if err != nil {

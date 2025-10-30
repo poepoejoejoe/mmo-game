@@ -82,11 +82,11 @@ func ProcessMove(entityID string, direction MoveDirection) *models.StateCorrecti
 
 	// --- BUG FIX REVERT: Use a single GeoAdd to correctly update the GeoSet position ---
 	// GeoAdd correctly adds a new member or updates the position of an existing one.
-	// The previous ZAdd call was incorrect and corrupted the location data.
+	lon, lat := NormalizeCoords(targetX, targetY)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
 		Name:      entityID,
-		Longitude: float64(targetX),
-		Latitude:  float64(targetY),
+		Longitude: lon,
+		Latitude:  lat,
 	})
 
 	_, err = pipe.Exec(ctx)

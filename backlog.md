@@ -70,6 +70,9 @@ lol
 - PVP
 - Talent system
 
+### Known bug / issues
+When scaling world size past 180 there is an issue with the long / lad geo radius redis finding. We would need to normalize values to get that to work.
+
 ---
 
 ## Engineer Virality & Emergent Gameplay

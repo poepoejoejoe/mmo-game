@@ -76,10 +76,11 @@ func completeTeleport(playerID string, expectedCompleteTime time.Time) {
 	LockTileForEntity(playerID, destX, destY)
 
 	rdb.HSet(ctx, playerID, "x", destX, "y", destY)
+	lon, lat := NormalizeCoords(destX, destY)
 	rdb.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
 		Name:      playerID,
-		Longitude: float64(destX),
-		Latitude:  float64(destY),
+		Longitude: lon,
+		Latitude:  lat,
 	})
 
 	moveUpdate := map[string]interface{}{

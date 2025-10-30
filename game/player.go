@@ -81,10 +81,11 @@ func LoginPlayer(secretKey string) (string, *models.InitialStateMessage) {
 			PublishUpdate(updateMsg)
 
 			// Also add them back to the geospatial index
+			lon, lat := NormalizeCoords(playerEntityState.X, playerEntityState.Y)
 			rdb.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
 				Name:      playerID,
-				Longitude: float64(playerEntityState.X),
-				Latitude:  float64(playerEntityState.Y),
+				Longitude: lon,
+				Latitude:  lat,
 			})
 			rdb.HSet(ctx, playerID, "loginTimestamp", time.Now().UnixMilli())
 		}
@@ -405,7 +406,9 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"activeRune", "",
 		"knownRecipes", `{"wooden_wall":true, "fire":true, "cooked_rat_meat":true, "crude_axe":true}`,
 	)
-	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: float64(spawnX), Latitude: float64(spawnY)})
+	// --- Player position in Geo set ---
+	lon, lat := NormalizeCoords(spawnX, spawnY)
+	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{Name: playerID, Longitude: lon, Latitude: lat})
 
 	// --- NEW: Initialize a 10-slot inventory ---
 	inventory := make(map[string]interface{})

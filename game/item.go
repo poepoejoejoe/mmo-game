@@ -34,11 +34,12 @@ func CreateWorldItem(x, y int, itemID ItemID, quantity int, ownerID string, expi
 		"publicAt", publicAt,
 	)
 
-	// Add to geospatial index for quick lookups
+	// Add to geospatial index
+	lon, lat := NormalizeCoords(x, y)
 	pipe.GeoAdd(ctx, string(RedisKeyZone0Positions), &redis.GeoLocation{
 		Name:      dropID,
-		Longitude: float64(x),
-		Latitude:  float64(y),
+		Longitude: lon,
+		Latitude:  lat,
 	})
 
 	// Set an expiration time for the item drop - THIS IS WRONG, it deletes the item
