@@ -253,7 +253,10 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 	for coord, tileJSON := range worldDataRaw {
 		var tile models.WorldTile
 		json.Unmarshal([]byte(tileJSON), &tile)
-		worldDataTyped[coord] = tile
+		// Only filter out plain ground tiles. Keep everything else, including sanctuary grounds.
+		if TileType(tile.Type) != TileTypeGround || tile.IsSanctuary {
+			worldDataTyped[coord] = tile
+		}
 	}
 
 	inventoryDataRaw, _ := rdb.HGetAll(ctx, inventoryKey).Result()

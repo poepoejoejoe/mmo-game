@@ -37,7 +37,7 @@ export function getMyEntity(): EntityState | undefined {
 
 export function getTileData(x: number, y: number): WorldTile {
     const key = `${x},${y}`;
-    return clientState.world[key] || { type: 'void', health: 0 };
+    return clientState.world[key] || { type: 'ground', health: 0 };
 }
 
 // --- State Mutators (Setters) ---
