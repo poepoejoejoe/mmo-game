@@ -6,10 +6,10 @@
  * and register it here, and it will be available throughout the system.
  */
 
-import { registerEntityDraw, registerTileDraw, registerItemDraw } from './registry';
+import { registerEntityDraw, registerTileDraw, registerItemDraw, EntityDrawFunction } from './registry';
 import { drawPlayer, drawWizard, drawItem, drawRat, drawSlime, drawGolemBanker } from './entities';
 import { drawCrudeAxe } from './weapons';
-import { drawRockTile, drawTree, drawSanctuaryStone, drawIronRockTile } from '../drawing';
+import { drawRockTile, drawTree, drawSanctuaryStone, drawIronRockTile } from '../drawing/tiles';
 
 /**
  * Initialize all drawing function registrations.
@@ -17,12 +17,17 @@ import { drawRockTile, drawTree, drawSanctuaryStone, drawIronRockTile } from '..
  */
 export function initializeDrawingRegistry(): void {
     // Register entity drawing functions
-    registerEntityDraw('player', drawPlayer);
-    registerEntityDraw('wizard', drawWizard);
-    registerEntityDraw('item', drawItem);
-    registerEntityDraw('rat', drawRat);
-    registerEntityDraw('slime', drawSlime);
-    registerEntityDraw('golem_banker', drawGolemBanker);
+    // Wrap functions to match the expected signature
+    registerEntityDraw('player', drawPlayer as EntityDrawFunction);
+    registerEntityDraw('wizard', ((ctx, x, y, tileSize) => {
+        drawWizard(ctx, x, y, tileSize);
+    }) as EntityDrawFunction);
+    registerEntityDraw('item', drawItem as EntityDrawFunction);
+    registerEntityDraw('rat', ((ctx, x, y, tileSize, entity, time) => {
+        drawRat(ctx, x, y, tileSize, entity, time);
+    }) as EntityDrawFunction);
+    registerEntityDraw('slime', drawSlime as EntityDrawFunction);
+    registerEntityDraw('golem_banker', drawGolemBanker as EntityDrawFunction);
     
     // Register tile drawing functions
     registerTileDraw('rock', drawRockTile);

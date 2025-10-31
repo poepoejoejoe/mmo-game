@@ -2,7 +2,7 @@ import './styles.css';
 import { initializeNetwork, addStateUpdateListener } from './network';
 import { initializeInput } from './input';
 import { initializeRenderer, startRenderLoop } from './renderer';
-import { initializeUI, updatePlayerCoords } from './ui';
+import { initializeUI } from './ui';
 import { getMyEntity } from './state';
 import { initializeDrawingRegistry } from './drawing/registryInit';
 

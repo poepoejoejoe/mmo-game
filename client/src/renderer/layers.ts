@@ -5,10 +5,6 @@
  * This makes it easier for LLMs to understand and modify the rendering pipeline.
  */
 
-import * as state from '../state';
-import { TILE_SIZE } from '../constants';
-import { assetImages } from '../renderer';
-
 export interface RenderLayer {
     name: string;
     render: (ctx: CanvasRenderingContext2D, params: RenderParams) => void;
