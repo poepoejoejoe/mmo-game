@@ -33,6 +33,17 @@
 - remove the outline from the slime and rat. keep their eyes, but with a little thinner line
 
 ### Current
+- bank
+Let's work on making a banker (each sanctuary needs to have a banker) WE should add a concept of friendly npc (the wizard is friendly as well). We can make sure the wizard and golem banker share some property that excludes them from being considered in ai.go.
+
+Let's make it so that when you interact with the golem banker it doesn't open dialog but opens a bank window right away. The bank window should be very similar to the way inventory is displayed. Items shoudl stack very high (almost inf) in the bank, when you left click an item from the bank or inventory it moves one of that item to or from the bank / inventory. Now we need to add a right click context menu for the bank, this allows us to withdrawn 1, 5 10 or X. X optino should open a very small window to allow us to type the amount. Only when the bank is open, if the player right click's their inventory there is a context window that is basically the same as previously stated but it says deposit, 1 5 10 or X. IF the player walks away from the banker the bank window closes.
+
+
+- echo well
+- echos and defend (minor rune?)
+- echos can loot (minor rune?)
+
+
 
 ### Alpha Backlog
 - hosting / deploys / monitoring (?)
