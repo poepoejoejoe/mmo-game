@@ -201,11 +201,12 @@ return result
 - ✅ FindPath (`FindPathActionHandler`) - Pathfinding calculation and direction generation
 - ✅ Teleport (`TeleportActionHandler`) - Channeling-based teleportation to binding point
 - ✅ ToggleEcho (`ToggleEchoActionHandler`) - Toggling echo state for AI control
+- ✅ SendChat (`SendChatActionHandler`) - Chat messages broadcast to nearby players
+- ✅ DialogAction (`DialogActionHandler`) - Dialog actions like setting binding
+- ✅ DepositItem (`DepositItemActionHandler`) - Moving items from inventory to bank
+- ✅ WithdrawItem (`WithdrawItemActionHandler`) - Moving items from bank to inventory
 
-### Pending Migration
-- SendChat
-- DialogAction
-- DepositItem/WithdrawItem
+**All actions have been successfully migrated to the registry system!** 🎉
 
 ## Best Practices
 
@@ -233,5 +234,9 @@ See these files for reference implementations:
 - `game/action_find_path_handler.go` - Pathfinding with direction conversion
 - `game/action_teleport_handler.go` - Async channeling-based teleportation
 - `game/action_toggle_echo_handler.go` - Toggling echo state with validation
+- `game/action_send_chat_handler.go` - Chat broadcasting to nearby players
+- `game/action_dialog_handler.go` - Dialog actions and NPC interactions
+- `game/action_deposit_item_handler.go` - Bank deposit operations
+- `game/action_withdraw_item_handler.go` - Bank withdraw operations
 - `game/ACTION_TEMPLATE.go` - Complete template with examples
 

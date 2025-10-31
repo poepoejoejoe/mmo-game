@@ -208,9 +208,26 @@ func (c *Client) readPump() {
 					}
 				}
 			case game.ClientEventSendChat:
-				game.ProcessSendChat(c.id, msg.Payload)
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
+					// Note: Chat messages are broadcast via PublishToPlayer in the handler
+				}
 			case game.ClientEventDialogAction:
-				game.ProcessDialogAction(c.id, msg.Payload)
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
+				}
 			case game.ClientEventToggleEcho:
 				// Use the action registry for standardized processing
 				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
@@ -252,24 +269,24 @@ func (c *Client) readPump() {
 					}
 				}
 			case game.ClientEventDepositItem:
-				inventoryMsg, bankMsg := game.ProcessDepositItem(c.id, msg.Payload)
-				if inventoryMsg != nil {
-					inventoryJSON, _ := json.Marshal(inventoryMsg)
-					c.send <- inventoryJSON
-				}
-				if bankMsg != nil {
-					bankJSON, _ := json.Marshal(bankMsg)
-					c.send <- bankJSON
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
 				}
 			case game.ClientEventWithdrawItem:
-				inventoryMsg, bankMsg := game.ProcessWithdrawItem(c.id, msg.Payload)
-				if inventoryMsg != nil {
-					inventoryJSON, _ := json.Marshal(inventoryMsg)
-					c.send <- inventoryJSON
-				}
-				if bankMsg != nil {
-					bankJSON, _ := json.Marshal(bankMsg)
-					c.send <- bankJSON
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
 				}
 			}
 		}
