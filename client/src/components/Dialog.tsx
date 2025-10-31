@@ -1,6 +1,5 @@
 import React from 'react';
 import { send } from '../network';
-import * as state from '../state';
 
 interface DialogOption {
   text: string;

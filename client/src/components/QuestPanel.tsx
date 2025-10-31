@@ -1,5 +1,6 @@
 import React from 'react';
 import { Quest } from '../types';
+import PanelHeader from './shared/PanelHeader';
 
 interface QuestPanelProps {
   isOpen: boolean;
@@ -14,10 +15,7 @@ const QuestPanel: React.FC<QuestPanelProps> = ({ isOpen, onClose, quests }) => {
 
   return (
     <div id="quest-view" className="info-panel">
-      <div className="panel-header">
-        <h2>Quests</h2>
-        <span className="close-button" onClick={onClose}>&times;</span>
-      </div>
+      <PanelHeader title="Quests" onClose={onClose} />
       {allQuests.length === 0 ? (
         <p>No active quests.</p>
       ) : (

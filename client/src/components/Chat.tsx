@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as state from '../state';
 import { send } from '../network';
+import { registerWindowFunction } from '../api/windowApi';
 
 interface ChatMessage {
   playerId: string;
@@ -14,13 +15,13 @@ interface ChatProps {
   onToggle: () => void;
 }
 
-const Chat: React.FC<ChatProps> = ({ isOpen, onToggle }) => {
+const Chat: React.FC<ChatProps> = ({ isOpen: _isOpen, onToggle: _onToggle }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
 
   // Expose addMessage function so network.ts can add messages
   useEffect(() => {
-    (window as any).addChatMessage = (playerId: string, message: string) => {
+    const addChatMessage = (playerId: string, message: string) => {
       const s = state.getState();
       const entity = s.entities[playerId];
       
@@ -38,9 +39,8 @@ const Chat: React.FC<ChatProps> = ({ isOpen, onToggle }) => {
       ]);
     };
     
-    return () => {
-      delete (window as any).addChatMessage;
-    };
+    const cleanup = registerWindowFunction('addChatMessage', addChatMessage);
+    return cleanup;
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {

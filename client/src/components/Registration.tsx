@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { send } from '../network';
+import { registerWindowFunction } from '../api/windowApi';
 
 interface RegistrationProps {
   playerName: string;
@@ -24,13 +25,12 @@ const Registration: React.FC<RegistrationProps> = ({ playerName }) => {
 
   // Expose function for network.ts to trigger registration prompt
   useEffect(() => {
-    (window as any).promptForRegistration = () => {
+    const promptForRegistration = () => {
       setShowRegistration(true);
     };
     
-    return () => {
-      delete (window as any).promptForRegistration;
-    };
+    const cleanup = registerWindowFunction('promptForRegistration', promptForRegistration);
+    return cleanup;
   }, []);
 
   const handleRegister = () => {

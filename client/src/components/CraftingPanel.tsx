@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import * as state from '../state';
 import { itemDefinitions, recipeDefs } from '../definitions';
 import { send } from '../network';
 import Tooltip from './Tooltip';
+import ItemIcon from './shared/ItemIcon';
+import PanelHeader from './shared/PanelHeader';
+import { useTooltip } from '../hooks/useTooltip';
 
 interface CraftingPanelProps {
   isOpen: boolean;
@@ -12,15 +14,7 @@ interface CraftingPanelProps {
 }
 
 const CraftingPanel: React.FC<CraftingPanelProps> = ({ isOpen, onClose, inventory, knownRecipes }) => {
-  const [hoveredRecipe, setHoveredRecipe] = useState<string | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
-
-  const createIconElement = (itemDef: any): JSX.Element => {
-    if (itemDef.asset) {
-      return <img src={itemDef.asset} alt={itemDef.text || 'item icon'} />;
-    }
-    return <>{itemDef.icon || itemDef.character}</>;
-  };
+  const { hoveredKey: hoveredRecipe, tooltipPosition, handleMouseEnter, handleMouseLeave } = useTooltip<string>();
 
   // Calculate item counts from inventory
   const counts: { [key: string]: number } = {};
@@ -29,20 +23,6 @@ const CraftingPanel: React.FC<CraftingPanelProps> = ({ isOpen, onClose, inventor
       counts[inventory[slot].id] = (counts[inventory[slot].id] || 0) + inventory[slot].quantity;
     }
   }
-
-  const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>, itemId: string) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredRecipe(itemId);
-    setTooltipPosition({
-      x: rect.left,
-      y: rect.bottom + 5,
-    });
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredRecipe(null);
-    setTooltipPosition(null);
-  };
 
   const handleCraft = (itemId: string) => {
     send({ type: 'craft', payload: { item: itemId } });
@@ -65,9 +45,7 @@ const CraftingPanel: React.FC<CraftingPanelProps> = ({ isOpen, onClose, inventor
               const hasEnough = (counts[reqItemId] || 0) >= (requiredAmount as number);
               return (
                 <div key={reqItemId} className="tooltip-item">
-                  <div className="item-icon">
-                    {createIconElement(itemDef)}
-                  </div>
+                  <ItemIcon itemId={reqItemId} />
                   <span style={{ color: hasEnough ? '#fff' : '#ff4444' }}>
                     {requiredAmount}x {itemDef.text || reqItemId}
                   </span>
@@ -97,10 +75,7 @@ const CraftingPanel: React.FC<CraftingPanelProps> = ({ isOpen, onClose, inventor
 
   return (
     <div id="crafting-view" className="info-panel">
-      <div className="panel-header">
-        <h2>Crafting</h2>
-        <span className="close-button" onClick={onClose}>&times;</span>
-      </div>
+      <PanelHeader title="Crafting" onClose={onClose} />
       {recipeList.length === 0 ? (
         <p>You have not learned any crafting recipes.</p>
       ) : (
@@ -109,7 +84,6 @@ const CraftingPanel: React.FC<CraftingPanelProps> = ({ isOpen, onClose, inventor
           const canCraft = Object.keys(recipeReqs).every(
             reqItemId => (counts[reqItemId] || 0) >= recipeReqs[reqItemId]
           );
-          const itemDef = itemDefinitions[itemId] || itemDefinitions['default'];
 
           return (
             <button
@@ -121,9 +95,7 @@ const CraftingPanel: React.FC<CraftingPanelProps> = ({ isOpen, onClose, inventor
               onMouseEnter={(e) => handleMouseEnter(e, itemId)}
               onMouseLeave={handleMouseLeave}
             >
-              <div className="item-icon">
-                {createIconElement(itemDef)}
-              </div>
+              <ItemIcon itemId={itemId} />
             </button>
           );
         })

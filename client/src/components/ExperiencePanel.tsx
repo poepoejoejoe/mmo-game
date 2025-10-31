@@ -1,4 +1,5 @@
 import React from 'react';
+import PanelHeader from './shared/PanelHeader';
 
 interface ExperiencePanelProps {
   isOpen: boolean;
@@ -22,10 +23,7 @@ const ExperiencePanel: React.FC<ExperiencePanelProps> = ({ isOpen, onClose, expe
   if (!experience || Object.keys(experience).length === 0) {
     return (
       <div id="experience-view" className="info-panel">
-        <div className="panel-header">
-          <h2>Experience</h2>
-          <span className="close-button" onClick={onClose}>&times;</span>
-        </div>
+        <PanelHeader title="Experience" onClose={onClose} />
         <p>No experience data available.</p>
       </div>
     );
@@ -33,10 +31,7 @@ const ExperiencePanel: React.FC<ExperiencePanelProps> = ({ isOpen, onClose, expe
 
   return (
     <div id="experience-view" className="info-panel">
-      <div className="panel-header">
-        <h2>Experience</h2>
-        <span className="close-button" onClick={onClose}>&times;</span>
-      </div>
+      <PanelHeader title="Experience" onClose={onClose} />
       {Object.entries(experience).map(([skill, xp]) => {
         const icon = skillIcons[skill] || '❓';
         const name = skill.charAt(0).toUpperCase() + skill.slice(1);

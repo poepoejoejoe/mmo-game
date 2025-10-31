@@ -1,5 +1,6 @@
 import React from 'react';
 import { send } from '../network';
+import PanelHeader from './shared/PanelHeader';
 
 interface RunesPanelProps {
   isOpen: boolean;
@@ -28,10 +29,7 @@ const RunesPanel: React.FC<RunesPanelProps> = ({ isOpen, onClose, runes, activeR
 
   return (
     <div id="runes-view" className="info-panel">
-      <div className="panel-header">
-        <h2>Runes</h2>
-        <span className="close-button" onClick={onClose}>&times;</span>
-      </div>
+      <PanelHeader title="Runes" onClose={onClose} />
       {runes.length === 0 ? (
         <p>No runes unlocked.</p>
       ) : (

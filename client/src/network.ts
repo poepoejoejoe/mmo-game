@@ -27,6 +27,7 @@ import {
 import * as state from './state';
 import { showDamageIndicator } from './renderer';
 import { setPath } from './input';
+import { callWindowFunction } from './api/windowApi';
 
 let ws: WebSocket;
 const stateUpdateListeners: (() => void)[] = [];
@@ -79,10 +80,7 @@ function handleMessage(event: MessageEvent) {
                 // This is now handled by React state
             } else {
                 // If we logged in but don't have a name, show the registration prompt.
-                const promptForRegistrationFn = (window as any).promptForRegistration;
-                if (promptForRegistrationFn) {
-                    promptForRegistrationFn();
-                }
+                callWindowFunction('promptForRegistration');
             }
             onStateUpdate();
             break;
@@ -107,26 +105,17 @@ function handleMessage(event: MessageEvent) {
         }
         case 'teleport_channel_start': {
             const channelMsg = msg as any; // Quick type assertion
-            const showChannelingBarFn = (window as any).showChannelingBar;
-            if (showChannelingBarFn) {
-                showChannelingBarFn(channelMsg.duration);
-            }
+            callWindowFunction('showChannelingBar', channelMsg.duration);
             break;
         }
         case 'teleport_channel_end': {
-            const hideChannelingBarFn = (window as any).hideChannelingBar;
-            if (hideChannelingBarFn) {
-                hideChannelingBarFn();
-            }
+            callWindowFunction('hideChannelingBar');
             break;
         }
         case 'show_dialog': {
             const dialogMsg = msg as DialogMessage;
             const pos = state.getState().lastInteractionPosition;
-            const showDialogFn = (window as any).showDialog;
-            if (showDialogFn) {
-                showDialogFn(dialogMsg, pos);
-            }
+            callWindowFunction('showDialog', dialogMsg, pos);
             break;
         }
         case 'state_correction': {
@@ -199,10 +188,7 @@ function handleMessage(event: MessageEvent) {
         }
         case 'craft_success': {
             const craftMsg = msg as CraftSuccessMessage;
-            const showCraftSuccessFn = (window as any).showCraftSuccess;
-            if (showCraftSuccessFn) {
-                showCraftSuccessFn(craftMsg.itemId);
-            }
+            callWindowFunction('showCraftSuccess', craftMsg.itemId);
             break;
         }
         case 'player_appearance_changed': {
@@ -285,10 +271,7 @@ function handleMessage(event: MessageEvent) {
             break;
         case 'open_bank_window': {
             // Bank opening is now handled by React via state updates
-            const togglePanelFn = (window as any).togglePanel;
-            if (togglePanelFn) {
-                togglePanelFn('bank');
-            }
+            callWindowFunction('togglePanel', 'bank');
             break;
         }
         case 'dead':

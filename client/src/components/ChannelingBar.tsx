@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { registerWindowFunction } from '../api/windowApi';
 
 const ChannelingBar: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -52,12 +53,12 @@ const ChannelingBar: React.FC = () => {
       setProgress(0);
     };
 
-    (window as any).showChannelingBar = showChannelingBar;
-    (window as any).hideChannelingBar = hideChannelingBar;
+    const cleanupShow = registerWindowFunction('showChannelingBar', showChannelingBar);
+    const cleanupHide = registerWindowFunction('hideChannelingBar', hideChannelingBar);
 
     return () => {
-      delete (window as any).showChannelingBar;
-      delete (window as any).hideChannelingBar;
+      cleanupShow();
+      cleanupHide();
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }

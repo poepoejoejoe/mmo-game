@@ -3,6 +3,9 @@ import { InventoryItem } from '../types';
 import { itemDefinitions, gearSlots } from '../definitions';
 import { send } from '../network';
 import Tooltip from './Tooltip';
+import InventorySlot from './shared/InventorySlot';
+import PanelHeader from './shared/PanelHeader';
+import { useTooltip } from '../hooks/useTooltip';
 
 interface GearPanelProps {
   isOpen: boolean;
@@ -11,32 +14,12 @@ interface GearPanelProps {
 }
 
 const GearPanel: React.FC<GearPanelProps> = ({ isOpen, onClose, gear }) => {
-  const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
+  const { hoveredKey: hoveredSlot, tooltipPosition, handleMouseEnter, handleMouseLeave } = useTooltip<string>();
 
-  const createIconElement = (itemDef: any): JSX.Element => {
-    if (itemDef.asset) {
-      return <img src={itemDef.asset} alt={itemDef.text || 'item icon'} />;
+  const handleSlotClick = (slotKey: string, item: InventoryItem | undefined) => {
+    if (item) {
+      send({ type: 'unequip', payload: { gearSlot: slotKey } });
     }
-    return <>{itemDef.icon || itemDef.character}</>;
-  };
-
-  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>, slot: string, item: InventoryItem) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredSlot(slot);
-    setTooltipPosition({
-      x: rect.left,
-      y: rect.bottom + 5,
-    });
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredSlot(null);
-    setTooltipPosition(null);
-  };
-
-  const handleSlotClick = (slot: string) => {
-    send({ type: 'unequip', payload: { gearSlot: slot } });
   };
 
   const renderTooltipContent = (item: InventoryItem) => {
@@ -61,32 +44,27 @@ const GearPanel: React.FC<GearPanelProps> = ({ isOpen, onClose, gear }) => {
 
   return (
     <div id="gear-view" className="info-panel">
-      <div className="panel-header">
-        <h2>Gear</h2>
-        <span className="close-button" onClick={onClose}>&times;</span>
-      </div>
+      <PanelHeader title="Gear" onClose={onClose} />
       {gearSlots.map((slot) => {
         const item = gear[slot];
+        const emptySlotContent = (
+          <div className="item-name">
+            {slot.replace('-slot', '')}
+          </div>
+        );
 
         return (
-          <div
+          <InventorySlot
             key={slot}
-            className={`inventory-slot ${item ? 'unequippable' : ''}`}
-            data-slot={slot}
-            onClick={() => item && handleSlotClick(slot)}
-            onMouseEnter={item ? (e) => handleMouseEnter(e, slot, item) : undefined}
-            onMouseLeave={item ? handleMouseLeave : undefined}
-          >
-            {item ? (
-              <div className="item-icon">
-                {createIconElement(itemDefinitions[item.id] || itemDefinitions['default'])}
-              </div>
-            ) : (
-              <div className="item-name">
-                {slot.replace('-slot', '')}
-              </div>
-            )}
-          </div>
+            slotKey={slot}
+            item={item}
+            emptySlotContent={emptySlotContent}
+            showQuantity={false}
+            additionalClasses={item ? ['unequippable'] : []}
+            onClick={handleSlotClick}
+            onMouseEnter={(e, slot, item) => item && handleMouseEnter(e, slot)}
+            onMouseLeave={handleMouseLeave}
+          />
         );
       })}
       {hoveredSlot && gear[hoveredSlot] && (

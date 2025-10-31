@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { initialize } from './main';
 import * as state from './state';
-import { addStateUpdateListener } from './network';
 import { toggleInfoPanel } from './ui';
-import { InventoryItem } from './types';
-import { Quest } from './types';
+import { DialogOption } from './types';
+import { useGameState } from './hooks/useGameState';
+import { registerWindowFunction } from './api/windowApi';
 import PlayerCoords from './components/PlayerCoords';
 import HealthBar from './components/HealthBar';
 import ResonanceBar from './components/ResonanceBar';
@@ -25,23 +25,10 @@ import Registration from './components/Registration';
 import ChannelingBar from './components/ChannelingBar';
 import HelpTooltip from './components/HelpModal';
 import CraftSuccessAnimation from './components/CraftSuccessAnimation';
-import { DialogOption } from './types';
 
 function App() {
-  const [coords, setCoords] = useState({ x: 0, y: 0 });
-  const [health, setHealth] = useState({ current: 0, max: 0 });
-  const [resonance, setResonance] = useState({ current: 0, max: 1 });
-  const [playerName, setPlayerName] = useState('');
-  const [echo, setEcho] = useState({ isEcho: false, unlocked: false });
+  const gameState = useGameState();
   const [openPanels, setOpenPanels] = useState(new Set<string>());
-  const [inventory, setInventory] = useState<Record<string, InventoryItem>>({});
-  const [knownRecipes, setKnownRecipes] = useState<Record<string, boolean>>({});
-  const [gear, setGear] = useState<Record<string, InventoryItem>>({});
-  const [quests, setQuests] = useState<Record<string, Quest>>({});
-  const [experience, setExperience] = useState<Record<string, number>>({});
-  const [runes, setRunes] = useState<string[]>([]);
-  const [activeRune, setActiveRune] = useState<string>('');
-  const [bank, setBank] = useState<Record<string, InventoryItem>>({});
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
@@ -104,15 +91,26 @@ function App() {
     });
   }, []);
 
+  const isBankOpen = useCallback(() => {
+    return openPanels.has('bank');
+  }, [openPanels]);
+
   useEffect(() => {
-    // Expose showDialog and hideDialog functions for network.ts to use
-    (window as any).showDialog = showDialog;
-    (window as any).hideDialog = hideDialog;
-    // Expose togglePanel for bank button to use
-    (window as any).togglePanel = handleTogglePanel;
-    // Expose closeBankPanel for closing bank when walking away
-    (window as any).closeBankPanel = closeBankPanel;
-  }, [showDialog, hideDialog, handleTogglePanel, closeBankPanel]);
+    // Register window API functions for legacy code compatibility
+    const cleanupShowDialog = registerWindowFunction('showDialog', showDialog);
+    const cleanupHideDialog = registerWindowFunction('hideDialog', hideDialog);
+    const cleanupTogglePanel = registerWindowFunction('togglePanel', handleTogglePanel);
+    const cleanupCloseBankPanel = registerWindowFunction('closeBankPanel', closeBankPanel);
+    const cleanupIsBankOpen = registerWindowFunction('isBankOpen', isBankOpen);
+
+    return () => {
+      cleanupShowDialog();
+      cleanupHideDialog();
+      cleanupTogglePanel();
+      cleanupCloseBankPanel();
+      cleanupIsBankOpen();
+    };
+  }, [showDialog, hideDialog, handleTogglePanel, closeBankPanel, isBankOpen]);
 
   useEffect(() => {
     if (!isInitialized.current) {
@@ -122,65 +120,6 @@ function App() {
       // any of the legacy initialization code tries to access DOM elements.
       setTimeout(() => initialize(), 0);
     }
-
-    const me = state.getMyEntity();
-    if (me) {
-      setCoords({ x: me.x, y: me.y });
-      setHealth({ current: me.health || 0, max: me.maxHealth || 0 });
-      setPlayerName(me.name || '');
-      const s = state.getState();
-      setResonance({ current: s.resonance || 0, max: s.maxResonance || 1 });
-      setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
-      setInventory(s.inventory);
-      setKnownRecipes(s.knownRecipes || {});
-      setGear(s.gear || {});
-      setQuests(s.quests || {});
-      setExperience(s.experience || {});
-      setRunes(s.runes || []);
-      setActiveRune(s.activeRune || '');
-      setBank(s.bank || {});
-    }
-
-    const unsubscribe = addStateUpdateListener(() => {
-      const me = state.getMyEntity();
-      if (me) {
-        setCoords(prevCoords => {
-          if (prevCoords.x === me.x && prevCoords.y === me.y) {
-            return prevCoords;
-          }
-          return { x: me.x, y: me.y };
-        });
-        setHealth(prevHealth => {
-          const newHealth = { current: me.health || 0, max: me.maxHealth || 0 };
-          if (prevHealth.current === newHealth.current && prevHealth.max === newHealth.max) {
-            return prevHealth;
-          }
-          return newHealth;
-        });
-        setPlayerName(me.name || '');
-        const s = state.getState();
-        setResonance(prevResonance => {
-          const newResonance = { current: s.resonance || 0, max: s.maxResonance || 1 };
-          if (prevResonance.current === newResonance.current && prevResonance.max === newResonance.max) {
-            return prevResonance;
-          }
-          return newResonance;
-        });
-        setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
-        setInventory(s.inventory);
-        setKnownRecipes(s.knownRecipes || {});
-        setGear(s.gear || {});
-        setQuests(s.quests || {});
-        setExperience(s.experience || {});
-        setRunes(s.runes || []);
-        setActiveRune(s.activeRune || '');
-        setBank(s.bank || {});
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
   }, []);
 
   return (
@@ -189,7 +128,7 @@ function App() {
         {/* Top Info bar */}
         <div className="top-info">
             <img src="assets/game-title.png" id="game-title-logo" alt="Game Title" />
-            <Registration playerName={playerName} />
+            <Registration playerName={gameState.playerName} />
             <button className="help-button" id="help-button">?</button>
         </div>
 
@@ -200,11 +139,10 @@ function App() {
             <canvas id="game-canvas"></canvas>
         </div>
         
-        {/* Bank Panel - rendered inside game-container for proper centering */}
         <BankPanel
           isOpen={openPanels.has('bank')}
           onClose={() => handleTogglePanel('bank')}
-          bank={bank}
+          bank={gameState.bank}
         />
         
         {/* Bottom UI */}
@@ -222,12 +160,12 @@ function App() {
             )}
 
             <div id="player-hud-bottom">
-                <PlayerNameDisplay name={playerName} />
-                <HealthBar health={health.current} maxHealth={health.max} />
-                {echo.unlocked && <ResonanceBar resonance={resonance.current} maxResonance={resonance.max} />}
-                {echo.unlocked && <EchoButton isEcho={echo.isEcho} resonance={resonance.current} />}
+                <PlayerNameDisplay name={gameState.playerName} />
+                <HealthBar health={gameState.health.current} maxHealth={gameState.health.max} />
+                {gameState.echo.unlocked && <ResonanceBar resonance={gameState.resonance.current} maxResonance={gameState.resonance.max} />}
+                {gameState.echo.unlocked && <EchoButton isEcho={gameState.echo.isEcho} resonance={gameState.resonance.current} />}
                 <TeleportButton />
-                <PlayerCoords x={coords.x} y={coords.y} />
+                <PlayerCoords x={gameState.coords.x} y={gameState.coords.y} />
             </div>
 
             <div className="right-hud-container">
@@ -235,35 +173,35 @@ function App() {
                     <InventoryPanel 
                       isOpen={openPanels.has('inventory')} 
                       onClose={() => handleTogglePanel('inventory')}
-                      inventory={inventory}
+                      inventory={gameState.inventory}
                       isBankOpen={openPanels.has('bank')}
                     />
                     <CraftingPanel
                       isOpen={openPanels.has('crafting')}
                       onClose={() => handleTogglePanel('crafting')}
-                      inventory={inventory}
-                      knownRecipes={knownRecipes}
+                      inventory={gameState.inventory}
+                      knownRecipes={gameState.knownRecipes}
                     />
                     <GearPanel
                       isOpen={openPanels.has('gear')}
                       onClose={() => handleTogglePanel('gear')}
-                      gear={gear}
+                      gear={gameState.gear}
                     />
                     <QuestPanel
                       isOpen={openPanels.has('quest')}
                       onClose={() => handleTogglePanel('quest')}
-                      quests={quests}
+                      quests={gameState.quests}
                     />
                     <ExperiencePanel
                       isOpen={openPanels.has('experience')}
                       onClose={() => handleTogglePanel('experience')}
-                      experience={experience}
+                      experience={gameState.experience}
                     />
                     <RunesPanel
                       isOpen={openPanels.has('runes')}
                       onClose={() => handleTogglePanel('runes')}
-                      runes={runes}
-                      activeRune={activeRune}
+                      runes={gameState.runes}
+                      activeRune={gameState.activeRune}
                     />
                 </div>
                 <ActionBar openPanels={openPanels} onTogglePanel={handleTogglePanel} />

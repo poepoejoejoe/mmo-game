@@ -1,4 +1,5 @@
 import * as state from './state';
+import { callWindowFunction, getWindowAPI } from './api/windowApi';
 
 // Main Content
 let gameCanvas: HTMLElement;
@@ -38,48 +39,36 @@ export function setBuildModeActive(isActive: boolean, buildItem: string | null):
 
 export function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes' | 'bank') {
     // Legacy function - React handles panel toggling now, but keeping for compatibility
-    const togglePanelFn = (window as any).togglePanel;
-    if (togglePanelFn) {
-        togglePanelFn(panelType);
+    callWindowFunction('togglePanel', panelType);
+    // Fallback: manually toggle openPanels set if function not available
+    // Note: We can't check if function exists, so we always try the fallback
+    if (openPanels.has(panelType)) {
+        openPanels.delete(panelType);
     } else {
-        // Fallback: manually toggle openPanels set
-        if (openPanels.has(panelType)) {
-            openPanels.delete(panelType);
-        } else {
-            openPanels.add(panelType);
-        }
+        openPanels.add(panelType);
     }
 }
 
 export function showDialog(dialogMsg: { npcName?: string, text: string, options: { text: string, action: string, context?: string }[] }, position: {x: number, y: number} | null) {
     // Redirect to React Dialog component
-    const showDialogFn = (window as any).showDialog;
-    if (showDialogFn) {
-        showDialogFn(dialogMsg, position);
-    }
+    callWindowFunction('showDialog', dialogMsg, position);
 }
 
 export function hideDialog() {
     // Redirect to React Dialog component
-    const hideDialogFn = (window as any).hideDialog;
-    if (hideDialogFn) {
-        hideDialogFn();
-    } else {
-        state.setActiveNpcId(null);
-    }
+    callWindowFunction('hideDialog');
+    // Fallback: clear active NPC if React dialog not available
+    state.setActiveNpcId(null);
 }
 
 export function closeBankWindow() {
-    const closeBankPanelFn = (window as any).closeBankPanel;
-    if (closeBankPanelFn) {
-        closeBankPanelFn();
+    // Close bank panel using the React-managed function
+    const windowAPI = getWindowAPI();
+    if (windowAPI.closeBankPanel) {
+        windowAPI.closeBankPanel();
     } else {
-        const togglePanelFn = (window as any).togglePanel;
-        if (togglePanelFn && openPanels.has('bank')) {
-            togglePanelFn('bank');
-        } else if (openPanels.has('bank')) {
-            toggleInfoPanel('bank');
-        }
+        // Fallback: use togglePanel (will toggle off if open)
+        callWindowFunction('togglePanel', 'bank');
     }
 }
 

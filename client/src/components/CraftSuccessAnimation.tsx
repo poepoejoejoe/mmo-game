@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { itemDefinitions } from '../definitions';
+import { registerWindowFunction } from '../api/windowApi';
 
 interface FloatingIcon {
   id: string;
@@ -65,11 +66,8 @@ const CraftSuccessAnimation: React.FC = () => {
       }, 1500);
     };
 
-    (window as any).showCraftSuccess = showCraftSuccess;
-
-    return () => {
-      delete (window as any).showCraftSuccess;
-    };
+    const cleanup = registerWindowFunction('showCraftSuccess', showCraftSuccess);
+    return cleanup;
   }, []);
 
   return (

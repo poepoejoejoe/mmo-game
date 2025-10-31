@@ -3,6 +3,7 @@ import * as network from './network';
 import { setBuildModeActive, startCooldown, gearView, inventoryView, craftingView, hideDialog, closeBankWindow } from './ui';
 import { ACTION_COOLDOWN, TILE_SIZE, WATER_PENALTY } from './constants';
 import { getEntityProperties, getTileProperties } from './definitions';
+import { getWindowAPI } from './api/windowApi';
 
 let gameCanvas: HTMLCanvasElement;
 let nameInputEl: HTMLInputElement;
@@ -69,19 +70,41 @@ function sendMoveCommand(dx: number, dy: number, isContinuous: boolean = false) 
     const dirKey = `${dx},${dy}`;
     network.send({ type: 'move', payload: { direction: directionMap[dirKey] } });
 
-    // --- NEW: Check distance to active NPC ---
+    // --- Check distance to active NPC ---
     const s = state.getState();
-    if (s.activeNpcId) {
+    if (s.activeNpcId && me) {
         const npc = s.entities[s.activeNpcId];
-        const me = state.getMyEntity();
-        if (npc && me) {
+        if (npc) {
             const distance = Math.max(Math.abs(me.x - npc.x), Math.abs(me.y - npc.y));
             if (distance > 3) {
                 hideDialog();
                 if (npc.name === 'golem_banker') {
+                    console.log('yo')
                     closeBankWindow();
                 }
             }
+        }
+    }
+    
+    // --- Also check if bank is open independently (in case activeNpcId isn't set) ---
+    const windowAPI = getWindowAPI();
+    if (windowAPI.isBankOpen && windowAPI.isBankOpen() && me) {
+        // Find any golem_banker NPC and check distance
+        let foundNearbyBanker = false;
+        for (const id in s.entities) {
+            const entity = s.entities[id];
+            if (entity.type === 'npc' && entity.name === 'golem_banker') {
+                const distance = Math.max(Math.abs(me.x - entity.x), Math.abs(me.y - entity.y));
+                if (distance <= 3) {
+                    foundNearbyBanker = true;
+                    break;
+                }
+            }
+        }
+        
+        // Close bank if no banker found nearby
+        if (!foundNearbyBanker) {
+            closeBankWindow();
         }
     }
 }

@@ -3,6 +3,9 @@ import { InventoryItem } from '../types';
 import { itemDefinitions, edibleDefs } from '../definitions';
 import { send, sendLearnRecipe, sendDepositItem } from '../network';
 import Tooltip from './Tooltip';
+import InventorySlot from './shared/InventorySlot';
+import PanelHeader from './shared/PanelHeader';
+import { useTooltip } from '../hooks/useTooltip';
 
 interface InventoryPanelProps {
   isOpen: boolean;
@@ -12,30 +15,8 @@ interface InventoryPanelProps {
 }
 
 const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, inventory, isBankOpen = false }) => {
-  const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
+  const { hoveredKey: hoveredSlot, tooltipPosition, handleMouseEnter, handleMouseLeave, clearTooltip } = useTooltip<string>();
   const [contextMenu, setContextMenu] = useState<{ slot: string; x: number; y: number } | null>(null);
-
-  const createIconElement = (itemDef: any): JSX.Element => {
-    if (itemDef.asset) {
-      return <img src={itemDef.asset} alt={itemDef.text || 'item icon'} />;
-    }
-    return <>{itemDef.icon || itemDef.character}</>;
-  };
-
-  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>, slotKey: string, item: InventoryItem) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredSlot(slotKey);
-    setTooltipPosition({
-      x: rect.left,
-      y: rect.bottom + 5,
-    });
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredSlot(null);
-    setTooltipPosition(null);
-  };
 
   const renderTooltipContent = (item: InventoryItem) => {
     const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
@@ -83,8 +64,7 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
     e.preventDefault();
     if (item && isBankOpen) {
       // Hide tooltip immediately when showing context menu
-      setHoveredSlot(null);
-      setTooltipPosition(null);
+      clearTooltip();
       setContextMenu({ slot: slotKey, x: e.clientX, y: e.clientY });
     }
   };
@@ -118,7 +98,7 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
     }
   }, [contextMenu]);
 
-  const handleSlotClick = (slotKey: string, item: any) => {
+  const handleSlotClick = (slotKey: string, item: InventoryItem | undefined) => {
     if (!item) return;
 
     // If bank is open, deposit instead of normal actions
@@ -146,47 +126,34 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
 
   return (
     <div id="inventory-view" className="info-panel">
-      <div className="panel-header">
-        <h2>Inventory</h2>
-        <span className="close-button" onClick={onClose}>&times;</span>
-      </div>
+      <PanelHeader title="Inventory" onClose={onClose} />
       <div className="inventory-grid">
           {Array.from({ length: 10 }, (_, i) => {
             const slotKey = `slot_${i}`;
             const item = inventory[slotKey];
             
             // Build class names - only show action classes when bank is NOT open
-            const classNames = ['inventory-slot'];
+            const additionalClasses: string[] = [];
             if (item && !isBankOpen) {
-              if (edibleDefs[item.id]) classNames.push('edible');
-              if (itemDefinitions[item.id]?.equippable) classNames.push('equippable');
-              if (itemDefinitions[item.id]?.kind === 'recipe') classNames.push('learnable');
+              if (edibleDefs[item.id]) additionalClasses.push('edible');
+              if (itemDefinitions[item.id]?.equippable) additionalClasses.push('equippable');
+              if (itemDefinitions[item.id]?.kind === 'recipe') additionalClasses.push('learnable');
             }
 
             return (
-              <div
+              <InventorySlot
                 key={slotKey}
-                className={classNames.join(' ')}
-                data-slot={slotKey}
-                onClick={() => item && handleSlotClick(slotKey, item)}
-                onContextMenu={(e) => handleContextMenu(e, slotKey, item)}
-                onMouseEnter={item ? (e) => handleMouseEnter(e, slotKey, item) : undefined}
-                onMouseLeave={item ? handleMouseLeave : undefined}
-                draggable={!!item && !isBankOpen}
-              >
-              {item ? (
-                <>
-                  <div className="item-icon">
-                    {createIconElement(itemDefinitions[item.id] || itemDefinitions['default'])}
-                  </div>
-                  <div className="item-quantity">{item.quantity}</div>
-                </>
-              ) : (
-                <>&nbsp;</>
-              )}
-            </div>
-          );
-        })}
+                slotKey={slotKey}
+                item={item}
+                additionalClasses={additionalClasses}
+                draggable={!isBankOpen}
+                onClick={handleSlotClick}
+                onContextMenu={handleContextMenu}
+                onMouseEnter={(e, slotKey, item) => item && handleMouseEnter(e, slotKey)}
+                onMouseLeave={handleMouseLeave}
+              />
+            );
+          })}
       </div>
       {hoveredSlot && inventory[hoveredSlot] && (
         <Tooltip show={true} position={tooltipPosition}>

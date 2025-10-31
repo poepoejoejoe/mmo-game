@@ -3,7 +3,9 @@ import { InventoryItem } from '../types';
 import { itemDefinitions } from '../definitions';
 import { sendWithdrawItem } from '../network';
 import Tooltip from './Tooltip';
-import * as state from '../state';
+import InventorySlot from './shared/InventorySlot';
+import PanelHeader from './shared/PanelHeader';
+import { useTooltip } from '../hooks/useTooltip';
 
 interface BankPanelProps {
   isOpen: boolean;
@@ -12,30 +14,8 @@ interface BankPanelProps {
 }
 
 const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
-  const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
+  const { hoveredKey: hoveredSlot, tooltipPosition, handleMouseEnter, handleMouseLeave } = useTooltip<string>();
   const [contextMenu, setContextMenu] = useState<{ slot: string; x: number; y: number } | null>(null);
-
-  const createIconElement = (itemDef: any): JSX.Element => {
-    if (itemDef.asset) {
-      return <img src={itemDef.asset} alt={itemDef.text || 'item icon'} />;
-    }
-    return <>{itemDef.icon || itemDef.character}</>;
-  };
-
-  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>, slotKey: string, item: InventoryItem) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredSlot(slotKey);
-    setTooltipPosition({
-      x: rect.left,
-      y: rect.bottom + 5,
-    });
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredSlot(null);
-    setTooltipPosition(null);
-  };
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>, slotKey: string, item: InventoryItem | undefined) => {
     e.preventDefault();
@@ -54,9 +34,8 @@ const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
     setContextMenu(null);
   };
 
-  const handleSlotClick = (slotKey: string) => {
+  const handleSlotClick = (slotKey: string, item: InventoryItem | undefined) => {
     // Left click withdraws 1 item
-    const item = bank[slotKey];
     if (item) {
       sendWithdrawItem(slotKey, 1);
     }
@@ -93,36 +72,22 @@ const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
   return (
     <>
       <div id="bank-view" className="info-panel centered-panel">
-        <div className="panel-header">
-          <h2>Bank</h2>
-          <span className="close-button" onClick={onClose}>&times;</span>
-        </div>
+        <PanelHeader title="Bank" onClose={onClose} />
         <div className="inventory-grid">
           {Array.from({ length: 64 }, (_, i) => {
             const slotKey = `slot_${i}`;
             const item = bank[slotKey];
 
             return (
-              <div
+              <InventorySlot
                 key={slotKey}
-                className="inventory-slot"
-                data-slot={slotKey}
-                onClick={() => handleSlotClick(slotKey)}
-                onContextMenu={(e) => handleContextMenu(e, slotKey, item)}
-                onMouseEnter={item ? (e) => handleMouseEnter(e, slotKey, item) : undefined}
-                onMouseLeave={item ? handleMouseLeave : undefined}
-              >
-                {item ? (
-                  <>
-                    <div className="item-icon">
-                      {createIconElement(itemDefinitions[item.id] || itemDefinitions['default'])}
-                    </div>
-                    <div className="item-quantity">{item.quantity}</div>
-                  </>
-                ) : (
-                  <>&nbsp;</>
-                )}
-              </div>
+                slotKey={slotKey}
+                item={item}
+                onClick={handleSlotClick}
+                onContextMenu={handleContextMenu}
+                onMouseEnter={(e, slotKey, item) => item && handleMouseEnter(e, slotKey)}
+                onMouseLeave={handleMouseLeave}
+              />
             );
           })}
         </div>
