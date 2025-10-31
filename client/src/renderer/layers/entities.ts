@@ -16,6 +16,16 @@ export function renderEntities(ctx: CanvasRenderingContext2D, params: RenderPara
     const allEntities = state.getState().entities;
     const myPlayerId = state.getState().playerId;
 
+    // First pass: collect positions of golem banker and wizard NPCs
+    const npcBlockingPositions = new Set<string>();
+    for (const entityId in allEntities) {
+        const entity = allEntities[entityId];
+        if (entity.type === 'npc' && (entity.name === 'golem_banker' || entity.name === 'wizard')) {
+            const posKey = `${entity.x},${entity.y}`;
+            npcBlockingPositions.add(posKey);
+        }
+    }
+
     for (const entityId in allEntities) {
         const entity = allEntities[entityId];
         
@@ -23,6 +33,14 @@ export function renderEntities(ctx: CanvasRenderingContext2D, params: RenderPara
         if (entity.type === 'item') {
             if (entity.owner && entity.owner !== myPlayerId && entity.publicAt && Date.now() < entity.publicAt) {
                 continue; // Skip rendering if it's owned by someone else and not yet public
+            }
+        }
+
+        // Skip rendering players that are on the same position as a golem banker or wizard
+        if (entity.type === 'player') {
+            const posKey = `${entity.x},${entity.y}`;
+            if (npcBlockingPositions.has(posKey)) {
+                continue; // Skip rendering player if NPC is on the same position
             }
         }
 
