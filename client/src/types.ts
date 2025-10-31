@@ -21,6 +21,8 @@ export interface EntityState {
     shirtColor?: string;
     gear?: Record<string, InventoryItem>;
     isEcho?: boolean;
+    health?: number;
+    maxHealth?: number;
 }
 
 export interface WorldTile {

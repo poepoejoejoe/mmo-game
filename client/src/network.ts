@@ -31,7 +31,6 @@ import {
     showCraftSuccess, 
     showDialog, 
     updateInventoryUI, 
-    updatePlayerHealth, 
     updatePlayerNameDisplay,
     showChannelingBar,
     hideChannelingBar,
@@ -77,6 +76,7 @@ function handleMessage(event: MessageEvent) {
                 initialState.world,
                 initialState.inventory,
                 initialState.gear,
+                initialState.bank,
                 initialState.quests,
                 initialState.experience,
                 initialState.resonance || 0,
@@ -235,9 +235,13 @@ function handleMessage(event: MessageEvent) {
         }
         case 'player_stats_update': {
             const statsMsg = msg as PlayerStatsUpdateMessage;
-            if (statsMsg.health !== undefined && statsMsg.maxHealth !== undefined) {
-                updatePlayerHealth(statsMsg.health, statsMsg.maxHealth);
+            const me = state.getMyEntity();
+
+            if (me) {
+                if (statsMsg.health !== undefined) me.health = statsMsg.health;
+                if (statsMsg.maxHealth !== undefined) me.maxHealth = statsMsg.maxHealth;
             }
+
             if (statsMsg.experience) {
                 state.setExperience(statsMsg.experience);
             }
