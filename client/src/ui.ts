@@ -41,22 +41,13 @@ let gameCanvas: HTMLElement;
 
 // Bottom Bar
 let playerCoordsEl: HTMLElement;
-let playerNameDisplayEl: HTMLElement;
-export let inventoryView: HTMLElement;
+export let inventoryView: HTMLElement | null;
 export let craftingView: HTMLElement;
 export let gearView: HTMLElement;
 export let questView: HTMLElement;
 export let experienceView: HTMLElement;
 export let runesView: HTMLElement;
 export let bankView: HTMLElement;
-let inventoryButton: HTMLButtonElement;
-let craftingButton: HTMLButtonElement;
-let gearButton: HTMLButtonElement;
-let questButton: HTMLButtonElement;
-let experienceButton: HTMLButtonElement;
-let runesButton: HTMLButtonElement;
-let echoButton: HTMLButtonElement;
-let teleportButton: HTMLButtonElement;
 let chatMessagesEl: HTMLElement;
 let chatButton: HTMLButtonElement;
 let chatContainer: HTMLElement;
@@ -93,21 +84,12 @@ export function initializeUI() {
 
     // Bottom Bar
     playerCoordsEl = document.getElementById('player-coords')!;
-    playerNameDisplayEl = document.getElementById('player-name-display')!;
-    inventoryView = document.getElementById('inventory-view')!;
+    inventoryView = document.getElementById('inventory-view'); // May be null until React renders
     craftingView = document.getElementById('crafting-view')!;
     gearView = document.getElementById('gear-view')!;
     questView = document.getElementById('quest-view')!;
     experienceView = document.getElementById('experience-view')!;
     runesView = document.getElementById('runes-view')!;
-    inventoryButton = document.getElementById('inventory-button') as HTMLButtonElement;
-    craftingButton = document.getElementById('crafting-button') as HTMLButtonElement;
-    gearButton = document.getElementById('gear-button') as HTMLButtonElement;
-    questButton = document.getElementById('quest-button') as HTMLButtonElement;
-    experienceButton = document.getElementById('experience-button') as HTMLButtonElement;
-    runesButton = document.getElementById('runes-button') as HTMLButtonElement;
-    echoButton = document.getElementById('echo-button') as HTMLButtonElement;
-    teleportButton = document.getElementById('teleport-button') as HTMLButtonElement;
     chatMessagesEl = document.getElementById('chat-messages')!;
     chatButton = document.getElementById('chat-button') as HTMLButtonElement;
     chatContainer = document.getElementById('chat-container')!;
@@ -143,18 +125,6 @@ export function initializeUI() {
         }
     });
 
-    inventoryButton.addEventListener('click', () => toggleInfoPanel('inventory'));
-    craftingButton.addEventListener('click', () => toggleInfoPanel('crafting'));
-    gearButton.addEventListener('click', () => toggleInfoPanel('gear'));
-    questButton.addEventListener('click', () => toggleInfoPanel('quest'));
-    experienceButton.addEventListener('click', () => toggleInfoPanel('experience'));
-    runesButton.addEventListener('click', () => toggleInfoPanel('runes'));
-    echoButton.addEventListener('click', () => {
-        send({ type: 'toggle_echo', payload: {} });
-    });
-    teleportButton.addEventListener('click', () => {
-        send({ type: 'teleport', payload: {} });
-    });
     helpButton.addEventListener('click', () => toggleModal('help-modal', true));
     helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
     dialogCloseButton.addEventListener('click', hideDialog);
@@ -166,15 +136,7 @@ export function initializeUI() {
     toggleChat(); // to set initial state
     toggleChat(); // toggle back to open, but apply style
 
-    inventoryButton.innerHTML = `<img src="assets/inventory-icon.png" alt="Inventory">`;
-    craftingButton.innerHTML = `<img src="assets/crafting-icon.png" alt="Crafting">`;
-    gearButton.innerHTML = `<img src="assets/gear-icon.png" alt="Gear">`;
-    questButton.innerHTML = `<img src="assets/quest-icon.png" alt="Quests">`;
-    experienceButton.innerHTML = `<img src="assets/experience-icon.png" alt="Experience">`;
-    runesButton.innerHTML = `<img src="assets/runes-icon.png" alt="Runes">`;
     chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
-    echoButton.innerHTML = `<img src="assets/echo-icon.png" alt="Echo">`;
-    teleportButton.innerHTML = `<img src="assets/sanctuary-stone-icon.png" alt="Teleport">`;
 
     const infoPanelsContainer = document.querySelector('.info-panels');
     infoPanelsContainer?.addEventListener('click', (e) => {
@@ -193,7 +155,7 @@ export function initializeUI() {
 
         if (slot) {
             const isBankOpen = bankView.style.display === 'flex';
-            const isInventorySlot = inventoryView.contains(slot);
+            const isInventorySlot = inventoryView && inventoryView.contains(slot);
 
             if (isBankOpen && isInventorySlot) {
                 // Already handled by the more specific listener in initializeBankUI
@@ -304,7 +266,8 @@ function initializeBankUI() {
         }
     });
 
-    inventoryView.addEventListener('contextmenu', (e) => {
+    if (inventoryView) {
+        inventoryView.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (bankView.style.display !== 'flex') return;
         const target = e.target as HTMLElement;
@@ -329,6 +292,7 @@ function initializeBankUI() {
             }
         }
     });
+    }
 
     bankContextMenu.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
@@ -365,11 +329,13 @@ function initializeBankUI() {
         }
     };
 
-    inventoryView.addEventListener('click', (e) => {
-        if (openPanels.has('bank')) {
-            handleLeftClick(e, 'inventory');
-        }
-    });
+    if (inventoryView) {
+        inventoryView.addEventListener('click', (e) => {
+            if (openPanels.has('bank')) {
+                handleLeftClick(e, 'inventory');
+            }
+        });
+    }
 
     bankView.addEventListener('click', (e) => handleLeftClick(e, 'bank'));
 
@@ -435,7 +401,8 @@ export function showCraftSuccess(itemId: string) {
     icon.src = itemDef.asset;
     icon.className = 'floating-icon';
 
-    const rect = inventoryButton.getBoundingClientRect();
+    if (!inventoryView) return;
+    const rect = inventoryView.getBoundingClientRect(); // Changed from inventoryButton
     const containerRect = container.getBoundingClientRect();
 
     icon.style.left = `${rect.left - containerRect.left + (rect.width / 2)}px`;
@@ -464,7 +431,7 @@ function toggleChat() {
     }
 }
 
-function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes' | 'bank') {
+export function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes' | 'bank') {
     if (openPanels.has(panelType)) {
         openPanels.delete(panelType);
     } else {
@@ -485,7 +452,6 @@ function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' 
             panelElement.parentElement.prepend(panelElement);
         }
     }
-    updateButtonAndPanelSelection();
     updateAllPanels();
 }
 
@@ -500,17 +466,13 @@ function updateAllPanels() {
 }
 
 function updateButtonAndPanelSelection() {
-    // Buttons
-    inventoryButton.classList.toggle('selected', openPanels.has('inventory'));
-    craftingButton.classList.toggle('selected', openPanels.has('crafting'));
-    gearButton.classList.toggle('selected', openPanels.has('gear'));
-    questButton.classList.toggle('selected', openPanels.has('quest'));
-    experienceButton.classList.toggle('selected', openPanels.has('experience'));
-    runesButton.classList.toggle('selected', openPanels.has('runes'));
-    bankButton.classList.toggle('selected', openPanels.has('bank'));
+    // Button selection is now handled by React state
 
     // Views
-    inventoryView.style.display = openPanels.has('inventory') ? 'flex' : 'none';
+    // inventoryView is now handled by React - skip it
+    if (inventoryView) {
+        inventoryView.style.display = openPanels.has('inventory') ? 'flex' : 'none';
+    }
     craftingView.style.display = openPanels.has('crafting') ? 'flex' : 'none';
     gearView.style.display = openPanels.has('gear') ? 'flex' : 'none';
     questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
@@ -860,6 +822,10 @@ export function updateGearUI(): void {
 }
 
 export function updateInventoryUI(): void {
+    // This function is now obsolete - inventory is handled by React
+    // Keeping it for compatibility but it does nothing if inventoryView is null
+    if (!inventoryView) return;
+    
     const inventory = state.getState().inventory;
     inventoryView.innerHTML = '';
     inventoryView.appendChild(createPanelHeader('Inventory', 'inventory'));
@@ -956,7 +922,7 @@ export function updatePlayerIdDisplay() {
 export function updatePlayerNameDisplay(name: string) {
     if (name) {
         welcomeMessageEl.textContent = `Welcome, ${name}!`;
-        playerNameDisplayEl.textContent = name;
+        // playerNameDisplayEl.textContent = name; This is now a React component
         registrationContainer.style.display = 'none';
         welcomeMessageEl.style.display = 'block';
     } else {
@@ -973,35 +939,7 @@ export function updateResonanceUI(): void {
 }
 
 export function updateEchoUI(): void {
-    const me = state.getMyEntity();
-    const isUnlocked = state.getState().echoUnlocked;
-    const resonanceContainer = document.querySelector('.resonance-display') as HTMLElement;
-
-    if (!me || !isUnlocked) {
-        echoButton.style.display = 'none';
-        if (resonanceContainer) resonanceContainer.style.display = 'none';
-        return;
-    } else {
-        echoButton.style.display = 'grid'; // Assuming 'grid' is used for centering
-        if (resonanceContainer) resonanceContainer.style.display = 'flex';
-    }
-
-    updateResonanceUI();
-
-    const resonance = state.getState().resonance || 0;
-    const isEcho = me.isEcho || false;
-
-    if (isEcho) {
-        echoButton.classList.add('selected');
-        const minutes = Math.floor(resonance / 60);
-        const seconds = resonance % 60;
-        echoButton.title = `Reclaim Control (${minutes}m ${seconds}s remaining)`;
-    } else {
-        echoButton.classList.remove('selected');
-        const minutes = Math.floor(resonance / 60);
-        const seconds = resonance % 60;
-        echoButton.title = `Activate Echo (${minutes}m ${seconds}s available)`;
-    }
+    // This is now handled by the EchoButton and ResonanceBar React components.
 }
 
 export function updateExperienceUI(): void {

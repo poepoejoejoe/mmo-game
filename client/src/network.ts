@@ -31,7 +31,6 @@ import {
     showCraftSuccess, 
     showDialog, 
     updateInventoryUI, 
-    updatePlayerNameDisplay,
     showChannelingBar,
     hideChannelingBar,
     openBankWindow,
@@ -89,7 +88,7 @@ function handleMessage(event: MessageEvent) {
             updateInventoryUI();
             const myEntity = state.getMyEntity();
             if (myEntity && myEntity.name) {
-                updatePlayerNameDisplay(myEntity.name);
+                // This is now handled by React state
             } else {
                 // If we logged in but don't have a name, show the registration prompt.
                 promptForRegistration();
@@ -276,7 +275,7 @@ function handleMessage(event: MessageEvent) {
             const regMsg = msg as RegisteredMessage;
             localStorage.setItem('secretKey', regMsg.secretKey);
             state.setPlayerId(regMsg.playerId); // Update our player ID
-            updatePlayerNameDisplay(regMsg.name);
+            // This is now handled by React state
             onStateUpdate();
             break;
         }

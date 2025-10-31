@@ -2,15 +2,43 @@ import { useEffect, useState, useRef } from 'react';
 import { initialize } from './main';
 import * as state from './state';
 import { addStateUpdateListener } from './network';
+import { toggleInfoPanel } from './ui';
+import { InventoryItem } from './types';
 import PlayerCoords from './components/PlayerCoords';
 import HealthBar from './components/HealthBar';
 import ResonanceBar from './components/ResonanceBar';
+import PlayerNameDisplay from './components/PlayerNameDisplay';
+import EchoButton from './components/EchoButton';
+import TeleportButton from './components/TeleportButton';
+import ActionBar from './components/ActionBar';
+import InventoryPanel from './components/InventoryPanel';
 
 function App() {
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const [health, setHealth] = useState({ current: 0, max: 0 });
   const [resonance, setResonance] = useState({ current: 0, max: 1 });
+  const [playerName, setPlayerName] = useState('');
+  const [echo, setEcho] = useState({ isEcho: false, unlocked: false });
+  const [openPanels, setOpenPanels] = useState(new Set<string>());
+  const [inventory, setInventory] = useState<Record<string, InventoryItem>>({});
   const isInitialized = useRef(false);
+
+  const handleTogglePanel = (panelId: string) => {
+    // This function now drives the state for both React and the legacy UI
+    setOpenPanels(prevPanels => {
+      const newPanels = new Set(prevPanels);
+      if (newPanels.has(panelId)) {
+        newPanels.delete(panelId);
+      } else {
+        newPanels.add(panelId);
+      }
+      return newPanels;
+    });
+    // Only call toggleInfoPanel for non-inventory panels for now
+    if (panelId !== 'inventory') {
+      toggleInfoPanel(panelId as any);
+    }
+  };
 
   useEffect(() => {
     if (!isInitialized.current) {
@@ -25,8 +53,11 @@ function App() {
     if (me) {
       setCoords({ x: me.x, y: me.y });
       setHealth({ current: me.health || 0, max: me.maxHealth || 0 });
+      setPlayerName(me.name || '');
       const s = state.getState();
       setResonance({ current: s.resonance || 0, max: s.maxResonance || 1 });
+      setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
+      setInventory(s.inventory);
     }
 
     const unsubscribe = addStateUpdateListener(() => {
@@ -45,6 +76,7 @@ function App() {
           }
           return newHealth;
         });
+        setPlayerName(me.name || '');
         const s = state.getState();
         setResonance(prevResonance => {
           const newResonance = { current: s.resonance || 0, max: s.maxResonance || 1 };
@@ -53,6 +85,8 @@ function App() {
           }
           return newResonance;
         });
+        setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
+        setInventory(s.inventory);
       }
     });
 
@@ -99,31 +133,28 @@ function App() {
             </div>
 
             <div id="player-hud-bottom">
-                <div id="player-name-display"></div>
+                <PlayerNameDisplay name={playerName} />
                 <HealthBar health={health.current} maxHealth={health.max} />
-                <ResonanceBar resonance={resonance.current} maxResonance={resonance.max} />
-                <button id="echo-button" className="action-button" title="Activate Echo"></button>
-                <button id="teleport-button" className="action-button" title="Teleport to Sanctuary Stone"></button>
+                {echo.unlocked && <ResonanceBar resonance={resonance.current} maxResonance={resonance.max} />}
+                {echo.unlocked && <EchoButton isEcho={echo.isEcho} resonance={resonance.current} />}
+                <TeleportButton />
                 <PlayerCoords x={coords.x} y={coords.y} />
             </div>
 
             <div className="right-hud-container">
                 <div className="info-panels">
-                    <div id="inventory-view" className="info-panel" style={{display: 'none'}}></div>
+                    <InventoryPanel 
+                      isOpen={openPanels.has('inventory')} 
+                      onClose={() => handleTogglePanel('inventory')}
+                      inventory={inventory}
+                    />
                     <div id="crafting-view" className="info-panel" style={{display: 'none'}}></div>
                     <div id="gear-view" className="info-panel" style={{display: 'none'}}></div>
                     <div id="quest-view" className="info-panel" style={{display: 'none'}}></div>
                     <div id="experience-view" className="info-panel" style={{display: 'none'}}></div>
                     <div id="runes-view" className="info-panel" style={{display: 'none'}}></div>
                 </div>
-                <div id="main-action-bar" className="action-bar">
-                    <button className="action-button" id="inventory-button">🎒</button>
-                    <button className="action-button" id="crafting-button">🔨</button>
-                    <button className="action-button" id="gear-button">🛡️</button>
-                    <button className="action-button" id="quest-button"></button>
-                    <button className="action-button" id="experience-button">⭐</button>
-                    <button className="action-button" id="runes-button"></button>
-                </div>
+                <ActionBar openPanels={openPanels} onTogglePanel={handleTogglePanel} />
             </div>
         </div>
         

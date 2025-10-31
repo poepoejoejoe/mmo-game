@@ -361,13 +361,13 @@ function handleRightClick(e: MouseEvent) {
         }
     };
 
-    inventoryView.addEventListener('dragstart', (e) => handleDragStart(e, 'inventory'));
+    if (inventoryView) {
+        inventoryView.addEventListener('dragstart', (e) => handleDragStart(e, 'inventory'));
+        inventoryView.addEventListener('dragover', handleDragOver);
+        inventoryView.addEventListener('drop', (e) => handleDrop(e, 'inventory'));
+    }
     bankView.addEventListener('dragstart', (e) => handleDragStart(e, 'bank'));
-
-    inventoryView.addEventListener('dragover', handleDragOver);
     bankView.addEventListener('dragover', handleDragOver);
-
-    inventoryView.addEventListener('drop', (e) => handleDrop(e, 'inventory'));
     bankView.addEventListener('drop', (e) => handleDrop(e, 'bank'));
 
     // 2. Send find-path request to server
@@ -441,28 +441,30 @@ export function initializeInput() {
 
     setInterval(processPathMovement, 100);
 
-    inventoryView.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        const slot = target.closest('.inventory-slot');
-        if (!slot) return;
+    if (inventoryView) {
+        inventoryView.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            const slot = target.closest('.inventory-slot');
+            if (!slot) return;
 
-        if (slot.classList.contains('edible')) {
-            if (!canPerformAction) return;
-            const itemToEat = (slot as HTMLElement).dataset.item;
-            if (itemToEat) {
-                startActionCooldown(ACTION_COOLDOWN);
-                network.send({ type: 'eat', payload: { item: itemToEat } });
+            if (slot.classList.contains('edible')) {
+                if (!canPerformAction) return;
+                const itemToEat = (slot as HTMLElement).dataset.item;
+                if (itemToEat) {
+                    startActionCooldown(ACTION_COOLDOWN);
+                    network.send({ type: 'eat', payload: { item: itemToEat } });
+                }
             }
-        }
-        if (slot.classList.contains('equippable')) {
-            if (!canPerformAction) return;
-            const inventorySlot = (slot as HTMLElement).dataset.slot;
-            if (inventorySlot) {
-                startActionCooldown(ACTION_COOLDOWN);
-                network.send({ type: 'equip', payload: { inventorySlot } });
+            if (slot.classList.contains('equippable')) {
+                if (!canPerformAction) return;
+                const inventorySlot = (slot as HTMLElement).dataset.slot;
+                if (inventorySlot) {
+                    startActionCooldown(ACTION_COOLDOWN);
+                    network.send({ type: 'equip', payload: { inventorySlot } });
+                }
             }
-        }
-    });
+        });
+    }
 
     gearView.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
