@@ -26,7 +26,7 @@ const ErrorMessages: React.FC = () => {
       // Remove message after duration (3 seconds)
       setTimeout(() => {
         setMessages(prev => prev.filter(msg => msg.id !== messageId));
-      }, 3000);
+      }, 4000);
     };
 
     const cleanup = registerWindowFunction('showErrorMessage', showErrorMessage);

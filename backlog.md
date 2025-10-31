@@ -42,12 +42,12 @@ drag and drop in inventory inventory
 
 there should be an inventory full small little red errors message somewhere on the screen
 
-
-### Current
 remember the state the inventory was in. So if we open the bank and our inventory was closed, the inventory opens but then when we walk away from the bank and the bank closes the inventory should close as well. However, if we walk up to the bank and inventory was open, then when we walk away from the bank and the bank closes the inventory should stay open.
 
 moving needs to cancel the teleport to sanctuary.
 
+
+### Current
 - echo well
 - echos and defend (minor rune?)
 - echos can loot (minor rune?)

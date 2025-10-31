@@ -132,7 +132,7 @@ func main() {
 	// game.SpawnNPC("npc:rat:"+utils.GenerateUniqueID(), -2, -3, game.NPCTypeRat)
 
 	// Start the game loops
-	// go game.StartAILoop()
+	go game.StartAILoop()
 	go game.StartSpawnerLoop()
 	go game.StartDamageSystem()
 	go game.StartDecaySystem()
