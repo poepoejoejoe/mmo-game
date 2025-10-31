@@ -16,6 +16,8 @@ import InventoryPanel from './components/InventoryPanel';
 import CraftingPanel from './components/CraftingPanel';
 import GearPanel from './components/GearPanel';
 import QuestPanel from './components/QuestPanel';
+import ExperiencePanel from './components/ExperiencePanel';
+import RunesPanel from './components/RunesPanel';
 
 function App() {
   const [coords, setCoords] = useState({ x: 0, y: 0 });
@@ -28,6 +30,9 @@ function App() {
   const [knownRecipes, setKnownRecipes] = useState<Record<string, boolean>>({});
   const [gear, setGear] = useState<Record<string, InventoryItem>>({});
   const [quests, setQuests] = useState<Record<string, Quest>>({});
+  const [experience, setExperience] = useState<Record<string, number>>({});
+  const [runes, setRunes] = useState<string[]>([]);
+  const [activeRune, setActiveRune] = useState<string>('');
   const isInitialized = useRef(false);
 
   const handleTogglePanel = (panelId: string) => {
@@ -42,7 +47,7 @@ function App() {
       return newPanels;
     });
     // Only call toggleInfoPanel for non-React panels
-    if (panelId !== 'inventory' && panelId !== 'crafting' && panelId !== 'gear' && panelId !== 'quest') {
+    if (panelId !== 'inventory' && panelId !== 'crafting' && panelId !== 'gear' && panelId !== 'quest' && panelId !== 'experience' && panelId !== 'runes') {
       toggleInfoPanel(panelId as any);
     }
   };
@@ -68,6 +73,9 @@ function App() {
       setKnownRecipes(s.knownRecipes || {});
       setGear(s.gear || {});
       setQuests(s.quests || {});
+      setExperience(s.experience || {});
+      setRunes(s.runes || []);
+      setActiveRune(s.activeRune || '');
     }
 
     const unsubscribe = addStateUpdateListener(() => {
@@ -100,6 +108,9 @@ function App() {
         setKnownRecipes(s.knownRecipes || {});
         setGear(s.gear || {});
         setQuests(s.quests || {});
+        setExperience(s.experience || {});
+        setRunes(s.runes || []);
+        setActiveRune(s.activeRune || '');
       }
     });
 
@@ -177,8 +188,17 @@ function App() {
                       onClose={() => handleTogglePanel('quest')}
                       quests={quests}
                     />
-                    <div id="experience-view" className="info-panel" style={{display: 'none'}}></div>
-                    <div id="runes-view" className="info-panel" style={{display: 'none'}}></div>
+                    <ExperiencePanel
+                      isOpen={openPanels.has('experience')}
+                      onClose={() => handleTogglePanel('experience')}
+                      experience={experience}
+                    />
+                    <RunesPanel
+                      isOpen={openPanels.has('runes')}
+                      onClose={() => handleTogglePanel('runes')}
+                      runes={runes}
+                      activeRune={activeRune}
+                    />
                 </div>
                 <ActionBar openPanels={openPanels} onTogglePanel={handleTogglePanel} />
             </div>

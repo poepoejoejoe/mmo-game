@@ -45,8 +45,8 @@ export let inventoryView: HTMLElement | null;
 export let craftingView: HTMLElement | null;
 export let gearView: HTMLElement | null;
 export let questView: HTMLElement | null;
-export let experienceView: HTMLElement;
-export let runesView: HTMLElement;
+export let experienceView: HTMLElement | null;
+export let runesView: HTMLElement | null;
 export let bankView: HTMLElement;
 let chatMessagesEl: HTMLElement;
 let chatButton: HTMLButtonElement;
@@ -88,8 +88,8 @@ export function initializeUI() {
     craftingView = document.getElementById('crafting-view'); // May be null until React renders
     gearView = document.getElementById('gear-view'); // May be null until React renders
     questView = document.getElementById('quest-view');
-    experienceView = document.getElementById('experience-view')!;
-    runesView = document.getElementById('runes-view')!;
+    experienceView = document.getElementById('experience-view');
+    runesView = document.getElementById('runes-view');
     chatMessagesEl = document.getElementById('chat-messages')!;
     chatButton = document.getElementById('chat-button') as HTMLButtonElement;
     chatContainer = document.getElementById('chat-container')!;
@@ -485,8 +485,14 @@ function updateButtonAndPanelSelection() {
     if (questView) {
         questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
     }
-    experienceView.style.display = openPanels.has('experience') ? 'flex' : 'none';
-    runesView.style.display = openPanels.has('runes') ? 'flex' : 'none';
+    // experienceView is now handled by React - skip it
+    if (experienceView) {
+        experienceView.style.display = openPanels.has('experience') ? 'flex' : 'none';
+    }
+    // runesView is now handled by React - skip it
+    if (runesView) {
+        runesView.style.display = openPanels.has('runes') ? 'flex' : 'none';
+    }
     bankView.style.display = openPanels.has('bank') ? 'flex' : 'none';
 }
 
@@ -899,17 +905,22 @@ export function updateInventoryUI(): void {
 }
 
 export function updateRunesUI(): void {
+    // This function is now obsolete - runes are handled by React
+    // Keeping it for compatibility but it does nothing if runesView is null
+    if (!runesView) return;
+    
     const s = state.getState();
     const runes = s.runes || [];
     const activeRune = s.activeRune;
+    const runesViewElement = runesView; // Store in const for TypeScript
 
-    runesView.innerHTML = '';
-    runesView.appendChild(createPanelHeader('Runes', 'runes'));
+    runesViewElement.innerHTML = '';
+    runesViewElement.appendChild(createPanelHeader('Runes', 'runes'));
 
     if (runes.length === 0) {
         const p = document.createElement('p');
         p.textContent = 'No runes unlocked.';
-        runesView.appendChild(p);
+        runesViewElement.appendChild(p);
         return;
     }
 
@@ -934,7 +945,7 @@ export function updateRunesUI(): void {
             send({ type: 'set_rune', payload: { rune: newRune } });
         });
 
-        runesView.appendChild(runeButton);
+        runesViewElement.appendChild(runeButton);
     });
 }
 
@@ -966,9 +977,14 @@ export function updateEchoUI(): void {
 }
 
 export function updateExperienceUI(): void {
+    // This function is now obsolete - experience is handled by React
+    // Keeping it for compatibility but it does nothing if experienceView is null
+    if (!experienceView) return;
+    
     const experience = state.getState().experience;
-    experienceView.innerHTML = '';
-    experienceView.appendChild(createPanelHeader('Experience', 'experience'));
+    const experienceViewElement = experienceView; // Store in const for TypeScript
+    experienceViewElement.innerHTML = '';
+    experienceViewElement.appendChild(createPanelHeader('Experience', 'experience'));
 
     if (!experience) {
         return;
@@ -998,7 +1014,7 @@ export function updateExperienceUI(): void {
             </div>
         `;
 
-        experienceView.appendChild(skillEl);
+        experienceViewElement.appendChild(skillEl);
     }
 }
 
