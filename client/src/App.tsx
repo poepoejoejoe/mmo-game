@@ -4,10 +4,12 @@ import * as state from './state';
 import { addStateUpdateListener } from './network';
 import PlayerCoords from './components/PlayerCoords';
 import HealthBar from './components/HealthBar';
+import ResonanceBar from './components/ResonanceBar';
 
 function App() {
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const [health, setHealth] = useState({ current: 0, max: 0 });
+  const [resonance, setResonance] = useState({ current: 0, max: 1 });
   const isInitialized = useRef(false);
 
   useEffect(() => {
@@ -23,6 +25,8 @@ function App() {
     if (me) {
       setCoords({ x: me.x, y: me.y });
       setHealth({ current: me.health || 0, max: me.maxHealth || 0 });
+      const s = state.getState();
+      setResonance({ current: s.resonance || 0, max: s.maxResonance || 1 });
     }
 
     const unsubscribe = addStateUpdateListener(() => {
@@ -40,6 +44,14 @@ function App() {
             return prevHealth;
           }
           return newHealth;
+        });
+        const s = state.getState();
+        setResonance(prevResonance => {
+          const newResonance = { current: s.resonance || 0, max: s.maxResonance || 1 };
+          if (prevResonance.current === newResonance.current && prevResonance.max === newResonance.max) {
+            return prevResonance;
+          }
+          return newResonance;
         });
       }
     });
@@ -89,13 +101,7 @@ function App() {
             <div id="player-hud-bottom">
                 <div id="player-name-display"></div>
                 <HealthBar health={health.current} maxHealth={health.max} />
-                <div className="resonance-display">
-                    <img src="assets/resonance-icon.png" alt="Resonance" className="hud-icon" />
-                    <div id="resonance-bar-container">
-                        <div id="resonance-bar"></div>
-                        <span id="resonance-bar-text"></span>
-                    </div>
-                </div>
+                <ResonanceBar resonance={resonance.current} maxResonance={resonance.max} />
                 <button id="echo-button" className="action-button" title="Activate Echo"></button>
                 <button id="teleport-button" className="action-button" title="Teleport to Sanctuary Stone"></button>
                 <PlayerCoords x={coords.x} y={coords.y} />

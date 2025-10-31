@@ -41,8 +41,6 @@ let gameCanvas: HTMLElement;
 
 // Bottom Bar
 let playerCoordsEl: HTMLElement;
-let resonanceBar: HTMLElement;
-let resonanceBarText: HTMLElement;
 let playerNameDisplayEl: HTMLElement;
 export let inventoryView: HTMLElement;
 export let craftingView: HTMLElement;
@@ -95,8 +93,6 @@ export function initializeUI() {
 
     // Bottom Bar
     playerCoordsEl = document.getElementById('player-coords')!;
-    resonanceBar = document.getElementById('resonance-bar')!;
-    resonanceBarText = document.getElementById('resonance-bar-text')!;
     playerNameDisplayEl = document.getElementById('player-name-display')!;
     inventoryView = document.getElementById('inventory-view')!;
     craftingView = document.getElementById('crafting-view')!;
@@ -973,15 +969,7 @@ export function updatePlayerHealth() {
 }
 
 export function updateResonanceUI(): void {
-    const resonance = state.getState().resonance || 0;
-    const maxResonance = state.getState().maxResonance || 1; // Avoid division by zero
-    const resonancePercentage = (resonance / maxResonance) * 100;
-
-    resonanceBar.style.width = `${resonancePercentage}%`;
-
-    const minutes = Math.floor(resonance / 60);
-    const seconds = resonance % 60;
-    resonanceBarText.textContent = `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+    // This is now handled by the ResonanceBar React component.
 }
 
 export function updateEchoUI(): void {
