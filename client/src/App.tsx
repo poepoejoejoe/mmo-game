@@ -4,6 +4,7 @@ import * as state from './state';
 import { addStateUpdateListener } from './network';
 import { toggleInfoPanel } from './ui';
 import { InventoryItem } from './types';
+import { Quest } from './types';
 import PlayerCoords from './components/PlayerCoords';
 import HealthBar from './components/HealthBar';
 import ResonanceBar from './components/ResonanceBar';
@@ -14,6 +15,7 @@ import ActionBar from './components/ActionBar';
 import InventoryPanel from './components/InventoryPanel';
 import CraftingPanel from './components/CraftingPanel';
 import GearPanel from './components/GearPanel';
+import QuestPanel from './components/QuestPanel';
 
 function App() {
   const [coords, setCoords] = useState({ x: 0, y: 0 });
@@ -25,6 +27,7 @@ function App() {
   const [inventory, setInventory] = useState<Record<string, InventoryItem>>({});
   const [knownRecipes, setKnownRecipes] = useState<Record<string, boolean>>({});
   const [gear, setGear] = useState<Record<string, InventoryItem>>({});
+  const [quests, setQuests] = useState<Record<string, Quest>>({});
   const isInitialized = useRef(false);
 
   const handleTogglePanel = (panelId: string) => {
@@ -39,7 +42,7 @@ function App() {
       return newPanels;
     });
     // Only call toggleInfoPanel for non-React panels
-    if (panelId !== 'inventory' && panelId !== 'crafting' && panelId !== 'gear') {
+    if (panelId !== 'inventory' && panelId !== 'crafting' && panelId !== 'gear' && panelId !== 'quest') {
       toggleInfoPanel(panelId as any);
     }
   };
@@ -64,6 +67,7 @@ function App() {
       setInventory(s.inventory);
       setKnownRecipes(s.knownRecipes || {});
       setGear(s.gear || {});
+      setQuests(s.quests || {});
     }
 
     const unsubscribe = addStateUpdateListener(() => {
@@ -95,6 +99,7 @@ function App() {
         setInventory(s.inventory);
         setKnownRecipes(s.knownRecipes || {});
         setGear(s.gear || {});
+        setQuests(s.quests || {});
       }
     });
 
@@ -167,7 +172,11 @@ function App() {
                       onClose={() => handleTogglePanel('gear')}
                       gear={gear}
                     />
-                    <div id="quest-view" className="info-panel" style={{display: 'none'}}></div>
+                    <QuestPanel
+                      isOpen={openPanels.has('quest')}
+                      onClose={() => handleTogglePanel('quest')}
+                      quests={quests}
+                    />
                     <div id="experience-view" className="info-panel" style={{display: 'none'}}></div>
                     <div id="runes-view" className="info-panel" style={{display: 'none'}}></div>
                 </div>

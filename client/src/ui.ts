@@ -44,7 +44,7 @@ let playerCoordsEl: HTMLElement;
 export let inventoryView: HTMLElement | null;
 export let craftingView: HTMLElement | null;
 export let gearView: HTMLElement | null;
-export let questView: HTMLElement;
+export let questView: HTMLElement | null;
 export let experienceView: HTMLElement;
 export let runesView: HTMLElement;
 export let bankView: HTMLElement;
@@ -87,7 +87,7 @@ export function initializeUI() {
     inventoryView = document.getElementById('inventory-view'); // May be null until React renders
     craftingView = document.getElementById('crafting-view'); // May be null until React renders
     gearView = document.getElementById('gear-view'); // May be null until React renders
-    questView = document.getElementById('quest-view')!;
+    questView = document.getElementById('quest-view');
     experienceView = document.getElementById('experience-view')!;
     runesView = document.getElementById('runes-view')!;
     chatMessagesEl = document.getElementById('chat-messages')!;
@@ -481,7 +481,10 @@ function updateButtonAndPanelSelection() {
     if (gearView) {
         gearView.style.display = openPanels.has('gear') ? 'flex' : 'none';
     }
-    questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
+    // questView is now handled by React - skip it
+    if (questView) {
+        questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
+    }
     experienceView.style.display = openPanels.has('experience') ? 'flex' : 'none';
     runesView.style.display = openPanels.has('runes') ? 'flex' : 'none';
     bankView.style.display = openPanels.has('bank') ? 'flex' : 'none';
@@ -758,16 +761,21 @@ export function updateCraftingUI(): void {
 }
 
 export function updateQuestUI(): void {
+    // This function is now obsolete - quests are handled by React
+    // Keeping it for compatibility but it does nothing if questView is null
+    if (!questView) return;
+    
     const quests = state.getState().quests;
     const allQuests = Object.values(quests);
+    const questViewElement = questView; // Store in const for TypeScript
 
-    questView.innerHTML = '';
-    questView.appendChild(createPanelHeader('Quests', 'quest'));
+    questViewElement.innerHTML = '';
+    questViewElement.appendChild(createPanelHeader('Quests', 'quest'));
 
     if (allQuests.length === 0) {
         const p = document.createElement('p');
         p.textContent = 'No active quests.';
-        questView.appendChild(p);
+        questViewElement.appendChild(p);
         return;
     }
 
@@ -796,7 +804,7 @@ export function updateQuestUI(): void {
             });
         }
         questEl.appendChild(objectivesList);
-        questView.appendChild(questEl);
+        questViewElement.appendChild(questEl);
     }
 }
 
