@@ -5,6 +5,7 @@ import (
 	"log"
 	"mmo-game/models"
 	"strconv"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -31,7 +32,13 @@ func HandlePlayerDeath(playerID string) {
 
 	// Reset health and set new position in Redis
 	pipe := rdb.Pipeline()
-	pipe.HSet(ctx, playerID, "x", spawnX, "y", spawnY)
+	maxHealth := PlayerDefs.MaxHealth
+	pipe.HSet(ctx, playerID, 
+		"x", spawnX, 
+		"y", spawnY,
+		"health", maxHealth, // Reset health to max
+		"nextActionAt", time.Now().UnixMilli(), // Reset cooldown
+	)
 
 	// --- Player position in Geo set ---
 	lon, lat := NormalizeCoords(spawnX, spawnY)
@@ -47,7 +54,24 @@ func HandlePlayerDeath(playerID string) {
 		return
 	}
 
-	// Announce the player's "move" to the new spawn point
+	// Send EntityJoined message to ensure client properly sees the player after respawn
+	// This is better than EntityMoved because it ensures the client knows the player exists
+	playerDataAfterRespawn, _ := rdb.HGetAll(ctx, playerID).Result()
+	gear, _ := GetGear(playerID)
+	
+	joinMsg := map[string]interface{}{
+		"type":       string(ServerEventEntityJoined),
+		"entityId":   playerID,
+		"id":         playerID,
+		"x":          spawnX,
+		"y":          spawnY,
+		"entityType": string(EntityTypePlayer),
+		"shirtColor": playerDataAfterRespawn["shirtColor"],
+		"gear":       gear,
+	}
+	PublishUpdate(joinMsg)
+
+	// Also send EntityMoved for position update
 	updateMsg := map[string]interface{}{
 		"type":     string(ServerEventEntityMoved),
 		"entityId": playerID,
@@ -56,18 +80,15 @@ func HandlePlayerDeath(playerID string) {
 	}
 	PublishUpdate(updateMsg)
 
-	// Send a message to the client to update their health UI
-	h := PlayerDefs.MaxHealth
+	// Send health update message to the client
 	statsUpdateMsg := models.PlayerStatsUpdateMessage{
 		Type:      string(ServerEventPlayerStatsUpdate),
-		Health:    &h,
-		MaxHealth: &h,
+		Health:    &maxHealth,
+		MaxHealth: &maxHealth,
 	}
 	statsUpdateJSON, _ := json.Marshal(statsUpdateMsg)
 
-	// This is a bit of a hack. We're looking up the client in the hub
-	// to send them a direct message. A better approach might be a dedicated
-	// channel for per-client messages from the game logic.
+	// Send direct message to ensure client receives the update
 	if sendDirectMessage != nil {
 		sendDirectMessage(playerID, statsUpdateJSON)
 	}

@@ -70,6 +70,10 @@ func (h *EatActionHandler) Process(playerID string, payload json.RawMessage) *Ac
 
 	// 2. Heal the player
 	health, _ := strconv.Atoi(playerData["health"])
+	// Ensure health is at least 0 (handle empty string case)
+	if health < 0 {
+		health = 0
+	}
 	maxHealth := PlayerDefs.MaxHealth
 	healAmount := edible.HealAmount
 
@@ -78,7 +82,8 @@ func (h *EatActionHandler) Process(playerID string, payload json.RawMessage) *Ac
 		newHealth = maxHealth
 	}
 
-	if newHealth > health {
+	// Always update health if it changed (even if already at max, to ensure consistency)
+	if newHealth != health {
 		pipe.HSet(ctx, playerID, "health", newHealth)
 	}
 
@@ -106,7 +111,7 @@ func (h *EatActionHandler) Process(playerID string, payload json.RawMessage) *Ac
 	})
 
 	// Send health update if health changed
-	if newHealth > health {
+	if newHealth != health {
 		statsUpdateMsg := models.PlayerStatsUpdateMessage{
 			Type:      string(ServerEventPlayerStatsUpdate),
 			Health:    &newHealth,
@@ -117,9 +122,11 @@ func (h *EatActionHandler) Process(playerID string, payload json.RawMessage) *Ac
 			Type:    statsUpdateMsg.Type,
 			Payload: statsUpdateJSON,
 		})
+		log.Printf("Player %s ate %s and healed from %d to %d/%d.", playerID, eatData.Item, health, newHealth, maxHealth)
+	} else {
+		log.Printf("Player %s ate %s but health did not change (%d/%d).", playerID, eatData.Item, health, maxHealth)
 	}
-
-	log.Printf("Player %s ate %s and healed to %d/%d.", playerID, eatData.Item, newHealth, maxHealth)
+	
 	return result
 }
 

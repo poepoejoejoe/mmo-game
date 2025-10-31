@@ -136,24 +136,24 @@ func (c *Client) readPump() {
 					}
 				}
 			case game.ClientEventEquip:
-				inventoryUpdate, gearUpdate := game.ProcessEquip(c.id, msg.Payload)
-				if inventoryUpdate != nil {
-					inventoryJSON, _ := json.Marshal(inventoryUpdate)
-					c.send <- inventoryJSON
-				}
-				if gearUpdate != nil {
-					gearJSON, _ := json.Marshal(gearUpdate)
-					c.send <- gearJSON
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, msg := range result.ToPlayer {
+						msgJSON, _ := json.Marshal(msg)
+						c.send <- msgJSON
+					}
 				}
 			case game.ClientEventUnequip:
-				inventoryUpdate, gearUpdate := game.ProcessUnequip(c.id, msg.Payload)
-				if inventoryUpdate != nil {
-					inventoryJSON, _ := json.Marshal(inventoryUpdate)
-					c.send <- inventoryJSON
-				}
-				if gearUpdate != nil {
-					gearJSON, _ := json.Marshal(gearUpdate)
-					c.send <- gearJSON
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, msg := range result.ToPlayer {
+						msgJSON, _ := json.Marshal(msg)
+						c.send <- msgJSON
+					}
 				}
 			case game.ClientEventCraft:
 				// Use the action registry for standardized processing
@@ -166,14 +166,14 @@ func (c *Client) readPump() {
 					}
 				}
 			case game.ClientEventPlaceItem:
-				correctionMsg, inventoryMsg := game.ProcessPlaceItem(c.id, msg.Payload)
-				if correctionMsg != nil {
-					correctionJSON, _ := json.Marshal(correctionMsg)
-					c.send <- correctionJSON
-				}
-				if inventoryMsg != nil {
-					inventoryJSON, _ := json.Marshal(inventoryMsg)
-					c.send <- inventoryJSON
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, msg := range result.ToPlayer {
+						msgJSON, _ := json.Marshal(msg)
+						c.send <- msgJSON
+					}
 				}
 			case game.ClientEventAttack:
 				// Use the action registry for standardized processing

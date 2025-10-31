@@ -6,18 +6,18 @@ package game
 // then register it here with RegisterAction.
 func init() {
 	// Register action handlers
-	// Currently migrated actions: Move, Eat, Attack, Craft, Interact
+	// Currently migrated actions: Move, Eat, Attack, Craft, Interact, Equip, Unequip, PlaceItem
 	// Other actions will be migrated gradually as needed.
 	RegisterAction(ClientEventMove, &MoveActionHandler{})
 	RegisterAction(ClientEventEat, &EatActionHandler{})
 	RegisterAction(ClientEventAttack, &AttackActionHandler{})
 	RegisterAction(ClientEventCraft, &CraftActionHandler{})
 	RegisterAction(ClientEventInteract, &InteractActionHandler{})
+	RegisterAction(ClientEventEquip, &EquipActionHandler{})
+	RegisterAction(ClientEventUnequip, &UnequipActionHandler{})
+	RegisterAction(ClientEventPlaceItem, &PlaceItemActionHandler{})
 	
 	// TODO: Migrate remaining actions to use the registry:
-	// - ClientEventEquip
-	// - ClientEventUnequip
-	// - ClientEventPlaceItem
 	// - ClientEventLearnRecipe
 	// - ClientEventSendChat
 	// - ClientEventDialogAction

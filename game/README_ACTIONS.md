@@ -193,10 +193,11 @@ return result
 - ✅ Attack (`AttackActionHandler`) - Combat with broadcasts
 - ✅ Craft (`CraftActionHandler`) - Complex crafting with ingredient validation and special conditions
 - ✅ Interact (`InteractActionHandler`) - Entity and tile interactions (NPCs, items, resources)
+- ✅ Equip (`EquipActionHandler`) - Equipping items from inventory with slot swapping
+- ✅ Unequip (`UnequipActionHandler`) - Unequipping items to inventory with space validation
+- ✅ PlaceItem (`PlaceItemActionHandler`) - Placing items in the world (walls, fire, etc.)
 
 ### Pending Migration
-- Equip/Unequip
-- PlaceItem
 - LearnRecipe
 - SendChat
 - DialogAction
@@ -224,5 +225,8 @@ See these files for reference implementations:
 - `game/action_attack_handler.go` - Combat with broadcasts
 - `game/action_craft_handler.go` - Complex crafting with validation
 - `game/action_interact_handler.go` - Multi-purpose entity/tile interactions
+- `game/action_equip_handler.go` - Equipping items with slot management
+- `game/action_unequip_handler.go` - Unequipping items with inventory checks
+- `game/action_place_item_handler.go` - Placing items with multiple item type support
 - `game/ACTION_TEMPLATE.go` - Complete template with examples
 

@@ -179,22 +179,8 @@ function handleMessage(event: MessageEvent) {
                 safeInventory = inventoryMsg.inventory;
             } else if ((msg as any).payload) {
                 // Payload-wrapped message (from AddToPlayer)
-                try {
-                    let payloadData: InventoryUpdateMessage;
-                    
-                    // Payload can be a string (JSON string) or already parsed object
-                    if (typeof (msg as any).payload === 'string') {
-                        payloadData = JSON.parse((msg as any).payload);
-                    } else {
-                        // Already parsed object (json.RawMessage gets parsed automatically)
-                        payloadData = (msg as any).payload as InventoryUpdateMessage;
-                    }
-                    
-                    safeInventory = payloadData.inventory || {};
-                } catch (e) {
-                    console.error('Error parsing inventory update payload:', e, msg);
-                    safeInventory = {};
-                }
+                const payloadData = (msg as any).payload as InventoryUpdateMessage;
+                safeInventory = payloadData.inventory || {};
             }
             
             console.log('Inventory update received:', safeInventory);
@@ -245,24 +231,29 @@ function handleMessage(event: MessageEvent) {
         }
         case 'player_stats_update': {
             const statsMsg = msg as PlayerStatsUpdateMessage;
+            // Handle both direct fields and payload-wrapped messages
+            const payloadData = (msg as any).payload 
+                ? (msg as any).payload as PlayerStatsUpdateMessage 
+                : statsMsg;
+            
             const me = state.getMyEntity();
 
             if (me) {
-                if (statsMsg.health !== undefined) me.health = statsMsg.health;
-                if (statsMsg.maxHealth !== undefined) me.maxHealth = statsMsg.maxHealth;
+                if (payloadData.health !== undefined) me.health = payloadData.health;
+                if (payloadData.maxHealth !== undefined) me.maxHealth = payloadData.maxHealth;
             }
 
-            if (statsMsg.experience) {
-                state.setExperience(statsMsg.experience);
+            if (payloadData.experience) {
+                state.setExperience(payloadData.experience);
             }
-            if (statsMsg.resonance !== undefined) {
-                state.setResonance(statsMsg.resonance);
+            if (payloadData.resonance !== undefined) {
+                state.setResonance(payloadData.resonance);
             }
-            if (statsMsg.maxResonance !== undefined) {
-                state.setMaxResonance(statsMsg.maxResonance);
+            if (payloadData.maxResonance !== undefined) {
+                state.setMaxResonance(payloadData.maxResonance);
             }
-            if (statsMsg.echoUnlocked !== undefined) {
-                state.setEchoUnlocked(statsMsg.echoUnlocked);
+            if (payloadData.echoUnlocked !== undefined) {
+                state.setEchoUnlocked(payloadData.echoUnlocked);
             }
             onStateUpdate();
             break;

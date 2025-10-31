@@ -410,7 +410,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	pipe.HSet(ctx, playerID,
 		"x", spawnX,
 		"y", spawnY,
-		"health", PlayerDefs.MaxHealth,
+		"health", 3, // Start with 3 HP for testing
 		"nextActionAt", time.Now().UnixMilli(),
 		"entityType", string(EntityTypePlayer), // This is the internal type
 		"moveCooldown", 100, // 100ms move cooldown for players
@@ -463,8 +463,12 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	item7, _ := json.Marshal(models.Item{ID: string(ItemIronOre), Quantity: 10})
 	inventory["slot_7"] = string(item7)
 
+	// Slot 8: pizza for testing eating
+	item8, _ := json.Marshal(models.Item{ID: string(ItemSliceOfPizza), Quantity: 1})
+	inventory["slot_8"] = string(item8)
+
 	// Initialize remaining slots as empty
-	for i := 8; i < 10; i++ {
+	for i := 9; i < 10; i++ {
 		inventory["slot_"+strconv.Itoa(i)] = "" // Empty string signifies an empty slot
 	}
 	pipe.HSet(ctx, inventoryKey, inventory)
