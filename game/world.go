@@ -18,12 +18,22 @@ const (
 	perlinN     = 3
 	perlinSeed  = 100
 	noiseOffset = 10000.5 // A large offset to sample noise away from the origin, avoiding artifacts.
+
+	// Sanctuary Generation Constants
+	SanctuaryNoiseFrequency = 50.0
+	SanctuaryNoiseThreshold = 0.60
+	MinSanctuaryDistance    = 100
+	SanctuaryMinRadius      = 8
+	SanctuaryRadiusVariance = 5 // Max radius will be MinRadius + Variance - 1
 )
 
 var p *perlin.Perlin
+var sanctuaryPerlin *perlin.Perlin
 
 func init() {
 	p = perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, perlinSeed)
+	// Use a different seed for sanctuaries to ensure the noise maps are different
+	sanctuaryPerlin = perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, perlinSeed+1)
 }
 
 // GetNaturalTileType determines the natural tile type for a given coordinate using Perlin noise.
@@ -48,51 +58,6 @@ func GetNaturalTileType(x, y int) TileType {
 	return TileTypeGround
 }
 
-// GenerateSanctuary creates a sanctuary stone and a blob of sanctuary tiles around it.
-// This function can be called after the initial world generation to add more sanctuaries.
-func GenerateSanctuary(centerX, centerY, radius int) {
-	log.Printf("Generating sanctuary at (%d, %d) with radius %d...", centerX, centerY, radius)
-	pipe := rdb.Pipeline()
-
-	// Create the sanctuary aura around the stone
-	for x := centerX - radius; x <= centerX+radius; x++ {
-		for y := centerY - radius; y <= centerY+radius; y++ {
-			coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
-			var tile models.WorldTile
-
-			if x == centerX && y == centerY {
-				// Place the central stone
-				tile.Type = string(TileTypeSanctuaryStone)
-			} else {
-				distSq := (x-centerX)*(x-centerX) + (y-centerY)*(y-centerY)
-				// Check if the tile is within the blob radius
-				if distSq < radius*radius && rand.Float64() < 1.0-float64(distSq)/float64(radius*radius) {
-					// Only overwrite ground tiles to avoid placing sanctuaries in water, etc.
-					existingTileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), coordKey).Result()
-					if err == nil {
-						var existingTile models.WorldTile
-						if json.Unmarshal([]byte(existingTileJSON), &existingTile) == nil && existingTile.Type == string(TileTypeGround) {
-							existingTile.IsSanctuary = true
-							tile = existingTile
-						}
-					}
-				}
-			}
-
-			if tile.Type != "" || tile.IsSanctuary {
-				tileJSON, _ := json.Marshal(tile)
-				pipe.HSet(ctx, string(RedisKeyWorldZone0), coordKey, string(tileJSON))
-			}
-		}
-	}
-
-	_, err := pipe.Exec(ctx)
-	if err != nil {
-		log.Printf("Failed to generate sanctuary blob: %v", err)
-	}
-	log.Println("Sanctuary generation complete.")
-}
-
 func GenerateWorld() {
 	log.Println("Generating world terrain and health...")
 	worldKey := string(RedisKeyWorldZone0)
@@ -101,6 +66,51 @@ func GenerateWorld() {
 		log.Println("World already exists. Skipping generation.")
 		return
 	}
+
+	// --- NEW: Procedurally determine sanctuary locations ---
+	// First, a pass to find sanctuary hotspots without creating them yet.
+	// This ensures that all sanctuaries are known before we start creating tiles.
+	potentialSanctuaries := []Sanctuary{}
+	for x := -WorldSize; x <= WorldSize; x++ {
+		for y := -WorldSize; y <= WorldSize; y++ {
+			// Check for sanctuary hotspots
+			sanctuaryNoiseVal := sanctuaryPerlin.Noise2D((float64(x)+noiseOffset)/SanctuaryNoiseFrequency, (float64(y)+noiseOffset)/SanctuaryNoiseFrequency)
+			if sanctuaryNoiseVal > SanctuaryNoiseThreshold { // High threshold for rarity
+				// Check if this spot is too close to an existing sanctuary
+				isTooClose := false
+				for _, s := range potentialSanctuaries {
+					distSq := (x-s.X)*(x-s.X) + (y-s.Y)*(y-s.Y)
+					if distSq < MinSanctuaryDistance*MinSanctuaryDistance { // Minimum distance between sanctuaries (e.g., 100 tiles)
+						isTooClose = true
+						break
+					}
+				}
+
+				if !isTooClose && GetNaturalTileType(x, y) != TileTypeWater {
+					radius := SanctuaryMinRadius + rand.Intn(SanctuaryRadiusVariance) // Random radius between 8 and 12
+					potentialSanctuaries = append(potentialSanctuaries, Sanctuary{X: x, Y: y, Radius: radius})
+					log.Printf("Found potential sanctuary at (%d, %d)", x, y)
+				}
+			}
+		}
+	}
+
+	// Ensure the starting sanctuary at (0,1) is always present
+	hasStartingSanctuary := false
+	for _, s := range potentialSanctuaries {
+		if s.X == 0 && s.Y == 1 {
+			hasStartingSanctuary = true
+			break
+		}
+	}
+	if !hasStartingSanctuary {
+		Sanctuaries = append(Sanctuaries, Sanctuary{X: 0, Y: 1, Radius: 8})
+	}
+
+	// Add the potential sanctuaries to the global list
+	Sanctuaries = append(Sanctuaries, potentialSanctuaries...)
+	log.Printf("Total sanctuaries to be generated: %d", len(Sanctuaries))
+	// --- END NEW ---
 
 	pipe := rdb.Pipeline()
 

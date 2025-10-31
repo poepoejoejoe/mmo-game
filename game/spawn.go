@@ -70,8 +70,10 @@ func SpawnPlayer(playerID string, playerData map[string]string) (int, int) {
 	}
 
 	// Fallback to a random sanctuary
-	randomSanctuary := Sanctuaries[rand.Intn(len(Sanctuaries))]
-	return findNearbyOpenTile(randomSanctuary.X, randomSanctuary.Y, randomSanctuary.Radius)
+	// randomSanctuary := Sanctuaries[rand.Intn(len(Sanctuaries))]
+	// return findNearbyOpenTile(randomSanctuary.X, randomSanctuary.Y, randomSanctuary.Radius)
+	firstSanctuary := Sanctuaries[0]
+	return findNearbyOpenTile(firstSanctuary.X, firstSanctuary.Y, firstSanctuary.Radius)
 }
 
 func spawnPreLockedNPC(entityID string, x, y int, npcType NPCType, groupID string, originX, originY int, wanderDistance int) {

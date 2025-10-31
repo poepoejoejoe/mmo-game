@@ -296,8 +296,7 @@ func init() {
 		MaxHealth: 10,
 	}
 	Sanctuaries = []Sanctuary{
-		{X: 0, Y: 1, Radius: 8},   // Starting sanctuary at origin
-		{X: 20, Y: 20, Radius: 5}, // Second sanctuary for testing
+		{X: 0, Y: 1, Radius: 8}, // Starting sanctuary at origin
 	}
 	// --- END NEW ---
 
