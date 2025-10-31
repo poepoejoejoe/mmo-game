@@ -36,7 +36,19 @@
 - bank
 Let's work on making a banker (each sanctuary needs to have a banker) WE should add a concept of friendly npc (the wizard is friendly as well). We can make sure the wizard and golem banker share some property that excludes them from being considered in ai.go.
 
-Let's make it so that when you interact with the golem banker it doesn't open dialog but opens a bank window right away. The bank window should be very similar to the way inventory is displayed. Items shoudl stack very high (almost inf) in the bank, when you left click an item from the bank or inventory it moves one of that item to or from the bank / inventory. Now we need to add a right click context menu for the bank, this allows us to withdrawn 1, 5 10 or X. X optino should open a very small window to allow us to type the amount. Only when the bank is open, if the player right click's their inventory there is a context window that is basically the same as previously stated but it says deposit, 1 5 10 or X. IF the player walks away from the banker the bank window closes.
+Let's make it so that when you interact with the golem banker it doesn't open dialog but opens a bank window right away. The bank window should be very similar to the way inventory is displayed. Items shoudl stack very high (almost inf) in the bank, when you left click an item from the bank or inventory it moves one of that item to or from the bank / inventory. Now we need to add a right click context menu for the bank, this allows us to withdrawn 1, 5 10 or X. X optino should open a very small window to allow us to type the amount. Only when the bank is open, if the player right click's their inventory there is a context window that is basically the same as previously stated but it says deposit, 1 5 10 or X. IF the player walks away from the banker the bank window closes. The bank should have 64 slots in a 8 by 8 grid for now. For testing have player spawn with some random stacks of items in their bank
+
+
+drag and drop in inventory inventory
+there is a bug with unequiping gear. When you click the item from the gear tab it should unequip the item and that item should go to the players inventory (if its not full)
+
+there should be an inventory full small little red errors message somewhere on the screen
+
+there is a bug with trying to deposit an equipable item like the axe (probaly the helmet too). When the bank is open, the binidng to equip those items should be disabled, so the user should see the deposit click behaviors for those items.
+
+remember the state the inventory was in. So if we open the bank and our inventory was closed, the inventory opens but then when we walk away from the bank and the bank closes the inventory should close as well. However, if we walk up to the bank and inventory was open, then when we walk away from the bank and the bank closes the inventory should stay open.
+
+
 
 
 - echo well

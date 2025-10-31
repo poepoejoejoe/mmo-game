@@ -25,6 +25,8 @@
             </div>
             <canvas id="game-canvas"></canvas>
         </div>
+        
+        <div id="bank-view" class="info-panel centered-panel" style="display: none;"></div>
 
         <!-- Bottom UI -->
         <div class="bottom-ui">
@@ -63,23 +65,13 @@
             </div>
 
             <div class="right-hud-container">
-                <div id="inventory-view" class="info-panel" style="display: none;">
-                    <!-- Inventory slots will be dynamically generated here -->
-                </div>
-                <div id="crafting-view" class="info-panel" style="display: none;">
-                    <!-- Crafting recipes will be dynamically generated here -->
-                </div>
-                <div id="gear-view" class="info-panel" style="display: none;">
-                    <!-- Gear/equipment will be displayed here -->
-                </div>
-                <div id="quest-view" class="info-panel" style="display: none;">
-                    <!-- Quest progress will be displayed here -->
-                </div>
-                <div id="experience-view" class="info-panel" style="display: none;">
-                    <!-- Experience bars will be displayed here -->
-                </div>
-                <div id="runes-view" class="info-panel" style="display: none;">
-                    <!-- Runes will be displayed here -->
+                <div class="info-panels">
+                    <div id="inventory-view" class="info-panel" style="display: none;"></div>
+                    <div id="crafting-view" class="info-panel" style="display: none;"></div>
+                    <div id="gear-view" class="info-panel" style="display: none;"></div>
+                    <div id="quest-view" class="info-panel" style="display: none;"></div>
+                    <div id="experience-view" class="info-panel" style="display: none;"></div>
+                    <div id="runes-view" class="info-panel" style="display: none;"></div>
                 </div>
                 <div id="main-action-bar" class="action-bar">
                     <button class="action-button" id="inventory-button">🎒</button>
@@ -127,6 +119,15 @@
             <p><b>Left-Click (and hold) Adjacent Resource:</b> Gather</p>
             <p><b>B:</b> Build Wall mode (left click to place wall)</p>
             <p><b>F:</b> Build Fire mode (left click to place fire)</p>
+        </div>
+    </div>
+
+    <div id="bank-context-menu" class="context-menu" style="display: none;"></div>
+    <div id="quantity-modal" class="modal">
+        <div class="modal-content">
+            <h3>How many?</h3>
+            <input type="number" id="quantity-input" min="1">
+            <button id="quantity-submit">OK</button>
         </div>
     </div>
 

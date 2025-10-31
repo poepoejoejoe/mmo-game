@@ -2,8 +2,10 @@ package game
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"mmo-game/models"
+	"mmo-game/game/utils"
 	"strconv"
 	"time"
 
@@ -43,98 +45,85 @@ func GetEntityPosition(playerData map[string]string) (int, int) {
 	return x, y
 }
 
+// AddItemToInventory finds the best slot for a new item and adds it.
 func AddItemToInventory(playerID string, itemID ItemID, quantity int) (map[string]models.Item, error) {
-	inventoryKey := string(RedisKeyPlayerInventory) + playerID
-	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
+	inventoryKey := "inventory:" + playerID
+	inventoryData, err := rdb.HGetAll(ctx, inventoryKey).Result()
 	if err != nil {
 		return nil, err
 	}
 
-	inventory := make(map[string]models.Item)
-	slots := make([]*models.Item, 10) // Array of pointers to items for easy modification
-
-	// Deserialize inventory
-	for i := 0; i < 10; i++ {
-		slotKey := "slot_" + strconv.Itoa(i)
-		if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
-			var item models.Item
-			json.Unmarshal([]byte(itemJSON), &item)
-			inventory[slotKey] = item
-			slots[i] = &item
-		}
-	}
-
-	itemProps := ItemDefs[itemID]
-	remainingQuantity := quantity
-
-	// First pass: stack with existing items
-	if itemProps.Stackable {
-		for _, item := range slots {
-			if item != nil && item.ID == string(itemID) && item.Quantity < itemProps.MaxStack {
-				addAmount := min(remainingQuantity, itemProps.MaxStack-item.Quantity)
-				item.Quantity += addAmount
-				remainingQuantity -= addAmount
-				if remainingQuantity == 0 {
-					break
-				}
-			}
-		}
-	}
-
-	// Second pass: add to empty slots
-	if remainingQuantity > 0 {
-		// Second pass: add to empty slots
-		addedItem := false
-		if remainingQuantity > 0 {
-			for i, item := range slots {
-				if item == nil {
-					if itemProps.Stackable {
-						addAmount := min(remainingQuantity, itemProps.MaxStack)
-						slots[i] = &models.Item{ID: string(itemID), Quantity: addAmount}
-						remainingQuantity -= addAmount
-					} else {
-						slots[i] = &models.Item{ID: string(itemID), Quantity: 1}
-						remainingQuantity--
-					}
-					addedItem = true
-					if remainingQuantity == 0 {
-						break
-					}
-				}
-			}
-		}
-		if !addedItem {
-			// If no items were added (e.g., inventory full), we still need to
-			// return the current state of the inventory, not nil.
-			currentInventory := make(map[string]models.Item)
-			for i, item := range slots {
-				if item != nil {
-					currentInventory["slot_"+strconv.Itoa(i)] = *item
-				}
-			}
-			return currentInventory, nil
-		}
-	}
-
-	// Update Redis and the final map
 	pipe := rdb.Pipeline()
-	finalInventory := make(map[string]models.Item)
-	for i, item := range slots {
-		slotKey := "slot_" + strconv.Itoa(i)
-		if item != nil {
-			itemJSON, _ := json.Marshal(*item)
-			pipe.HSet(ctx, inventoryKey, slotKey, string(itemJSON))
-			finalInventory[slotKey] = *item
-		} else {
-			pipe.HSet(ctx, inventoryKey, slotKey, "")
-		}
+	_, newInventory, err := addItemToPlayerInventory(pipe, inventoryKey, inventoryData, itemID, quantity)
+	if err != nil {
+		return nil, err
 	}
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return nil, err
 	}
+	return newInventory, nil
 
-	return finalInventory, nil
+}
+
+func addItemToPlayerInventory(pipe redis.Pipeliner, inventoryKey string, inventoryData map[string]string, itemID ItemID, quantity int) (redis.Pipeliner, map[string]models.Item, error) {
+	itemProps := ItemDefs[itemID]
+	remainingQuantity := quantity
+
+	// 1. Fill up existing, partially-filled stacks of the same item.
+	if itemProps.Stackable {
+		for i := 0; i < 10 && remainingQuantity > 0; i++ {
+			slotKey := "slot_" + strconv.Itoa(i)
+			if itemJSON, ok := inventoryData[slotKey]; ok && itemJSON != "" {
+				var item models.Item
+				json.Unmarshal([]byte(itemJSON), &item)
+
+				if item.ID == string(itemID) && item.Quantity < itemProps.MaxStack {
+					spaceInStack := itemProps.MaxStack - item.Quantity
+					amountToStack := utils.Min(remainingQuantity, spaceInStack)
+
+					item.Quantity += amountToStack
+					remainingQuantity -= amountToStack
+
+					newItemJSON, _ := json.Marshal(item)
+					pipe.HSet(ctx, inventoryKey, slotKey, string(newItemJSON))
+					inventoryData[slotKey] = string(newItemJSON) // Update local map
+				}
+			}
+		}
+	}
+
+	// 2. Add remaining items to new stacks in empty slots.
+	if remainingQuantity > 0 {
+		for i := 0; i < 10 && remainingQuantity > 0; i++ {
+			slotKey := "slot_" + strconv.Itoa(i)
+			if val, ok := inventoryData[slotKey]; !ok || val == "" {
+				amountToPlace := utils.Min(remainingQuantity, itemProps.MaxStack)
+
+				newItem := models.Item{ID: string(itemID), Quantity: amountToPlace}
+				newItemJSON, _ := json.Marshal(newItem)
+				pipe.HSet(ctx, inventoryKey, slotKey, string(newItemJSON))
+				inventoryData[slotKey] = string(newItemJSON) // Update local map
+
+				remainingQuantity -= amountToPlace
+			}
+		}
+	}
+
+	if remainingQuantity > 0 {
+		return nil, nil, fmt.Errorf("inventory full")
+	}
+
+	newInventory := make(map[string]models.Item)
+	for slot, itemJSON := range inventoryData {
+		if itemJSON != "" {
+			var item models.Item
+			json.Unmarshal([]byte(itemJSON), &item)
+			newInventory[slot] = item
+		}
+	}
+
+	return pipe, newInventory, nil
 }
 
 func RemoveItemFromInventory(playerID string, itemID ItemID, quantity int) (map[string]models.Item, error) {
@@ -413,5 +402,39 @@ func interruptTeleport(playerID string) {
 
 		sendNotification(playerID, "Your teleport was interrupted!")
 		log.Printf("Player %s teleport was interrupted.", playerID)
+	}
+}
+
+func getInventoryUpdateMessage(inventoryKey string) *models.InventoryUpdateMessage {
+	newInventoryDataRaw, _ := rdb.HGetAll(ctx, inventoryKey).Result()
+	newInventory := make(map[string]models.Item)
+	for slot, itemJSON := range newInventoryDataRaw {
+		if itemJSON != "" {
+			var item models.Item
+			json.Unmarshal([]byte(itemJSON), &item)
+			newInventory[slot] = item
+		}
+	}
+
+	return &models.InventoryUpdateMessage{
+		Type:      string(ServerEventInventoryUpdate),
+		Inventory: newInventory,
+	}
+}
+
+func getBankUpdateMessage(bankKey string) *models.BankUpdateMessage {
+	newBankDataRaw, _ := rdb.HGetAll(ctx, bankKey).Result()
+	newBank := make(map[string]models.Item)
+	for slot, itemJSON := range newBankDataRaw {
+		if itemJSON != "" {
+			var item models.Item
+			json.Unmarshal([]byte(itemJSON), &item)
+			newBank[slot] = item
+		}
+	}
+
+	return &models.BankUpdateMessage{
+		Type: string(ServerEventBankUpdate),
+		Bank: newBank,
 	}
 }

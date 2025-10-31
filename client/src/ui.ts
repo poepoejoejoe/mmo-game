@@ -1,6 +1,6 @@
 import * as state from './state';
 import { edibleDefs, itemDefinitions, recipeDefs, gearSlots } from './definitions';
-import { send, sendLearnRecipe } from './network';
+import { send, sendLearnRecipe, sendDepositItem, sendWithdrawItem } from './network';
 
 const skillIcons: Record<string, string> = {
     woodcutting: 'assets/woodcutting-icon.png',
@@ -52,6 +52,7 @@ export let gearView: HTMLElement;
 export let questView: HTMLElement;
 export let experienceView: HTMLElement;
 export let runesView: HTMLElement;
+export let bankView: HTMLElement;
 let inventoryButton: HTMLButtonElement;
 let craftingButton: HTMLButtonElement;
 let gearButton: HTMLButtonElement;
@@ -64,6 +65,9 @@ let chatMessagesEl: HTMLElement;
 let chatButton: HTMLButtonElement;
 let chatContainer: HTMLElement;
 
+// Bank
+let bankButton: HTMLButtonElement; // This will be created dynamically
+
 // --- NEW: Dialog UI Elements ---
 let dialogModal: HTMLElement;
 let dialogNpcName: HTMLElement;
@@ -72,8 +76,11 @@ let dialogOptions: HTMLElement;
 let dialogCloseButton: HTMLElement;
 let dialogOverlay: HTMLElement;
 
+// Bank
+let isBankUIInitialized = false;
 
-const openPanels = new Set<'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes'>();
+
+const openPanels = new Set<'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes' | 'bank'>();
 let isChatOpen = true;
 
 export function initializeUI() {
@@ -121,6 +128,18 @@ export function initializeUI() {
     dialogCloseButton = document.getElementById('dialog-close-button')!;
     dialogOverlay = document.getElementById('dialog-overlay')!;
 
+    // Bank
+    bankView = document.getElementById('bank-view')!;
+
+    // Create and add the bank button dynamically
+    bankButton = document.createElement('button');
+    bankButton.id = 'bank-button';
+    bankButton.className = 'action-button';
+    bankButton.innerHTML = `<img src="assets/inventory-icon.png" alt="Bank">`; // Placeholder icon
+    bankButton.addEventListener('click', () => toggleInfoPanel('bank'));
+    document.getElementById('main-action-bar')?.appendChild(bankButton);
+
+
     registerButton.addEventListener('click', () => {
         const name = nameInput.value.trim();
         if (name) {
@@ -164,6 +183,253 @@ export function initializeUI() {
     chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
     echoButton.innerHTML = `<img src="assets/echo-icon.png" alt="Echo">`;
     teleportButton.innerHTML = `<img src="assets/sanctuary-stone-icon.png" alt="Teleport">`;
+
+    const infoPanelsContainer = document.querySelector('.info-panels');
+    infoPanelsContainer?.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('close-button')) {
+            const panelId = target.dataset.panelId;
+            if (panelId) {
+                toggleInfoPanel(panelId as 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes' | 'bank');
+            }
+        }
+    });
+
+    document.body.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const slot = target.closest('.inventory-slot') as HTMLElement | null;
+
+        if (slot) {
+            const isBankOpen = bankView.style.display === 'flex';
+            const isInventorySlot = inventoryView.contains(slot);
+
+            if (isBankOpen && isInventorySlot) {
+                // Already handled by the more specific listener in initializeBankUI
+            } else if (slot.classList.contains('equippable')) {
+                send({ type: 'equip', payload: { inventorySlot: slot.dataset.slot } });
+            } else if (slot.classList.contains('edible')) {
+                send({ type: 'eat', payload: { item: slot.dataset.item } });
+            } else if (slot.classList.contains('learnable')) {
+                sendLearnRecipe(slot.dataset.slot!);
+            } else if (slot.classList.contains('unequippable')) {
+                send({ type: 'unequip', payload: { gearSlot: slot.dataset.slot } });
+            }
+        }
+
+        const craftButton = target.closest('.crafting-recipe') as HTMLElement | null;
+        if (craftButton) {
+            send({ type: 'craft', payload: { item: craftButton.dataset.item } });
+        }
+    });
+}
+
+export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {
+    if (isActive && buildItem) {
+        gameCanvas.classList.add('build-mode');
+    } else {
+        gameCanvas.classList.remove('build-mode');
+    }
+}
+
+function createPanelHeader(title: string, panelId: 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes' | 'bank'): HTMLElement {
+    const header = document.createElement('div');
+    header.className = 'panel-header';
+
+    const titleEl = document.createElement('h2');
+    titleEl.textContent = title;
+    header.appendChild(titleEl);
+
+    const closeButton = document.createElement('span');
+    closeButton.className = 'close-button';
+    closeButton.innerHTML = '&times;';
+    closeButton.addEventListener('click', () => toggleInfoPanel(panelId));
+    header.appendChild(closeButton);
+
+    return header;
+}
+
+function initializeBankUI() {
+    if (isBankUIInitialized) return;
+
+    const bankContextMenu = document.getElementById('bank-context-menu')!;
+    const quantityModal = document.getElementById('quantity-modal')!;
+    const quantityInput = document.getElementById('quantity-input') as HTMLInputElement;
+    const quantitySubmit = document.getElementById('quantity-submit')!;
+    
+    let currentContext = { type: '', slot: '' };
+
+    function showQuantityModal(type: 'deposit' | 'withdraw', slot: string) {
+        currentContext = { type, slot };
+        quantityModal.classList.add('active');
+        quantityInput.value = '1';
+        quantityInput.focus();
+    }
+
+    function hideQuantityModal() {
+        quantityModal.classList.remove('active');
+    }
+
+    quantitySubmit.addEventListener('click', () => {
+        const quantity = parseInt(quantityInput.value, 10);
+        if (isNaN(quantity) || quantity <= 0) return;
+
+        if (currentContext.type === 'deposit') {
+            sendDepositItem(currentContext.slot, quantity);
+        } else if (currentContext.type === 'withdraw') {
+            sendWithdrawItem(currentContext.slot, quantity);
+        }
+        hideQuantityModal();
+    });
+
+    document.addEventListener('click', () => {
+        if (bankContextMenu) {
+            bankContextMenu.style.display = 'none';
+        }
+    });
+
+    bankView.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const target = e.target as HTMLElement;
+        const slot = target.closest('.inventory-slot');
+        if (slot) {
+            const slotKey = (slot as HTMLElement).dataset.slot!;
+            const item = state.getState().bank[slotKey];
+            if (item) {
+                let menuHTML = '';
+                [1, 5, 10].forEach(q => {
+                    if (item.quantity >= q) {
+                         menuHTML += `<button data-action="withdraw" data-slot="${slotKey}" data-quantity="${q}">Withdraw ${q}</button>`;
+                    }
+                });
+                menuHTML += `<button data-action="withdraw" data-slot="${slotKey}" data-quantity="${item.quantity}">Withdraw All</button>`;
+                menuHTML += `<button data-action="withdraw" data-slot="${slotKey}">Withdraw X</button>`;
+                
+                bankContextMenu.innerHTML = menuHTML;
+                bankContextMenu.style.left = `${e.clientX}px`;
+                bankContextMenu.style.top = `${e.clientY}px`;
+                bankContextMenu.style.display = 'block';
+            }
+        }
+    });
+
+    inventoryView.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (bankView.style.display !== 'flex') return;
+        const target = e.target as HTMLElement;
+        const slot = target.closest('.inventory-slot');
+        if (slot) {
+            const slotKey = (slot as HTMLElement).dataset.slot!;
+            const item = state.getState().inventory[slotKey];
+            if (item) {
+                 let menuHTML = '';
+                [1, 5, 10].forEach(q => {
+                    if (item.quantity >= q) {
+                         menuHTML += `<button data-action="deposit" data-slot="${slotKey}" data-quantity="${q}">Deposit ${q}</button>`;
+                    }
+                });
+                menuHTML += `<button data-action="deposit" data-slot="${slotKey}" data-quantity="${item.quantity}">Deposit All</button>`;
+                menuHTML += `<button data-action="deposit" data-slot="${slotKey}">Deposit X</button>`;
+                
+                bankContextMenu.innerHTML = menuHTML;
+                bankContextMenu.style.left = `${e.clientX}px`;
+                bankContextMenu.style.top = `${e.clientY}px`;
+                bankContextMenu.style.display = 'block';
+            }
+        }
+    });
+
+    bankContextMenu.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const action = target.dataset.action;
+        const slot = target.dataset.slot;
+        const quantityStr = target.dataset.quantity;
+
+        if (action && slot) {
+            if (quantityStr) {
+                const quantity = parseInt(quantityStr, 10);
+                if (action === 'deposit') {
+                    sendDepositItem(slot, quantity);
+                } else if (action === 'withdraw') {
+                    sendWithdrawItem(slot, quantity);
+                }
+            } else {
+                // This is the 'X' option
+                showQuantityModal(action as 'deposit' | 'withdraw', slot);
+            }
+        }
+        bankContextMenu.style.display = 'none';
+    });
+
+    const handleLeftClick = (e: MouseEvent, panel: 'inventory' | 'bank') => {
+        const target = e.target as HTMLElement;
+        const slotEl = target.closest('.inventory-slot');
+        if (slotEl) {
+            const slotKey = (slotEl as HTMLElement).dataset.slot!;
+            if (panel === 'inventory') {
+                sendDepositItem(slotKey, 1);
+            } else {
+                sendWithdrawItem(slotKey, 1);
+            }
+        }
+    };
+
+    inventoryView.addEventListener('click', (e) => {
+        if (openPanels.has('bank')) {
+            handleLeftClick(e, 'inventory');
+        }
+    });
+
+    bankView.addEventListener('click', (e) => handleLeftClick(e, 'bank'));
+
+    isBankUIInitialized = true;
+}
+
+export function openBankWindow() {
+    initializeBankUI();
+    if (!openPanels.has('inventory')) {
+        toggleInfoPanel('inventory');
+    }
+    toggleInfoPanel('bank');
+}
+
+export function closeBankWindow() {
+    if (openPanels.has('bank')) {
+        toggleInfoPanel('bank');
+    }
+}
+
+export function updateBankUI() {
+    const bank = state.getState().bank;
+    bankView.innerHTML = ''; // Clear existing content
+    bankView.appendChild(createPanelHeader('Bank', 'bank'));
+
+    const grid = document.createElement('div');
+    grid.className = 'inventory-grid';
+
+    for (let i = 0; i < 64; i++) {
+        const slotKey = `slot_${i}`;
+        const item = bank[slotKey];
+
+        const slotEl = document.createElement('div');
+        slotEl.classList.add('inventory-slot');
+        slotEl.dataset.slot = slotKey;
+
+        if (item) {
+            slotEl.draggable = true;
+            const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
+            const iconEl = createIconElement(itemDef);
+            slotEl.appendChild(iconEl);
+
+            const quantityEl = document.createElement('div');
+            quantityEl.classList.add('item-quantity');
+            quantityEl.textContent = String(item.quantity);
+            slotEl.appendChild(quantityEl);
+        } else {
+            slotEl.innerHTML = `&nbsp;`; // Empty slot
+        }
+        grid.appendChild(slotEl);
+    }
+    bankView.appendChild(grid);
 }
 
 export function showCraftSuccess(itemId: string) {
@@ -206,7 +472,7 @@ function toggleChat() {
     }
 }
 
-function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes') {
+function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes' | 'bank') {
     if (openPanels.has(panelType)) {
         openPanels.delete(panelType);
     } else {
@@ -219,6 +485,7 @@ function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' 
             quest: questView,
             experience: experienceView,
             runes: runesView,
+            bank: bankView,
         };
 
         const panelElement = panelMap[panelType];
@@ -227,7 +494,17 @@ function toggleInfoPanel(panelType: 'inventory' | 'crafting' | 'gear' | 'quest' 
         }
     }
     updateButtonAndPanelSelection();
-    updateInventoryUI(); // Re-render to show/hide views
+    updateAllPanels();
+}
+
+function updateAllPanels() {
+    if (openPanels.has('inventory')) updateInventoryUI();
+    if (openPanels.has('crafting')) updateCraftingUI();
+    if (openPanels.has('gear')) updateGearUI();
+    if (openPanels.has('quest')) updateQuestUI();
+    if (openPanels.has('experience')) updateExperienceUI();
+    if (openPanels.has('runes')) updateRunesUI();
+    if (openPanels.has('bank')) updateBankUI();
 }
 
 function updateButtonAndPanelSelection() {
@@ -238,6 +515,7 @@ function updateButtonAndPanelSelection() {
     questButton.classList.toggle('selected', openPanels.has('quest'));
     experienceButton.classList.toggle('selected', openPanels.has('experience'));
     runesButton.classList.toggle('selected', openPanels.has('runes'));
+    bankButton.classList.toggle('selected', openPanels.has('bank'));
 
     // Views
     inventoryView.style.display = openPanels.has('inventory') ? 'flex' : 'none';
@@ -246,6 +524,7 @@ function updateButtonAndPanelSelection() {
     questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
     experienceView.style.display = openPanels.has('experience') ? 'flex' : 'none';
     runesView.style.display = openPanels.has('runes') ? 'flex' : 'none';
+    bankView.style.display = openPanels.has('bank') ? 'flex' : 'none';
 }
 
 function toggleModal(modalId: string, show: boolean) {
@@ -326,50 +605,6 @@ export function startCooldown(duration: number): void {
     // This UI element was removed in the new design.
     // We can re-add it later if needed.
     console.log(`Action cooldown started for ${duration}ms`);
-}
-
-export function updateCraftingUI(): void {
-    const s = state.getState();
-    const inventory = s.inventory;
-    const knownRecipes = s.knownRecipes || {};
-    craftingView.innerHTML = '<h2>Crafting</h2>';
-
-    const counts: { [key: string]: number } = {};
-    for (const slot in inventory) {
-        if (inventory[slot]) {
-            counts[inventory[slot].id] = (counts[inventory[slot].id] || 0) + inventory[slot].quantity;
-        }
-    }
-
-    let hasKnownRecipes = false;
-    for (const itemIdToCraft in recipeDefs) {
-        if (knownRecipes[itemIdToCraft]) {
-            hasKnownRecipes = true;
-            const recipeReqs = recipeDefs[itemIdToCraft];
-            const canCraft = Object.keys(recipeReqs).every(reqItemId => (counts[reqItemId] || 0) >= recipeReqs[reqItemId]);
-
-            const itemDef = itemDefinitions[itemIdToCraft] || itemDefinitions['default'];
-            
-            const button = document.createElement('button');
-            button.id = `craft-${itemIdToCraft}-btn`;
-            button.classList.add('crafting-recipe');
-            button.disabled = !canCraft;
-            button.dataset.item = itemIdToCraft;
-
-            const iconEl = createIconElement(itemDef);
-            button.appendChild(iconEl);
-            
-            const recipeForTooltip = { item: itemIdToCraft, req: recipeReqs };
-            button.addEventListener('mouseenter', () => showCraftingTooltip(button, recipeForTooltip));
-            button.addEventListener('mouseleave', hideCraftingTooltip);
-            
-            craftingView.appendChild(button);
-        }
-    }
-
-    if (!hasKnownRecipes) {
-        craftingView.innerHTML += '<p>You have not learned any crafting recipes.</p>';
-    }
 }
 
 function showCraftingTooltip(button: HTMLButtonElement, recipe: any) {
@@ -511,36 +746,100 @@ function hideGearTooltip() {
     }
 }
 
+export function updateCraftingUI(): void {
+    const s = state.getState();
+    const inventory = s.inventory;
+    const knownRecipes = s.knownRecipes || {};
+    craftingView.innerHTML = '';
+    craftingView.appendChild(createPanelHeader('Crafting', 'crafting'));
+
+    const counts: { [key: string]: number } = {};
+    for (const slot in inventory) {
+        if (inventory[slot]) {
+            counts[inventory[slot].id] = (counts[inventory[slot].id] || 0) + inventory[slot].quantity;
+        }
+    }
+
+    let hasKnownRecipes = false;
+    for (const itemIdToCraft in recipeDefs) {
+        if (knownRecipes[itemIdToCraft]) {
+            hasKnownRecipes = true;
+            const recipeReqs = recipeDefs[itemIdToCraft];
+            const canCraft = Object.keys(recipeReqs).every(reqItemId => (counts[reqItemId] || 0) >= recipeReqs[reqItemId]);
+
+            const itemDef = itemDefinitions[itemIdToCraft] || itemDefinitions['default'];
+            
+            const button = document.createElement('button');
+            button.id = `craft-${itemIdToCraft}-btn`;
+            button.classList.add('crafting-recipe');
+            button.disabled = !canCraft;
+            button.dataset.item = itemIdToCraft;
+
+            const iconEl = createIconElement(itemDef);
+            button.appendChild(iconEl);
+            
+            const recipeForTooltip = { item: itemIdToCraft, req: recipeReqs };
+            button.addEventListener('mouseenter', () => showCraftingTooltip(button, recipeForTooltip));
+            button.addEventListener('mouseleave', hideCraftingTooltip);
+            
+            craftingView.appendChild(button);
+        }
+    }
+
+    if (!hasKnownRecipes) {
+        const p = document.createElement('p');
+        p.textContent = 'You have not learned any crafting recipes.';
+        craftingView.appendChild(p);
+    }
+}
+
 export function updateQuestUI(): void {
     const quests = state.getState().quests;
     const allQuests = Object.values(quests);
 
+    questView.innerHTML = '';
+    questView.appendChild(createPanelHeader('Quests', 'quest'));
+
     if (allQuests.length === 0) {
-        questView.innerHTML = '<h2>Quests</h2><p>No active quests.</p>';
+        const p = document.createElement('p');
+        p.textContent = 'No active quests.';
+        questView.appendChild(p);
         return;
     }
 
-    let content = '<h2>Quests</h2>';
     for (const quest of allQuests) {
-        content += `<div class="quest">`;
+        const questEl = document.createElement('div');
+        questEl.className = 'quest';
+
+        const titleEl = document.createElement('h3');
         if (quest.is_complete) {
-            content += `<h3>${quest.title} <span class="quest-complete">(Completed)</span></h3>`;
+            titleEl.innerHTML = `${quest.title} <span class="quest-complete">(Completed)</span>`;
         } else {
-            content += `<h3>${quest.title}</h3>`;
+            titleEl.textContent = quest.title;
         }
-        content += `<ul class="quest-objectives">`;
-        quest.objectives.forEach(obj => {
-            content += `<li class="${obj.completed ? 'completed' : ''}">${obj.description}</li>`;
-        });
-        content += `</ul>`;
-        content += `</div>`;
+        questEl.appendChild(titleEl);
+
+        const objectivesList = document.createElement('ul');
+        objectivesList.className = 'quest-objectives';
+        if (quest && quest.objectives) {
+            quest.objectives.forEach(obj => {
+                const objectiveEl = document.createElement('li');
+                objectiveEl.textContent = obj.description;
+                if (obj.completed) {
+                    objectiveEl.className = 'completed';
+                }
+                objectivesList.appendChild(objectiveEl);
+            });
+        }
+        questEl.appendChild(objectivesList);
+        questView.appendChild(questEl);
     }
-    questView.innerHTML = content;
 }
 
 export function updateGearUI(): void {
     const gear = state.getState().gear;
-    gearView.innerHTML = '<h2>Gear</h2>';
+    gearView.innerHTML = '';
+    gearView.appendChild(createPanelHeader('Gear', 'gear'));
 
     gearSlots.forEach(slot => {
         const item = gear[slot];
@@ -570,7 +869,8 @@ export function updateGearUI(): void {
 
 export function updateInventoryUI(): void {
     const inventory = state.getState().inventory;
-    inventoryView.innerHTML = '<h2>Inventory</h2>';
+    inventoryView.innerHTML = '';
+    inventoryView.appendChild(createPanelHeader('Inventory', 'inventory'));
 
     for (let i = 0; i < 10; i++) {
         const slotKey = `slot_${i}`;
@@ -578,8 +878,10 @@ export function updateInventoryUI(): void {
 
         const slotEl = document.createElement('div');
         slotEl.classList.add('inventory-slot');
+        slotEl.dataset.slot = slotKey;
 
         if (item) {
+            slotEl.draggable = true;
             const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
             const iconEl = createIconElement(itemDef);
             slotEl.appendChild(iconEl);
@@ -613,43 +915,6 @@ export function updateInventoryUI(): void {
         }
         inventoryView.appendChild(slotEl);
     }
-
-    updateCraftingUI();
-    updateGearUI();
-    updateQuestUI();
-    updateExperienceUI();
-    updateEchoUI();
-    updateRunesUI();
-
-    document.body.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        const slot = target.closest('.inventory-slot') as HTMLElement | null;
-
-        if (slot) {
-            if (slot.classList.contains('equippable')) {
-                send({ type: 'equip', payload: { inventorySlot: slot.dataset.slot } });
-            } else if (slot.classList.contains('edible')) {
-                send({ type: 'eat', payload: { item: slot.dataset.item } });
-            } else if (slot.classList.contains('learnable')) {
-                sendLearnRecipe(slot.dataset.slot!);
-            } else if (slot.classList.contains('unequippable')) {
-                send({ type: 'unequip', payload: { gearSlot: slot.dataset.slot } });
-            }
-        }
-
-        const craftButton = target.closest('.crafting-recipe') as HTMLElement | null;
-        if (craftButton) {
-            send({ type: 'craft', payload: { item: craftButton.dataset.item } });
-        }
-    });
-}
-
-export function setBuildModeActive(isActive: boolean, buildItem: string | null): void {
-    if (isActive && buildItem) {
-        gameCanvas.classList.add('build-mode');
-    } else {
-        gameCanvas.classList.remove('build-mode');
-    }
 }
 
 export function updateRunesUI(): void {
@@ -657,10 +922,13 @@ export function updateRunesUI(): void {
     const runes = s.runes || [];
     const activeRune = s.activeRune;
 
-    runesView.innerHTML = '<h2>Runes</h2>';
+    runesView.innerHTML = '';
+    runesView.appendChild(createPanelHeader('Runes', 'runes'));
 
     if (runes.length === 0) {
-        runesView.innerHTML += '<p>No runes unlocked.</p>';
+        const p = document.createElement('p');
+        p.textContent = 'No runes unlocked.';
+        runesView.appendChild(p);
         return;
     }
 
@@ -768,7 +1036,8 @@ export function updateEchoUI(): void {
 
 export function updateExperienceUI(): void {
     const experience = state.getState().experience;
-    experienceView.innerHTML = '<h2>Experience</h2>';
+    experienceView.innerHTML = '';
+    experienceView.appendChild(createPanelHeader('Experience', 'experience'));
 
     if (!experience) {
         return;

@@ -105,6 +105,8 @@ const (
 	ClientEventSetRune      ClientEventType = "set_rune"
 	ClientEventTeleport     ClientEventType = "teleport"
 	ClientEventFindPath     ClientEventType = "find-path"
+	ClientEventDepositItem  ClientEventType = "deposit_item"
+	ClientEventWithdrawItem ClientEventType = "withdraw_item"
 )
 
 // ServerEventType defines outgoing WebSocket message types.
@@ -115,6 +117,7 @@ const (
 	ServerEventStateCorrection         ServerEventType = "state_correction"
 	ServerEventWorldUpdate             ServerEventType = "world_update"
 	ServerEventInventoryUpdate         ServerEventType = "inventory_update"
+	ServerEventBankUpdate              ServerEventType = "bank_update"
 	ServerEventResourceDamaged         ServerEventType = "resource_damaged"
 	ServerEventEntityJoined            ServerEventType = "entity_joined" // <-- RENAMED
 	ServerEventEntityLeft              ServerEventType = "entity_left"   // <-- RENAMED
@@ -137,6 +140,7 @@ const (
 	ServerEventTeleportChannelEnd      ServerEventType = "teleport_channel_end"
 	ServerEventNoValidPath             ServerEventType = "no-valid-path"
 	ServerEventValidPath               ServerEventType = "valid-path"
+	ServerEventOpenBankWindow          ServerEventType = "open_bank_window"
 )
 
 // MoveDirection defines the valid move directions.
@@ -207,10 +211,11 @@ type TileProperties struct {
 type NPCType string
 
 const (
-	NPCTypeSlime     NPCType = "slime"
-	NPCTypeRat       NPCType = "rat"
-	NPCTypeWizard    NPCType = "wizard"
-	NPCTypeSlimeBoss NPCType = "slime_boss"
+	NPCTypeSlime       NPCType = "slime"
+	NPCTypeRat         NPCType = "rat"
+	NPCTypeWizard      NPCType = "wizard"
+	NPCTypeSlimeBoss   NPCType = "slime_boss"
+	NPCTypeGolemBanker NPCType = "golem_banker"
 )
 
 // NPCProperties defines the behavioral attributes of an NPC.
@@ -223,6 +228,7 @@ type NPCProperties struct {
 	IsAggro        bool // Does this NPC attack on sight?
 	AggroRange     int  // How far does it see players?
 	WanderDistance int
+	IsFriendly     bool
 }
 
 type LootEntry struct {
@@ -335,6 +341,13 @@ func init() {
 		MaxHealth:      100,
 		Attack:         0,
 		WanderDistance: 0,
+		IsFriendly:     true,
+	}
+	NPCDefs[NPCTypeGolemBanker] = NPCProperties{
+		MaxHealth:      999,
+		Attack:         0,
+		WanderDistance: 0,
+		IsFriendly:     true,
 	}
 	// --- END NEW ---
 

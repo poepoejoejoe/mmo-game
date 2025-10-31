@@ -386,6 +386,44 @@ body {
     border-bottom: 1px solid #555;
 }
 
+.panel-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #555;
+}
+
+.panel-header h2 {
+    margin: 0;
+    border-bottom: none;
+}
+
+.panel-header .close-button {
+    font-size: 24px;
+    cursor: pointer;
+    color: #aaa;
+}
+
+.centered-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+}
+
+#bank-view {
+    width: 570px !important; /* (8 slots * 60px) + (7 gaps * 10px) + (2 * 5px padding) */
+}
+
+.inventory-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 #inventory-view, #crafting-view, #gear-view {
     display: flex;
     flex-direction: row;
@@ -884,4 +922,27 @@ body {
     .mobile-controls {
         display: block;
     }
+}
+.context-menu {
+    position: absolute;
+    background-color: #2a2a2a;
+    border: 1px solid #888;
+    border-radius: 5px;
+    padding: 5px;
+    z-index: 101;
+}
+
+.context-menu button {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    color: #f0f0f0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.context-menu button:hover {
+    background-color: #4a627a;
 }

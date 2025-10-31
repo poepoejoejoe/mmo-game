@@ -36,7 +36,6 @@ type InteractPayload struct {
 	EntityID string `json:"entityId,omitempty"`
 }
 
-// --- UPDATED ---
 // EntityState represents the position and type of any entity.
 type EntityState struct {
 	ID         string          `json:"id,omitempty"`
@@ -62,6 +61,7 @@ type InitialStateMessage struct {
 	World        map[string]WorldTile   `json:"world"`
 	Inventory    map[string]Item        `json:"inventory"`
 	Gear         map[string]Item        `json:"gear"`
+	Bank         map[string]Item        `json:"bank"`
 	Quests       map[QuestID]*Quest     `json:"quests"`
 	Experience   map[Skill]float64      `json:"experience"`
 	Resonance    int64                  `json:"resonance"`
@@ -77,7 +77,6 @@ type QuestUpdateMessage struct {
 	Quests map[QuestID]*Quest `json:"quests"`
 }
 
-// (Other models remain the same)
 type StateCorrectionMessage struct {
 	Type string `json:"type"`
 	X    int    `json:"x"`
@@ -92,10 +91,14 @@ type WorldUpdateMessage struct {
 }
 
 // InventoryUpdateMessage is sent when a player's inventory changes.
-// It sends the entire new inventory state.
 type InventoryUpdateMessage struct {
 	Type      string          `json:"type"`
 	Inventory map[string]Item `json:"inventory"`
+}
+
+type BankUpdateMessage struct {
+	Type string          `json:"type"`
+	Bank map[string]Item `json:"bank"`
 }
 
 // GearUpdateMessage is sent when a player's gear changes.
@@ -154,7 +157,6 @@ type PlayerStatsUpdateMessage struct {
 }
 
 // Item defines a single item instance in a player's inventory.
-// This is being moved from the 'game' package to here.
 type Item struct {
 	ID       string `json:"id"`
 	Quantity int    `json:"quantity"`
@@ -287,4 +289,14 @@ type ValidPathPayload struct {
 type TeleportPayload struct {
 	X int `json:"x"`
 	Y int `json:"y"`
+}
+
+type DepositItemPayload struct {
+	Slot     string `json:"slot"`
+	Quantity int    `json:"quantity"`
+}
+
+type WithdrawItemPayload struct {
+	Slot     string `json:"slot"`
+	Quantity int    `json:"quantity"`
 }

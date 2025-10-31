@@ -281,6 +281,18 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		gearDataTyped[slot] = item
 	}
 
+	bankKey := "bank:" + playerID
+	bankDataRaw, _ := rdb.HGetAll(ctx, bankKey).Result()
+	bankDataTyped := make(map[string]models.Item)
+	for slot, itemJSON := range bankDataRaw {
+		if itemJSON == "" {
+			continue
+		}
+		var item models.Item
+		json.Unmarshal([]byte(itemJSON), &item)
+		bankDataTyped[slot] = item
+	}
+
 	quests, err := GetPlayerQuests(playerID)
 	if err != nil {
 		log.Printf("Error getting quests for player %s: %v", playerID, err)
@@ -311,6 +323,7 @@ func getPlayerState(playerID string) *models.InitialStateMessage {
 		World:        worldDataTyped,
 		Inventory:    inventoryDataTyped,
 		Gear:         gearDataTyped,
+		Bank:         bankDataTyped,
 		Quests:       quests.Quests,
 		Experience:   experience,
 		Resonance:    resonance,
@@ -421,13 +434,13 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	// --- NEW: Initialize a 10-slot inventory ---
 	inventory := make(map[string]interface{})
 	// Slot 0: 100 Wood
-	item0, _ := json.Marshal(models.Item{ID: string(ItemWood), Quantity: 100})
+	item0, _ := json.Marshal(models.Item{ID: string(ItemWood), Quantity: 50})
 	inventory["slot_0"] = string(item0)
 	// Slot 1: 50 Stone
 	item1, _ := json.Marshal(models.Item{ID: string(ItemStone), Quantity: 50})
 	inventory["slot_1"] = string(item1)
 	// Slot 2: 10 Wooden Walls
-	item2, _ := json.Marshal(models.Item{ID: string(ItemWoodenWall), Quantity: 200})
+	item2, _ := json.Marshal(models.Item{ID: string(ItemWoodenWall), Quantity: 10})
 	inventory["slot_2"] = string(item2)
 
 	// Slot 3: 1 Rat meat for testing
@@ -447,7 +460,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	inventory["slot_6"] = string(item6)
 
 	// iron ore for testing
-	item7, _ := json.Marshal(models.Item{ID: string(ItemIronOre), Quantity: 20})
+	item7, _ := json.Marshal(models.Item{ID: string(ItemIronOre), Quantity: 10})
 	inventory["slot_7"] = string(item7)
 
 	// Initialize remaining slots as empty
@@ -455,6 +468,20 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		inventory["slot_"+strconv.Itoa(i)] = "" // Empty string signifies an empty slot
 	}
 	pipe.HSet(ctx, inventoryKey, inventory)
+
+	bankKey := "bank:" + playerID
+	bank := make(map[string]interface{})
+	bankItem1, _ := json.Marshal(models.Item{ID: string(ItemWood), Quantity: 500})
+	bank["slot_0"] = string(bankItem1)
+	bankItem2, _ := json.Marshal(models.Item{ID: string(ItemStone), Quantity: 250})
+	bank["slot_1"] = string(bankItem2)
+	bankItem3, _ := json.Marshal(models.Item{ID: string(ItemIronOre), Quantity: 100})
+	bank["slot_2"] = string(bankItem3)
+	for i := 3; i < 64; i++ {
+		bank["slot_"+strconv.Itoa(i)] = ""
+	}
+	pipe.HSet(ctx, bankKey, bank)
+
 	pipe.HSet(ctx, gearKey, map[string]interface{}{"weapon-slot": ""})
 
 	// For testing: complete the first quest

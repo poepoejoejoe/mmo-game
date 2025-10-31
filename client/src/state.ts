@@ -7,6 +7,7 @@ const clientState: ClientState = {
     world: {},
     inventory: {},
     gear: {},
+    bank: {},
     quests: {},
     experience: {},
     lastInteractionPosition: null,
@@ -56,6 +57,7 @@ export function setInitialState(
     world: Record<string, WorldTile>, 
     inventory: Record<string, InventoryItem>,
     gear: Record<string, InventoryItem>,
+    bank: Record<string, InventoryItem>,
     quests: Record<string, Quest>,
     experience: Record<string, number>,
     resonance: number,
@@ -85,6 +87,7 @@ export function setInitialState(
     clientState.world = world;
     clientState.inventory = inventory;
     clientState.gear = gear;
+    clientState.bank = bank;
     clientState.quests = quests;
     clientState.experience = experience;
     clientState.resonance = resonance;
@@ -182,6 +185,10 @@ export function setEchoUnlocked(unlocked: boolean) {
 
 export function setInventory(inventory: Record<string, InventoryItem>) {
     clientState.inventory = inventory;
+}
+
+export function setBank(bank: Record<string, InventoryItem>) {
+    clientState.bank = bank;
 }
 
 export function setQuests(quests: Record<string, Quest>) {

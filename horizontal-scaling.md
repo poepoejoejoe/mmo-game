@@ -37,3 +37,4 @@ Fluid interaction across zone boundaries is critical for a seamless experience.
 Pathfinding will be handled pragmatically to manage complexity.
 
 *   **Zone-Restricted Pathfinding:** For the initial implementation, the player's `find-path` action will be restricted to their current zone. If the target coordinates are outside the current zone's boundaries, the action will fail gracefully with a user-facing message like, "Cannot find path to a different zone." A more advanced global pathfinding system that can route players across multiple zones can be implemented as a future project.
+

@@ -21,7 +21,8 @@ import {
     QuestUpdateMessage,
     NpcQuestStateUpdateMessage,
     ActiveRuneUpdateMessage,
-    RecipeLearnedMessage
+    RecipeLearnedMessage,
+    BankUpdateMessage
 } from './types';
 import * as state from './state';
 import { 
@@ -33,7 +34,9 @@ import {
     updatePlayerHealth, 
     updatePlayerNameDisplay,
     showChannelingBar,
-    hideChannelingBar
+    hideChannelingBar,
+    openBankWindow,
+    updateBankUI
 } from './ui';
 import { showDamageIndicator } from './renderer';
 import { setPath } from './input';
@@ -174,9 +177,16 @@ function handleMessage(event: MessageEvent) {
             break;
         }
         case 'inventory_update': {
-            const invMsg = msg as InventoryUpdateMessage;
-            state.setInventory(invMsg.inventory);
+            const inventoryMsg = msg as InventoryUpdateMessage;
+            state.setInventory(inventoryMsg.inventory);
             updateInventoryUI();
+            onStateUpdate();
+            break;
+        }
+        case 'bank_update': {
+            const bankMsg = msg as BankUpdateMessage;
+            state.setBank(bankMsg.bank);
+            updateBankUI();
             onStateUpdate();
             break;
         }
@@ -266,6 +276,9 @@ function handleMessage(event: MessageEvent) {
         case 'valid-path':
             setPath(msg.payload.directions);
             break;
+        case 'open_bank_window':
+            openBankWindow();
+            break;
         case 'dead':
             // handlePlayerDeath(msg.payload.message); // This function is not defined in the original file
             break;
@@ -274,10 +287,11 @@ function handleMessage(event: MessageEvent) {
 
 // (initializeNetwork remains the same)
 export function initializeNetwork() {
-    ws = new WebSocket(`ws://${window.location.host}/ws`);
+    ws = new WebSocket(`ws://localhost:8080/ws`);
     ws.onmessage = handleMessage;
 
     ws.onopen = () => {
+        console.log('Connection opened!');
         console.log('Connected to the server.');
         document.getElementById('player-coords')!.textContent = 'Connected! Waiting for world state...';
 
@@ -290,7 +304,8 @@ export function initializeNetwork() {
         });
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+        console.log('Connection closed.', event);
         console.log('Disconnected from the server.');
         document.getElementById('player-coords')!.textContent = 'Disconnected. Please refresh.';
     };
@@ -305,6 +320,26 @@ export function sendLearnRecipe(inventorySlot: string) {
         type: 'learn_recipe',
         payload: {
             inventorySlot,
+        },
+    });
+}
+
+export function sendDepositItem(slot: string, quantity: number) {
+    send({
+        type: 'deposit_item',
+        payload: {
+            slot,
+            quantity,
+        },
+    });
+}
+
+export function sendWithdrawItem(slot: string, quantity: number) {
+    send({
+        type: 'withdraw_item',
+        payload: {
+            slot,
+            quantity,
         },
     });
 }

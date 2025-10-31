@@ -222,6 +222,26 @@ func (c *Client) readPump() {
 					validPathJson, _ := json.Marshal(validPathMsg)
 					c.send <- validPathJson
 				}
+			case game.ClientEventDepositItem:
+				inventoryMsg, bankMsg := game.ProcessDepositItem(c.id, msg.Payload)
+				if inventoryMsg != nil {
+					inventoryJSON, _ := json.Marshal(inventoryMsg)
+					c.send <- inventoryJSON
+				}
+				if bankMsg != nil {
+					bankJSON, _ := json.Marshal(bankMsg)
+					c.send <- bankJSON
+				}
+			case game.ClientEventWithdrawItem:
+				inventoryMsg, bankMsg := game.ProcessWithdrawItem(c.id, msg.Payload)
+				if inventoryMsg != nil {
+					inventoryJSON, _ := json.Marshal(inventoryMsg)
+					c.send <- inventoryJSON
+				}
+				if bankMsg != nil {
+					bankJSON, _ := json.Marshal(bankMsg)
+					c.send <- bankJSON
+				}
 			}
 		}
 	}

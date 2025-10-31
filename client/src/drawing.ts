@@ -1482,3 +1482,46 @@ export function drawSlime(ctx: CanvasRenderingContext2D, x: number, y: number, t
 
     ctx.restore();
 }
+
+export function drawGolemBanker(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, entity: EntityState, time: number) {
+	const pixelSize = Math.max(1, Math.floor(tileSize / 16));
+	const centerX = x + tileSize / 2;
+	const centerY = y + tileSize / 2;
+
+	// Shadow
+	ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+	ctx.beginPath();
+	ctx.ellipse(centerX, y + tileSize - pixelSize * 2, pixelSize * 8, pixelSize * 3, 0, 0, Math.PI * 2);
+	ctx.fill();
+
+	ctx.save();
+	ctx.translate(centerX, centerY);
+
+	// Body
+	const bodyWidth = pixelSize * 10;
+	const bodyHeight = pixelSize * 12;
+	ctx.fillStyle = '#8a8a8a'; // Stone color
+	ctx.fillRect(-bodyWidth / 2, -bodyHeight / 2, bodyWidth, bodyHeight);
+
+	// Moss patches
+	ctx.fillStyle = '#6B8E23';
+	ctx.fillRect(-bodyWidth / 2, -bodyHeight / 2, pixelSize * 3, pixelSize * 4);
+	ctx.fillRect(bodyWidth / 2 - pixelSize * 4, -bodyHeight / 2 + pixelSize * 6, pixelSize * 4, pixelSize * 3);
+	ctx.fillRect(-bodyWidth / 2 + pixelSize * 2, bodyHeight / 2 - pixelSize * 3, pixelSize * 5, pixelSize * 3);
+
+	// Rune
+	const pulse = Math.sin(time / 500) * 0.2 + 0.8;
+	ctx.fillStyle = `rgba(0, 255, 255, ${pulse})`;
+	ctx.font = `bold ${pixelSize * 6}px monospace`;
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+	ctx.fillText('B', 0, -pixelSize * 2); // Simple 'B' for Bank
+
+	// Vault door
+	ctx.fillStyle = '#6d533b';
+	ctx.fillRect(-pixelSize * 2, pixelSize, pixelSize * 4, pixelSize * 4);
+	ctx.fillStyle = '#4a3a2a';
+	ctx.fillRect(-pixelSize, pixelSize * 2, pixelSize * 2, pixelSize * 2);
+
+	ctx.restore();
+}

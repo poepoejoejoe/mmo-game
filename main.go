@@ -123,6 +123,7 @@ func main() {
 	}
 	game.Init(rdb, SendDirectMessage, isPlayerOnline)
 	game.GenerateWorld()
+	game.SpawnBanker()
 	game.IndexWorldResources()
 	game.IndexPotentialSpawnPoints()
 	game.InitializeCollisionGrid()

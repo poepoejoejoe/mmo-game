@@ -11,6 +11,7 @@ import {
     drawSanctuaryStone,
     drawIronRockTile,
     drawCrudeAxe,
+    drawGolemBanker,
 } from './drawing';
 import { TileProperties, ItemProperties, EntityProperties, EntityState } from './types';
 
@@ -183,6 +184,10 @@ export const entityDefs: Record<string, EntityProperties> = {
     'wizard': {
         isAttackable: false,
         draw: drawWizard,
+    },
+    'golem_banker': {
+        isAttackable: false,
+        draw: drawGolemBanker,
     },
     'item': {
         draw: drawItem,

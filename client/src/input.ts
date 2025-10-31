@@ -1,6 +1,6 @@
 import * as state from './state';
 import * as network from './network';
-import { setBuildModeActive, startCooldown, gearView, inventoryView, craftingView, hideDialog } from './ui';
+import { setBuildModeActive, startCooldown, gearView, inventoryView, craftingView, hideDialog, closeBankWindow } from './ui';
 import { ACTION_COOLDOWN, TILE_SIZE, WATER_PENALTY } from './constants';
 import { getEntityProperties, getTileProperties } from './definitions';
 
@@ -79,6 +79,9 @@ function sendMoveCommand(dx: number, dy: number, isContinuous: boolean = false) 
             const distance = Math.max(Math.abs(me.x - npc.x), Math.abs(me.y - npc.y));
             if (distance > 3) {
                 hideDialog();
+                if (npc.name === 'golem_banker') {
+                    closeBankWindow();
+                }
             }
         }
     }
@@ -312,6 +315,60 @@ function handleRightClick(e: MouseEvent) {
     if ((moveDx !== 0 || moveDy !== 0)) {
         sendMoveCommand(moveDx, moveDy, false);
     }
+
+    // --- Drag and Drop Logic ---
+    const bankView = document.getElementById('bank-view')!;
+
+    const handleDragStart = (e: DragEvent, sourcePanel: 'inventory' | 'bank') => {
+        const target = e.target as HTMLElement;
+        const slotEl = target.closest('.inventory-slot') as HTMLElement;
+        if (slotEl && slotEl.dataset.slot) {
+            const s = state.getState();
+            const item = sourcePanel === 'inventory' ? s.inventory[slotEl.dataset.slot] : s.bank[slotEl.dataset.slot];
+            if (item) {
+                e.dataTransfer!.setData('application/json', JSON.stringify({
+                    sourcePanel,
+                    slot: slotEl.dataset.slot,
+                    quantity: item.quantity
+                }));
+                e.dataTransfer!.effectAllowed = 'move';
+            } else {
+                e.preventDefault();
+            }
+        } else {
+             e.preventDefault();
+        }
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+        e.preventDefault();
+    };
+
+    const handleDrop = (e: DragEvent, targetPanel: 'inventory' | 'bank') => {
+        e.preventDefault();
+        const data = e.dataTransfer!.getData('application/json');
+        if (!data) return;
+
+        try {
+            const { sourcePanel, slot, quantity } = JSON.parse(data);
+            if (sourcePanel === 'inventory' && targetPanel === 'bank') {
+                network.sendDepositItem(slot, quantity);
+            } else if (sourcePanel === 'bank' && targetPanel === 'inventory') {
+                network.sendWithdrawItem(slot, quantity);
+            }
+        } catch (err) {
+            console.error("Error parsing drag data", err);
+        }
+    };
+
+    inventoryView.addEventListener('dragstart', (e) => handleDragStart(e, 'inventory'));
+    bankView.addEventListener('dragstart', (e) => handleDragStart(e, 'bank'));
+
+    inventoryView.addEventListener('dragover', handleDragOver);
+    bankView.addEventListener('dragover', handleDragOver);
+
+    inventoryView.addEventListener('drop', (e) => handleDrop(e, 'inventory'));
+    bankView.addEventListener('drop', (e) => handleDrop(e, 'bank'));
 
     // 2. Send find-path request to server
     network.send({ type: 'find-path', payload: { x: coords.x, y: coords.y } });

@@ -45,6 +45,22 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 				dialogJSON, _ := json.Marshal(dialog)
 				sendDirectMessage(playerID, dialogJSON)
 			}
+			if npcType == NPCTypeGolemBanker {
+				// Send a message to the client to open the bank window
+				openBankMsg := map[string]interface{}{
+					"type": string(ServerEventOpenBankWindow),
+				}
+				openBankJSON, _ := json.Marshal(openBankMsg)
+				sendDirectMessage(playerID, openBankJSON)
+
+				// Also send the initial bank state
+				bankKey := "bank:" + playerID
+				bankMsg := getBankUpdateMessage(bankKey)
+				if bankMsg != nil {
+					bankJSON, _ := json.Marshal(bankMsg)
+					sendDirectMessage(playerID, bankJSON)
+				}
+			}
 			return nil, nil // End interaction after talking
 		}
 
@@ -413,21 +429,4 @@ func findItemInInventory(inventoryDataRaw map[string]string, itemID ItemID) (str
 		}
 	}
 	return "", models.Item{}, false
-}
-
-func getInventoryUpdateMessage(inventoryKey string) *models.InventoryUpdateMessage {
-	newInventoryDataRaw, _ := rdb.HGetAll(ctx, inventoryKey).Result()
-	newInventory := make(map[string]models.Item)
-	for slot, itemJSON := range newInventoryDataRaw {
-		if itemJSON != "" {
-			var item models.Item
-			json.Unmarshal([]byte(itemJSON), &item)
-			newInventory[slot] = item
-		}
-	}
-
-	return &models.InventoryUpdateMessage{
-		Type:      string(ServerEventInventoryUpdate),
-		Inventory: newInventory,
-	}
 }

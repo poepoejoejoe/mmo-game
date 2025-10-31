@@ -410,10 +410,10 @@ func processNPCAction(npcID string, tickCache *TickCache) {
 		return
 	}
 	npcType := NPCType(npcTypeStr)
-	if npcType == NPCTypeWizard {
-		return // Wizards are static and friendly
-	}
 	props := NPCDefs[npcType]
+	if props.IsFriendly {
+		return // Friendly NPCs don't have AI actions for now.
+	}
 
 	npcX, npcY := GetEntityPosition(npcData)
 	originX, _ := strconv.Atoi(npcData["originX"])

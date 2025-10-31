@@ -263,3 +263,8 @@ func spawnWizard() {
 	entityID := string(NPCWizardPrefix) + utils.GenerateUniqueID()
 	spawnNPC(entityID, 4, 0, NPCTypeWizard, "", 4, 0, NPCDefs[NPCTypeWizard].WanderDistance)
 }
+
+func SpawnBanker() {
+	entityID := "npc:banker:1" // Static ID for the first banker
+	spawnNPC(entityID, -4, 0, NPCTypeGolemBanker, "", -4, 0, NPCDefs[NPCTypeGolemBanker].WanderDistance)
+}

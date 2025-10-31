@@ -53,6 +53,7 @@ export interface ClientState {
     world: Record<string, WorldTile>;
     inventory: Record<string, InventoryItem>; // e.g. "slot_0": { id: "wood", quantity: 50 }
     gear: Record<string, InventoryItem>; // e.g. "weapon-slot": { id: "crude_axe", quantity: 1 }
+    bank: Record<string, InventoryItem>;
     quests: Record<string, Quest>;
     experience: Record<string, number>;
     resonance?: number;
@@ -117,6 +118,7 @@ export interface InitialStateMessage extends ServerMessage {
     world: Record<string, WorldTile>;
     inventory: Record<string, InventoryItem>;
     gear: Record<string, InventoryItem>;
+    bank: Record<string, InventoryItem>;
     quests: Record<string, Quest>;
     experience: Record<string, number>;
     resonance?: number;
@@ -125,6 +127,11 @@ export interface InitialStateMessage extends ServerMessage {
     runes: string[];
     activeRune: string;
     knownRecipes: Record<string, boolean>;
+}
+
+export interface BankUpdateMessage extends ServerMessage {
+    type: 'bank_update';
+    bank: Record<string, InventoryItem>;
 }
 
 export interface RecipeLearnedMessage extends ServerMessage {
