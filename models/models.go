@@ -286,6 +286,11 @@ type ValidPathPayload struct {
 	Directions []string `json:"directions"`
 }
 
+type ValidPathMessage struct {
+	Type       string   `json:"type"`
+	Directions []string `json:"directions"`
+}
+
 type TeleportPayload struct {
 	X int `json:"x"`
 	Y int `json:"y"`

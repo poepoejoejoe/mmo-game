@@ -307,5 +307,5 @@ export interface NoValidPathMessage extends ServerMessage {
 
 export interface ValidPathMessage extends ServerMessage {
     type: 'valid-path';
-    payload: { directions: string[] };
+    directions: string[];
 }

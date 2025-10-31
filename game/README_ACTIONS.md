@@ -196,15 +196,15 @@ return result
 - ✅ Equip (`EquipActionHandler`) - Equipping items from inventory with slot swapping
 - ✅ Unequip (`UnequipActionHandler`) - Unequipping items to inventory with space validation
 - ✅ PlaceItem (`PlaceItemActionHandler`) - Placing items in the world (walls, fire, etc.)
+- ✅ LearnRecipe (`LearnRecipeActionHandler`) - Learning recipes from recipe items
+- ✅ SetRune (`SetRuneActionHandler`) - Setting active rune for echo behavior
+- ✅ FindPath (`FindPathActionHandler`) - Pathfinding calculation and direction generation
+- ✅ Teleport (`TeleportActionHandler`) - Channeling-based teleportation to binding point
+- ✅ ToggleEcho (`ToggleEchoActionHandler`) - Toggling echo state for AI control
 
 ### Pending Migration
-- LearnRecipe
 - SendChat
 - DialogAction
-- ToggleEcho
-- SetRune
-- Teleport
-- FindPath
 - DepositItem/WithdrawItem
 
 ## Best Practices
@@ -228,5 +228,10 @@ See these files for reference implementations:
 - `game/action_equip_handler.go` - Equipping items with slot management
 - `game/action_unequip_handler.go` - Unequipping items with inventory checks
 - `game/action_place_item_handler.go` - Placing items with multiple item type support
+- `game/action_learn_recipe_handler.go` - Learning recipes from items
+- `game/action_set_rune_handler.go` - Setting runes for echo behavior
+- `game/action_find_path_handler.go` - Pathfinding with direction conversion
+- `game/action_teleport_handler.go` - Async channeling-based teleportation
+- `game/action_toggle_echo_handler.go` - Toggling echo state with validation
 - `game/ACTION_TEMPLATE.go` - Complete template with examples
 

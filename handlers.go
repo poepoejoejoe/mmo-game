@@ -118,9 +118,10 @@ func (c *Client) readPump() {
 				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
 				if result != nil && result.Success {
 					// Send messages to the player
-					for _, msg := range result.ToPlayer {
-						msgJSON, _ := json.Marshal(msg)
-						c.send <- msgJSON
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						// The payload already contains the full message JSON
+						c.send <- wsMsg.Payload
 					}
 					// Broadcast messages are handled by ProcessMove internally
 				}
@@ -130,9 +131,9 @@ func (c *Client) readPump() {
 				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
 				if result != nil && result.Success {
 					// Send messages to the player
-					for _, msg := range result.ToPlayer {
-						msgJSON, _ := json.Marshal(msg)
-						c.send <- msgJSON
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
 					}
 				}
 			case game.ClientEventEquip:
@@ -140,9 +141,9 @@ func (c *Client) readPump() {
 				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
 				if result != nil && result.Success {
 					// Send messages to the player
-					for _, msg := range result.ToPlayer {
-						msgJSON, _ := json.Marshal(msg)
-						c.send <- msgJSON
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
 					}
 				}
 			case game.ClientEventUnequip:
@@ -150,9 +151,9 @@ func (c *Client) readPump() {
 				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
 				if result != nil && result.Success {
 					// Send messages to the player
-					for _, msg := range result.ToPlayer {
-						msgJSON, _ := json.Marshal(msg)
-						c.send <- msgJSON
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
 					}
 				}
 			case game.ClientEventCraft:
@@ -160,9 +161,9 @@ func (c *Client) readPump() {
 				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
 				if result != nil && result.Success {
 					// Send messages to the player
-					for _, msg := range result.ToPlayer {
-						msgJSON, _ := json.Marshal(msg)
-						c.send <- msgJSON
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
 					}
 				}
 			case game.ClientEventPlaceItem:
@@ -170,9 +171,9 @@ func (c *Client) readPump() {
 				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
 				if result != nil && result.Success {
 					// Send messages to the player
-					for _, msg := range result.ToPlayer {
-						msgJSON, _ := json.Marshal(msg)
-						c.send <- msgJSON
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
 					}
 				}
 			case game.ClientEventAttack:
@@ -180,9 +181,9 @@ func (c *Client) readPump() {
 				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
 				if result != nil && result.Success {
 					// Send messages to the player
-					for _, msg := range result.ToPlayer {
-						msgJSON, _ := json.Marshal(msg)
-						c.send <- msgJSON
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
 					}
 					// Broadcast messages are handled by ProcessAttack internally
 				}
@@ -191,37 +192,64 @@ func (c *Client) readPump() {
 				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
 				if result != nil && result.Success {
 					// Send messages to the player
-					for _, msg := range result.ToPlayer {
-						msgJSON, _ := json.Marshal(msg)
-						c.send <- msgJSON
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
 					}
 				}
 			case game.ClientEventLearnRecipe:
-				game.ProcessLearnRecipe(c.id, msg.Payload)
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
+				}
 			case game.ClientEventSendChat:
 				game.ProcessSendChat(c.id, msg.Payload)
 			case game.ClientEventDialogAction:
 				game.ProcessDialogAction(c.id, msg.Payload)
 			case game.ClientEventToggleEcho:
-				game.ProcessToggleEcho(c.id)
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
+				}
 			case game.ClientEventSetRune:
-				game.ProcessSetRune(c.id, msg.Payload)
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
+				}
 			case game.ClientEventTeleport:
-				game.ProcessTeleport(c.id, msg.Payload)
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
+				}
 			case game.ClientEventFindPath:
-				var findPathData models.FindPathPayload
-				if err := json.Unmarshal(msg.Payload, &findPathData); err != nil {
-					log.Printf("Error unmarshalling find_path payload: %v", err)
-					continue
-				}
-				noValidPathMsg, validPathMsg := game.ProcessFindPath(c.id, findPathData)
-				if noValidPathMsg != nil {
-					noValidPathJson, _ := json.Marshal(noValidPathMsg)
-					c.send <- noValidPathJson
-				}
-				if validPathMsg != nil {
-					validPathJson, _ := json.Marshal(validPathMsg)
-					c.send <- validPathJson
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
 				}
 			case game.ClientEventDepositItem:
 				inventoryMsg, bankMsg := game.ProcessDepositItem(c.id, msg.Payload)

@@ -23,6 +23,7 @@ import {
     ActiveRuneUpdateMessage,
     RecipeLearnedMessage,
     BankUpdateMessage,
+    ValidPathMessage,
     InventoryItem
 } from './types';
 import * as state from './state';
@@ -171,20 +172,8 @@ function handleMessage(event: MessageEvent) {
         }
         case 'inventory_update': {
             const inventoryMsg = msg as InventoryUpdateMessage;
-            // Handle both direct inventory field and payload-wrapped messages
-            let safeInventory: Record<string, InventoryItem> = {};
-            
-            if (inventoryMsg.inventory) {
-                // Direct inventory field (from sendDirectMessage)
-                safeInventory = inventoryMsg.inventory;
-            } else if ((msg as any).payload) {
-                // Payload-wrapped message (from AddToPlayer)
-                const payloadData = (msg as any).payload as InventoryUpdateMessage;
-                safeInventory = payloadData.inventory || {};
-            }
-            
-            console.log('Inventory update received:', safeInventory);
-            state.setInventory(safeInventory);
+            state.setInventory(inventoryMsg.inventory || {});
+            console.log('Inventory update received:', inventoryMsg.inventory);
             onStateUpdate();
             break;
         }
@@ -231,29 +220,24 @@ function handleMessage(event: MessageEvent) {
         }
         case 'player_stats_update': {
             const statsMsg = msg as PlayerStatsUpdateMessage;
-            // Handle both direct fields and payload-wrapped messages
-            const payloadData = (msg as any).payload 
-                ? (msg as any).payload as PlayerStatsUpdateMessage 
-                : statsMsg;
-            
             const me = state.getMyEntity();
 
             if (me) {
-                if (payloadData.health !== undefined) me.health = payloadData.health;
-                if (payloadData.maxHealth !== undefined) me.maxHealth = payloadData.maxHealth;
+                if (statsMsg.health !== undefined) me.health = statsMsg.health;
+                if (statsMsg.maxHealth !== undefined) me.maxHealth = statsMsg.maxHealth;
             }
 
-            if (payloadData.experience) {
-                state.setExperience(payloadData.experience);
+            if (statsMsg.experience) {
+                state.setExperience(statsMsg.experience);
             }
-            if (payloadData.resonance !== undefined) {
-                state.setResonance(payloadData.resonance);
+            if (statsMsg.resonance !== undefined) {
+                state.setResonance(statsMsg.resonance);
             }
-            if (payloadData.maxResonance !== undefined) {
-                state.setMaxResonance(payloadData.maxResonance);
+            if (statsMsg.maxResonance !== undefined) {
+                state.setMaxResonance(statsMsg.maxResonance);
             }
-            if (payloadData.echoUnlocked !== undefined) {
-                state.setEchoUnlocked(payloadData.echoUnlocked);
+            if (statsMsg.echoUnlocked !== undefined) {
+                state.setEchoUnlocked(statsMsg.echoUnlocked);
             }
             onStateUpdate();
             break;
@@ -285,9 +269,11 @@ function handleMessage(event: MessageEvent) {
         case 'no-valid-path':
             console.log("No valid path found.");
             break;
-        case 'valid-path':
-            setPath(msg.payload.directions);
+        case 'valid-path': {
+            const validPathMsg = msg as ValidPathMessage;
+            setPath(validPathMsg.directions);
             break;
+        }
         case 'open_bank_window': {
             // Bank opening is now handled by React via state updates
             callWindowFunction('togglePanel', 'bank');
