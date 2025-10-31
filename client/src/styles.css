@@ -194,7 +194,7 @@ body {
     width: 300px;
     display: flex;
     flex-direction: column;
-    display: none; /* Hidden by default */
+    /* Visibility is now controlled by React conditional rendering */
 }
 #chat-messages {
     height: 120px;

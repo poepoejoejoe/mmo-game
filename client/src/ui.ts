@@ -47,28 +47,21 @@ export let gearView: HTMLElement | null;
 export let questView: HTMLElement | null;
 export let experienceView: HTMLElement | null;
 export let runesView: HTMLElement | null;
-export let bankView: HTMLElement;
-let chatMessagesEl: HTMLElement;
-let chatButton: HTMLButtonElement;
-let chatContainer: HTMLElement;
+export let bankView: HTMLElement | null;
+// Chat is now handled by React - no longer needed here
 
 // Bank
 let bankButton: HTMLButtonElement; // This will be created dynamically
 
-// --- NEW: Dialog UI Elements ---
-let dialogModal: HTMLElement;
-let dialogNpcName: HTMLElement;
-let dialogText: HTMLElement;
-let dialogOptions: HTMLElement;
-let dialogCloseButton: HTMLElement;
-let dialogOverlay: HTMLElement;
+// --- Dialog UI Elements ---
+// Dialog is now handled by React - no longer needed here
 
 // Bank
 let isBankUIInitialized = false;
 
 
 const openPanels = new Set<'inventory' | 'crafting' | 'gear' | 'quest' | 'experience' | 'runes' | 'bank'>();
-let isChatOpen = true;
+// Chat state is now handled by React - no longer needed here
 
 export function initializeUI() {
     // Top Bar
@@ -90,27 +83,27 @@ export function initializeUI() {
     questView = document.getElementById('quest-view');
     experienceView = document.getElementById('experience-view');
     runesView = document.getElementById('runes-view');
-    chatMessagesEl = document.getElementById('chat-messages')!;
-    chatButton = document.getElementById('chat-button') as HTMLButtonElement;
-    chatContainer = document.getElementById('chat-container')!;
+    // Chat is now handled by React - no initialization needed
 
-    // Dialog
-    dialogModal = document.getElementById('dialog-modal')!;
-    dialogNpcName = document.getElementById('dialog-npc-name')!;
-    dialogText = document.getElementById('dialog-text')!;
-    dialogOptions = document.getElementById('dialog-options')!;
-    dialogCloseButton = document.getElementById('dialog-close-button')!;
-    dialogOverlay = document.getElementById('dialog-overlay')!;
+    // Dialog is now handled by React - no initialization needed
 
-    // Bank
-    bankView = document.getElementById('bank-view')!;
+    // Bank is now handled by React - no initialization needed
+    bankView = document.getElementById('bank-view');
 
     // Create and add the bank button dynamically
     bankButton = document.createElement('button');
     bankButton.id = 'bank-button';
     bankButton.className = 'action-button';
     bankButton.innerHTML = `<img src="assets/inventory-icon.png" alt="Bank">`; // Placeholder icon
-    bankButton.addEventListener('click', () => toggleInfoPanel('bank'));
+    bankButton.addEventListener('click', () => {
+        // Use React toggle function if available, otherwise fall back to legacy
+        const togglePanelFn = (window as any).togglePanel;
+        if (togglePanelFn) {
+            togglePanelFn('bank');
+        } else {
+            toggleInfoPanel('bank');
+        }
+    });
     document.getElementById('main-action-bar')?.appendChild(bankButton);
 
 
@@ -127,16 +120,11 @@ export function initializeUI() {
 
     helpButton.addEventListener('click', () => toggleModal('help-modal', true));
     helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
-    dialogCloseButton.addEventListener('click', hideDialog);
-    dialogOverlay.addEventListener('click', hideDialog);
-    chatButton.addEventListener('click', toggleChat);
+    // Dialog event listeners are now handled by React Dialog component
+    // Chat event listeners are now handled by React Chat component
     
     // Set initial state on load
     updateButtonAndPanelSelection();
-    toggleChat(); // to set initial state
-    toggleChat(); // toggle back to open, but apply style
-
-    chatButton.innerHTML = `<img src="assets/chat-icon.png" alt="Chat">`;
 
     const infoPanelsContainer = document.querySelector('.info-panels');
     infoPanelsContainer?.addEventListener('click', (e) => {
@@ -154,7 +142,7 @@ export function initializeUI() {
         const slot = target.closest('.inventory-slot') as HTMLElement | null;
 
         if (slot) {
-            const isBankOpen = bankView.style.display === 'flex';
+            const isBankOpen = bankView && bankView.style.display === 'flex';
             const isInventorySlot = inventoryView && inventoryView.contains(slot);
 
             if (isBankOpen && isInventorySlot) {
@@ -241,35 +229,37 @@ function initializeBankUI() {
         }
     });
 
-    bankView.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        const target = e.target as HTMLElement;
-        const slot = target.closest('.inventory-slot');
-        if (slot) {
-            const slotKey = (slot as HTMLElement).dataset.slot!;
-            const item = state.getState().bank[slotKey];
-            if (item) {
-                let menuHTML = '';
-                [1, 5, 10].forEach(q => {
-                    if (item.quantity >= q) {
-                         menuHTML += `<button data-action="withdraw" data-slot="${slotKey}" data-quantity="${q}">Withdraw ${q}</button>`;
-                    }
-                });
-                menuHTML += `<button data-action="withdraw" data-slot="${slotKey}" data-quantity="${item.quantity}">Withdraw All</button>`;
-                menuHTML += `<button data-action="withdraw" data-slot="${slotKey}">Withdraw X</button>`;
-                
-                bankContextMenu.innerHTML = menuHTML;
-                bankContextMenu.style.left = `${e.clientX}px`;
-                bankContextMenu.style.top = `${e.clientY}px`;
-                bankContextMenu.style.display = 'block';
+    if (bankView) {
+        bankView.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const target = e.target as HTMLElement;
+            const slot = target.closest('.inventory-slot');
+            if (slot) {
+                const slotKey = (slot as HTMLElement).dataset.slot!;
+                const item = state.getState().bank[slotKey];
+                if (item) {
+                    let menuHTML = '';
+                    [1, 5, 10].forEach(q => {
+                        if (item.quantity >= q) {
+                             menuHTML += `<button data-action="withdraw" data-slot="${slotKey}" data-quantity="${q}">Withdraw ${q}</button>`;
+                        }
+                    });
+                    menuHTML += `<button data-action="withdraw" data-slot="${slotKey}" data-quantity="${item.quantity}">Withdraw All</button>`;
+                    menuHTML += `<button data-action="withdraw" data-slot="${slotKey}">Withdraw X</button>`;
+                    
+                    bankContextMenu.innerHTML = menuHTML;
+                    bankContextMenu.style.left = `${e.clientX}px`;
+                    bankContextMenu.style.top = `${e.clientY}px`;
+                    bankContextMenu.style.display = 'block';
+                }
             }
-        }
-    });
+        });
+    }
 
     if (inventoryView) {
         inventoryView.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        if (bankView.style.display !== 'flex') return;
+        if (bankView && bankView.style.display !== 'flex') return;
         const target = e.target as HTMLElement;
         const slot = target.closest('.inventory-slot');
         if (slot) {
@@ -337,29 +327,54 @@ function initializeBankUI() {
         });
     }
 
-    bankView.addEventListener('click', (e) => handleLeftClick(e, 'bank'));
+    if (bankView) {
+        bankView.addEventListener('click', (e) => handleLeftClick(e, 'bank'));
+    }
 
     isBankUIInitialized = true;
 }
 
 export function openBankWindow() {
     initializeBankUI();
-    if (!openPanels.has('inventory')) {
-        toggleInfoPanel('inventory');
-    }
-    toggleInfoPanel('bank');
-}
-
-export function closeBankWindow() {
-    if (openPanels.has('bank')) {
+    const togglePanelFn = (window as any).togglePanel;
+    if (togglePanelFn) {
+        // Use React toggle function - it will check if inventory is already open
+        togglePanelFn('bank');
+        // Also ensure inventory is open (React will handle the state check)
+        togglePanelFn('inventory');
+    } else {
+        // Fall back to legacy
+        if (!openPanels.has('inventory')) {
+            toggleInfoPanel('inventory');
+        }
         toggleInfoPanel('bank');
     }
 }
 
+export function closeBankWindow() {
+    const closeBankPanelFn = (window as any).closeBankPanel;
+    if (closeBankPanelFn) {
+        closeBankPanelFn();
+    } else {
+        // Fall back to legacy
+        const togglePanelFn = (window as any).togglePanel;
+        if (togglePanelFn && openPanels.has('bank')) {
+            togglePanelFn('bank');
+        } else if (openPanels.has('bank')) {
+            toggleInfoPanel('bank');
+        }
+    }
+}
+
 export function updateBankUI() {
+    // This function is now obsolete - bank is handled by React
+    // Keeping it for compatibility but it does nothing if bankView is null
+    if (!bankView) return;
+    
     const bank = state.getState().bank;
-    bankView.innerHTML = ''; // Clear existing content
-    bankView.appendChild(createPanelHeader('Bank', 'bank'));
+    const bankViewElement = bankView; // Store in const for TypeScript
+    bankViewElement.innerHTML = ''; // Clear existing content
+    bankViewElement.appendChild(createPanelHeader('Bank', 'bank'));
 
     const grid = document.createElement('div');
     grid.className = 'inventory-grid';
@@ -387,7 +402,7 @@ export function updateBankUI() {
         }
         grid.appendChild(slotEl);
     }
-    bankView.appendChild(grid);
+    bankViewElement.appendChild(grid);
 }
 
 export function showCraftSuccess(itemId: string) {
@@ -419,15 +434,6 @@ export function promptForRegistration() {
     if (!localStorage.getItem('secretKey')) {
         registrationContainer.style.display = 'flex';
         welcomeMessageEl.style.display = 'none';
-    }
-}
-
-function toggleChat() {
-    isChatOpen = !isChatOpen;
-    if (isChatOpen) {
-        chatContainer.style.display = 'flex';
-    } else {
-        chatContainer.style.display = 'none';
     }
 }
 
@@ -493,7 +499,10 @@ function updateButtonAndPanelSelection() {
     if (runesView) {
         runesView.style.display = openPanels.has('runes') ? 'flex' : 'none';
     }
-    bankView.style.display = openPanels.has('bank') ? 'flex' : 'none';
+    // bankView is now handled by React - skip it
+    if (bankView) {
+        bankView.style.display = openPanels.has('bank') ? 'flex' : 'none';
+    }
 }
 
 function toggleModal(modalId: string, show: boolean) {
@@ -508,67 +517,25 @@ function toggleModal(modalId: string, show: boolean) {
 }
 
 export function showDialog(dialogMsg: { npcName?: string, text: string, options: { text: string, action: string, context?: string }[] }, position: {x: number, y: number} | null) {
-    dialogNpcName.textContent = dialogMsg.npcName || 'Confirmation';
-    dialogText.innerHTML = `<p>${dialogMsg.text.replace(/\n/g, '</p><p>')}</p>`; // Support newlines
-    dialogOptions.innerHTML = '';
-
-    dialogMsg.options.forEach(option => {
-        const button = document.createElement('button');
-        button.textContent = option.text;
-        button.dataset.action = option.action;
-        if (option.context) {
-            button.dataset.context = option.context;
-        }
-        button.addEventListener('click', () => {
-            if (option.action !== 'close_dialog') {
-                send({
-                    type: 'dialog_action',
-                    payload: { action: option.action, context: option.context }
-                });
-            }
-            hideDialog(); // Close dialog after choosing
-        });
-        dialogOptions.appendChild(button);
-    });
-
-    if (position) {
-        dialogModal.style.left = `${position.x}px`;
-        dialogModal.style.top = `${position.y}px`;
-        dialogModal.style.transform = 'translate(-50%, -110%)'; // Reset transform if it was changed
-    } else {
-        // Fallback to center if no position is given
-        dialogModal.style.left = '50%';
-        dialogModal.style.top = '50%';
-        dialogModal.style.transform = 'translate(-50%, -50%)';
+    // This function is now obsolete - dialog is handled by React
+    // Keeping it for compatibility but redirecting to window.showDialog
+    const showDialogFn = (window as any).showDialog;
+    if (showDialogFn) {
+        showDialogFn(dialogMsg, position);
     }
-
-    dialogOverlay.classList.add('active');
-    toggleModal('dialog-modal', true);
 }
 
 export function hideDialog() {
-    dialogOverlay.classList.remove('active');
-    toggleModal('dialog-modal', false);
-    state.setActiveNpcId(null);
-}
-
-
-export function addChatMessage(playerId: string, message: string) {
-    const messageEl = document.createElement('div');
-    const s = state.getState();
-    const entity = s.entities[playerId];
-
-    let displayName = playerId;
-    if (entity && entity.name) {
-        displayName = entity.name;
+    // This function is now obsolete - dialog is handled by React
+    // Keeping it for compatibility but redirecting to window.hideDialog
+    const hideDialogFn = (window as any).hideDialog;
+    if (hideDialogFn) {
+        hideDialogFn();
     } else {
-        // guest-xxxx
-        displayName = playerId.substring(0, 12);
+        state.setActiveNpcId(null);
     }
-    
-    messageEl.innerHTML = `<strong>${displayName}:</strong> ${message}`;
-    chatMessagesEl.prepend(messageEl);
 }
+
 
 export function startCooldown(duration: number): void {
     // This UI element was removed in the new design.

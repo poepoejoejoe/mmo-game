@@ -5,7 +5,6 @@ import { ACTION_COOLDOWN, TILE_SIZE, WATER_PENALTY } from './constants';
 import { getEntityProperties, getTileProperties } from './definitions';
 
 let gameCanvas: HTMLCanvasElement;
-let chatInputEl: HTMLInputElement;
 let nameInputEl: HTMLInputElement;
 let canPerformAction = true;
 let isBuildMode = false;
@@ -129,7 +128,8 @@ function handleMouseMove(e: MouseEvent) {
 
 function handleKeyDown(e: KeyboardEvent) {
     // If typing in chat or name input, don't process game keybinds
-    if (document.activeElement === chatInputEl || document.activeElement === nameInputEl) {
+    const chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
+    if ((chatInput && document.activeElement === chatInput) || document.activeElement === nameInputEl) {
         return;
     }
 
@@ -170,7 +170,8 @@ function handleKeyDown(e: KeyboardEvent) {
 
 function handleKeyUp(e: KeyboardEvent) {
     // If typing in chat or name input, don't process game keybinds
-    if (document.activeElement === chatInputEl || document.activeElement === nameInputEl) {
+    const chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
+    if ((chatInput && document.activeElement === chatInput) || document.activeElement === nameInputEl) {
         return;
     }
     const index = pressedKeys.indexOf(e.key);
@@ -414,22 +415,12 @@ function processPathMovement() {
  */
 export function initializeInput() {
     gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-    chatInputEl = document.getElementById('chat-input') as HTMLInputElement;
     nameInputEl = document.getElementById('name-input') as HTMLInputElement;
 
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
 
-    chatInputEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const message = chatInputEl.value.trim();
-            if (message) {
-                network.send({ type: 'send_chat', payload: { message } });
-                chatInputEl.value = '';
-                chatInputEl.blur(); // Unfocus the input
-            }
-        }
-    });
+    // Chat input is now handled by React Chat component - no event listener needed here
 
     // Replace the single 'click' listener with more detailed mouse events for click-and-hold
     gameCanvas.addEventListener('contextmenu', (e) => e.preventDefault());

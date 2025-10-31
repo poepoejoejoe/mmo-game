@@ -26,10 +26,8 @@ import {
 } from './types';
 import * as state from './state';
 import { 
-    addChatMessage, 
     promptForRegistration, 
     showCraftSuccess, 
-    showDialog, 
     updateInventoryUI, 
     showChannelingBar,
     hideChannelingBar,
@@ -128,7 +126,10 @@ function handleMessage(event: MessageEvent) {
         case 'show_dialog': {
             const dialogMsg = msg as DialogMessage;
             const pos = state.getState().lastInteractionPosition;
-            showDialog(dialogMsg, pos);
+            const showDialogFn = (window as any).showDialog;
+            if (showDialogFn) {
+                showDialogFn(dialogMsg, pos);
+            }
             break;
         }
         case 'state_correction': {
@@ -259,7 +260,10 @@ function handleMessage(event: MessageEvent) {
         }
         case 'player_chat': {
             const chatMsg = msg as PlayerChatMessage;
-            addChatMessage(chatMsg.playerId, chatMsg.message); // Update the chat box UI
+            const addChatMessageFn = (window as any).addChatMessage;
+            if (addChatMessageFn) {
+                addChatMessageFn(chatMsg.playerId, chatMsg.message);
+            }
             state.setEntityChat(chatMsg.playerId, chatMsg.message); // Update the entity's state for canvas rendering
             onStateUpdate();
             break;

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { initialize } from './main';
 import * as state from './state';
 import { addStateUpdateListener } from './network';
@@ -18,6 +18,10 @@ import GearPanel from './components/GearPanel';
 import QuestPanel from './components/QuestPanel';
 import ExperiencePanel from './components/ExperiencePanel';
 import RunesPanel from './components/RunesPanel';
+import Dialog from './components/Dialog';
+import Chat from './components/Chat';
+import BankPanel from './components/BankPanel';
+import { DialogOption } from './types';
 
 function App() {
   const [coords, setCoords] = useState({ x: 0, y: 0 });
@@ -33,9 +37,42 @@ function App() {
   const [experience, setExperience] = useState<Record<string, number>>({});
   const [runes, setRunes] = useState<string[]>([]);
   const [activeRune, setActiveRune] = useState<string>('');
+  const [bank, setBank] = useState<Record<string, InventoryItem>>({});
+  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    npcName?: string;
+    text: string;
+    options: DialogOption[];
+    position: { x: number; y: number } | null;
+  }>({
+    isOpen: false,
+    text: '',
+    options: [],
+    position: null,
+  });
   const isInitialized = useRef(false);
 
-  const handleTogglePanel = (panelId: string) => {
+  const showDialog = useCallback((dialogMsg: { npcName?: string, text: string, options: DialogOption[] }, position: {x: number, y: number} | null) => {
+    setDialog({
+      isOpen: true,
+      npcName: dialogMsg.npcName,
+      text: dialogMsg.text,
+      options: dialogMsg.options,
+      position,
+    });
+  }, []);
+
+  const hideDialog = useCallback(() => {
+    setDialog(prev => ({ ...prev, isOpen: false }));
+    state.setActiveNpcId(null);
+  }, []);
+
+  const toggleChat = useCallback(() => {
+    setIsChatOpen(prev => !prev);
+  }, []);
+
+  const handleTogglePanel = useCallback((panelId: string) => {
     // This function now drives the state for both React and the legacy UI
     setOpenPanels(prevPanels => {
       const newPanels = new Set(prevPanels);
@@ -47,10 +84,31 @@ function App() {
       return newPanels;
     });
     // Only call toggleInfoPanel for non-React panels
-    if (panelId !== 'inventory' && panelId !== 'crafting' && panelId !== 'gear' && panelId !== 'quest' && panelId !== 'experience' && panelId !== 'runes') {
+    if (panelId !== 'inventory' && panelId !== 'crafting' && panelId !== 'gear' && panelId !== 'quest' && panelId !== 'experience' && panelId !== 'runes' && panelId !== 'bank') {
       toggleInfoPanel(panelId as any);
     }
-  };
+  }, []);
+
+  const closeBankPanel = useCallback(() => {
+    setOpenPanels(prevPanels => {
+      if (prevPanels.has('bank')) {
+        const newPanels = new Set(prevPanels);
+        newPanels.delete('bank');
+        return newPanels;
+      }
+      return prevPanels;
+    });
+  }, []);
+
+  useEffect(() => {
+    // Expose showDialog and hideDialog functions for network.ts to use
+    (window as any).showDialog = showDialog;
+    (window as any).hideDialog = hideDialog;
+    // Expose togglePanel for bank button to use
+    (window as any).togglePanel = handleTogglePanel;
+    // Expose closeBankPanel for closing bank when walking away
+    (window as any).closeBankPanel = closeBankPanel;
+  }, [showDialog, hideDialog, handleTogglePanel, closeBankPanel]);
 
   useEffect(() => {
     if (!isInitialized.current) {
@@ -76,6 +134,7 @@ function App() {
       setExperience(s.experience || {});
       setRunes(s.runes || []);
       setActiveRune(s.activeRune || '');
+      setBank(s.bank || {});
     }
 
     const unsubscribe = addStateUpdateListener(() => {
@@ -111,6 +170,7 @@ function App() {
         setExperience(s.experience || {});
         setRunes(s.runes || []);
         setActiveRune(s.activeRune || '');
+        setBank(s.bank || {});
       }
     });
 
@@ -139,21 +199,30 @@ function App() {
             <canvas id="game-canvas"></canvas>
         </div>
         
-        <div id="bank-view" className="info-panel centered-panel" style={{display: 'none'}}></div>
-
+        {/* Bank Panel - rendered inside game-container for proper centering */}
+        <BankPanel
+          isOpen={openPanels.has('bank')}
+          onClose={() => handleTogglePanel('bank')}
+          bank={bank}
+        />
+        
         {/* Bottom UI */}
         <div className="bottom-ui">
             <div className="left-hud-container">
-                <button className="action-button" id="chat-button">💬</button>
+                <button className="action-button" id="chat-button" onClick={toggleChat}>
+                    <img src="assets/chat-icon.png" alt="Chat" />
+                </button>
             </div>
 
-            <div id="chat-container">
-                <div id="chat-messages"></div>
-                <input type="text" id="chat-input" placeholder="Say something..." />
-                <div id="registration-container" style={{display: 'none', marginTop: '10px'}}>
-                    <input type="text" id="name-input" placeholder="Enter name to save progress" maxLength={15} />
-                    <button id="register-button">Save</button>
+            {isChatOpen && (
+                <div id="chat-container" className="chat-container">
+                    <Chat isOpen={isChatOpen} onToggle={toggleChat} />
                 </div>
+            )}
+
+            <div id="registration-container" style={{display: 'none', marginTop: '10px'}}>
+                <input type="text" id="name-input" placeholder="Enter name to save progress" maxLength={15} />
+                <button id="register-button">Save</button>
             </div>
 
             <div id="player-hud-bottom">
@@ -171,6 +240,7 @@ function App() {
                       isOpen={openPanels.has('inventory')} 
                       onClose={() => handleTogglePanel('inventory')}
                       inventory={inventory}
+                      isBankOpen={openPanels.has('bank')}
                     />
                     <CraftingPanel
                       isOpen={openPanels.has('crafting')}
@@ -213,19 +283,14 @@ function App() {
       </div>
 
       {/* Dialog Modal */}
-      <div id="dialog-overlay"></div>
-      <div id="dialog-modal" className="dialog-popup">
-          <div className="modal-header">
-              <h2 id="dialog-npc-name">NPC Name</h2>
-              <span className="close-button" id="dialog-close-button">&times;</span>
-          </div>
-          <div id="dialog-text">
-              <p>Hello there, traveler!</p>
-          </div>
-          <div id="dialog-options">
-              {/* Options will be added dynamically */}
-          </div>
-      </div>
+      <Dialog
+        isOpen={dialog.isOpen}
+        npcName={dialog.npcName}
+        text={dialog.text}
+        options={dialog.options}
+        position={dialog.position}
+        onClose={hideDialog}
+      />
 
       {/* Help Modal */}
       <div id="help-modal" className="modal">
