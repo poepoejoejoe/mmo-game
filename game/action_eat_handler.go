@@ -31,41 +31,19 @@ func (h *EatActionHandler) Process(playerID string, payload json.RawMessage) *Ac
 		return Failed()
 	}
 
-	// 1. Check if player has the item and consume it
-	inventoryKey := string(RedisKeyPlayerInventory) + playerID
-	inventoryDataRaw, err := rdb.HGetAll(ctx, inventoryKey).Result()
-	if err != nil {
-		return Failed()
-	}
-
-	itemSlot := ""
-	var itemInSlot models.Item
-	for i := 0; i < 10; i++ {
-		slotKey := "slot_" + strconv.Itoa(i)
-		if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
-			var item models.Item
-			json.Unmarshal([]byte(itemJSON), &item)
-			if item.ID == eatData.Item {
-				itemSlot = slotKey
-				itemInSlot = item
-				break
-			}
-		}
-	}
-
-	if itemSlot == "" {
+	// 1. Find and consume the item
+	slotInfo, err := FindItemInInventory(playerID, ItemID(eatData.Item), "")
+	if err != nil || slotInfo.SlotKey == "" {
 		log.Printf("Player %s tried to eat %s but has none.", playerID, eatData.Item)
 		return Failed()
 	}
 
 	pipe := rdb.Pipeline()
-	// Consume the item
-	if itemInSlot.Quantity > 1 {
-		itemInSlot.Quantity--
-		newItemJSON, _ := json.Marshal(itemInSlot)
-		pipe.HSet(ctx, inventoryKey, itemSlot, string(newItemJSON))
-	} else {
-		pipe.HSet(ctx, inventoryKey, itemSlot, "")
+	inventoryKey := string(RedisKeyPlayerInventory) + playerID
+	_, err = ConsumeItemFromSlot(pipe, inventoryKey, slotInfo.SlotKey, 1)
+	if err != nil {
+		log.Printf("Player %s failed to consume item: %v", playerID, err)
+		return Failed()
 	}
 
 	// 2. Heal the player
@@ -99,16 +77,14 @@ func (h *EatActionHandler) Process(playerID string, payload json.RawMessage) *Ac
 	result := NewActionResult()
 	
 	// Send inventory update
-	finalInventory, _ := GetInventory(playerID)
-	inventoryUpdateMsg := &models.InventoryUpdateMessage{
-		Type:      string(ServerEventInventoryUpdate),
-		Inventory: finalInventory,
+	inventoryUpdate := CreateInventoryUpdateMessage(playerID)
+	if inventoryUpdate != nil {
+		inventoryJSON, _ := json.Marshal(inventoryUpdate)
+		result.AddToPlayer(models.WebSocketMessage{
+			Type:    inventoryUpdate.Type,
+			Payload: inventoryJSON,
+		})
 	}
-	inventoryUpdateJSON, _ := json.Marshal(inventoryUpdateMsg)
-	result.AddToPlayer(models.WebSocketMessage{
-		Type:    inventoryUpdateMsg.Type,
-		Payload: inventoryUpdateJSON,
-	})
 
 	// Send health update if health changed
 	if newHealth != health {

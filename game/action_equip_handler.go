@@ -69,10 +69,10 @@ func (h *EquipActionHandler) Process(playerID string, payload json.RawMessage) *
 	}
 
 	// Fetch updated inventory and gear to send to client
-	newInventory, _ := GetInventory(playerID)
-	newGear, _ := GetGear(playerID)
-
 	rdb.HSet(ctx, playerID, "nextActionAt", time.Now().Add(BaseActionCooldown).UnixMilli())
+
+	// Get updated gear for appearance broadcast
+	newGear, _ := GetGear(playerID)
 
 	// Announce the appearance change to the world
 	appearanceUpdateMsg := map[string]interface{}{
@@ -86,26 +86,24 @@ func (h *EquipActionHandler) Process(playerID string, payload json.RawMessage) *
 	result := NewActionResult()
 
 	// Send inventory update
-	inventoryUpdate := &models.InventoryUpdateMessage{
-		Type:      string(ServerEventInventoryUpdate),
-		Inventory: newInventory,
+	inventoryUpdate := CreateInventoryUpdateMessage(playerID)
+	if inventoryUpdate != nil {
+		inventoryJSON, _ := json.Marshal(inventoryUpdate)
+		result.AddToPlayer(models.WebSocketMessage{
+			Type:    inventoryUpdate.Type,
+			Payload: inventoryJSON,
+		})
 	}
-	inventoryJSON, _ := json.Marshal(inventoryUpdate)
-	result.AddToPlayer(models.WebSocketMessage{
-		Type:    inventoryUpdate.Type,
-		Payload: inventoryJSON,
-	})
 
 	// Send gear update
-	gearUpdate := &models.GearUpdateMessage{
-		Type: string(ServerEventGearUpdate),
-		Gear: newGear,
+	gearUpdate := CreateGearUpdateMessage(playerID)
+	if gearUpdate != nil {
+		gearJSON, _ := json.Marshal(gearUpdate)
+		result.AddToPlayer(models.WebSocketMessage{
+			Type:    gearUpdate.Type,
+			Payload: gearJSON,
+		})
 	}
-	gearJSON, _ := json.Marshal(gearUpdate)
-	result.AddToPlayer(models.WebSocketMessage{
-		Type:    gearUpdate.Type,
-		Payload: gearJSON,
-	})
 
 	CheckObjectives(playerID, models.ObjectiveEquip, item.ID)
 

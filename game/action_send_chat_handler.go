@@ -21,7 +21,7 @@ func (h *SendChatActionHandler) Process(playerID string, payload json.RawMessage
 	}
 
 	// Basic validation
-	if len(chatData.Message) == 0 || len(chatData.Message) > 100 {
+	if len(chatData.Message) == 0 || len(chatData.Message) > MaxChatMessageLength {
 		return Failed()
 	}
 
@@ -33,7 +33,7 @@ func (h *SendChatActionHandler) Process(playerID string, payload json.RawMessage
 	x, y := GetEntityPosition(playerData)
 
 	// Define chat radius
-	const chatRadius = 10
+	const chatRadius = ChatRadius
 
 	// Find nearby players (including self)
 	nearbyPlayerIDs := GetEntitiesInRange(x, y, chatRadius, EntityTypePlayer)

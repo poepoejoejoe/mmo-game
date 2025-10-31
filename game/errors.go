@@ -52,5 +52,12 @@ const (
 	ErrOutOfRange        = "target is out of range"
 	ErrInvalidState      = "invalid game state for action"
 	ErrRedisError        = "Redis operation failed"
+	ErrInventoryFull     = "inventory is full"
+	ErrBankFull          = "bank is full"
+	ErrInvalidSlot       = "invalid inventory slot"
+	ErrInvalidQuantity   = "invalid item quantity"
+	ErrNotAdjacent       = "target is not adjacent"
+	ErrItemNotFound      = "item not found in inventory"
+	ErrInsufficientItems = "insufficient items in inventory"
 )
 

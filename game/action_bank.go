@@ -111,7 +111,7 @@ func addItemToBank(pipe redis.Pipeliner, bankKey string, itemID string, quantity
 	}
 
 	// First, try to stack with existing items
-	for i := 0; i < 64; i++ {
+	for i := 0; i < BankSize; i++ {
 		slotKey := "slot_" + strconv.Itoa(i)
 		if itemJSON, ok := bankData[slotKey]; ok && itemJSON != "" {
 			var item models.Item
@@ -126,7 +126,7 @@ func addItemToBank(pipe redis.Pipeliner, bankKey string, itemID string, quantity
 	}
 
 	// Second, find an empty slot
-	for i := 0; i < 64; i++ {
+	for i := 0; i < BankSize; i++ {
 		slotKey := "slot_" + strconv.Itoa(i)
 		if itemJSON, ok := bankData[slotKey]; !ok || itemJSON == "" {
 			newItem := models.Item{ID: itemID, Quantity: quantity}

@@ -64,20 +64,24 @@ func (h *DepositItemActionHandler) Process(playerID string, payload json.RawMess
 	result := NewActionResult()
 
 	// Send inventory update
-	inventoryUpdate := getInventoryUpdateMessage(inventoryKey)
-	inventoryJSON, _ := json.Marshal(inventoryUpdate)
-	result.AddToPlayer(models.WebSocketMessage{
-		Type:    inventoryUpdate.Type,
-		Payload: inventoryJSON,
-	})
+	inventoryUpdate := CreateInventoryUpdateMessage(playerID)
+	if inventoryUpdate != nil {
+		inventoryJSON, _ := json.Marshal(inventoryUpdate)
+		result.AddToPlayer(models.WebSocketMessage{
+			Type:    inventoryUpdate.Type,
+			Payload: inventoryJSON,
+		})
+	}
 
 	// Send bank update
-	bankUpdate := getBankUpdateMessage(bankKey)
-	bankJSON, _ := json.Marshal(bankUpdate)
-	result.AddToPlayer(models.WebSocketMessage{
-		Type:    bankUpdate.Type,
-		Payload: bankJSON,
-	})
+	bankUpdate := CreateBankUpdateMessage(playerID)
+	if bankUpdate != nil {
+		bankJSON, _ := json.Marshal(bankUpdate)
+		result.AddToPlayer(models.WebSocketMessage{
+			Type:    bankUpdate.Type,
+			Payload: bankJSON,
+		})
+	}
 
 	return result
 }

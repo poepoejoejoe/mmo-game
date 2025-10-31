@@ -2,6 +2,7 @@ package game
 
 import (
 	"encoding/json"
+	"mmo-game/models"
 	"time"
 )
 
@@ -77,6 +78,116 @@ func RequireHasItem(itemID ItemID, quantity int, action ActionFunc) ActionFunc {
 		if !HasItemInInventory(playerID, itemID, quantity) {
 			return Failed()
 		}
+		return action(playerID, payload)
+	}
+}
+
+// RequireHasItemInSlot wraps an action handler to ensure the player has a required item in a specific slot.
+// Returns Failed() if the slot doesn't contain the item or sufficient quantity.
+//
+// Usage:
+//   handler := RequireHasItemInSlot("slot_0", ItemWood, 5, func(playerID string, payload json.RawMessage) *ActionResult {
+//       // Your action logic here
+//       return result
+//   })
+func RequireHasItemInSlot(slotKey string, itemID ItemID, quantity int, action ActionFunc) ActionFunc {
+	return func(playerID string, payload json.RawMessage) *ActionResult {
+		inventoryKey := string(RedisKeyPlayerInventory) + playerID
+		itemJSON, err := rdb.HGet(ctx, inventoryKey, slotKey).Result()
+		if err != nil || itemJSON == "" {
+			return Failed()
+		}
+
+		var item models.Item
+		if err := json.Unmarshal([]byte(itemJSON), &item); err != nil {
+			return Failed()
+		}
+
+		if item.ID != string(itemID) || item.Quantity < quantity {
+			return Failed()
+		}
+
+		return action(playerID, payload)
+	}
+}
+
+// RequireAdjacent wraps an action handler to ensure the target coordinates are adjacent to the player.
+// The payload must contain X and Y fields for the target position.
+//
+// Usage:
+//   handler := RequireAdjacent(func(playerID string, payload json.RawMessage) *ActionResult {
+//       // Your action logic here - target is guaranteed to be adjacent
+//       return result
+//   })
+func RequireAdjacent(action ActionFunc) ActionFunc {
+	return func(playerID string, payload json.RawMessage) *ActionResult {
+		playerX, playerY, err := getPlayerPosition(playerID)
+		if err != nil {
+			return Failed()
+		}
+
+		// Try to extract X and Y from payload (common pattern)
+		var payloadData map[string]interface{}
+		if err := json.Unmarshal(payload, &payloadData); err != nil {
+			return Failed()
+		}
+
+		targetX, okX := payloadData["x"].(float64)
+		targetY, okY := payloadData["y"].(float64)
+		if !okX || !okY {
+			return Failed()
+		}
+
+		if !IsAdjacent(playerX, playerY, int(targetX), int(targetY)) {
+			return Failed()
+		}
+
+		return action(playerID, payload)
+	}
+}
+
+// RequireInRange wraps an action handler to ensure the target is within a specified range.
+// The payload must contain X and Y fields for the target position.
+//
+// Usage:
+//   handler := RequireInRange(5, func(playerID string, payload json.RawMessage) *ActionResult {
+//       // Your action logic here - target is guaranteed to be within range
+//       return result
+//   })
+func RequireInRange(maxRange int, action ActionFunc) ActionFunc {
+	return func(playerID string, payload json.RawMessage) *ActionResult {
+		playerX, playerY, err := getPlayerPosition(playerID)
+		if err != nil {
+			return Failed()
+		}
+
+		// Try to extract X and Y from payload
+		var payloadData map[string]interface{}
+		if err := json.Unmarshal(payload, &payloadData); err != nil {
+			return Failed()
+		}
+
+		targetX, okX := payloadData["x"].(float64)
+		targetY, okY := payloadData["y"].(float64)
+		if !okX || !okY {
+			return Failed()
+		}
+
+		dx := playerX - int(targetX)
+		if dx < 0 {
+			dx = -dx
+		}
+		dy := playerY - int(targetY)
+		if dy < 0 {
+			dy = -dy
+		}
+
+		// Manhattan distance
+		distance := dx + dy
+		if distance > maxRange {
+			return Failed()
+		}
+
 		return action(playerID, payload)
 	}
 }

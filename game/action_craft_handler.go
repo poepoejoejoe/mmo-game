@@ -72,7 +72,7 @@ func (h *CraftActionHandler) Process(playerID string, payload json.RawMessage) *
 	// Tally up available ingredients
 	available := make(map[ItemID]int)
 	inventorySlots := make(map[string]models.Item)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < InventorySize; i++ {
 		slotKey := "slot_" + strconv.Itoa(i)
 		if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
 			var item models.Item

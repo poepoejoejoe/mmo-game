@@ -11,6 +11,21 @@ const (
 	KILOMETERS_PER_DEGREE = 111.32
 )
 
+// Game configuration constants
+const (
+	// InventorySize is the number of slots in a player's inventory.
+	InventorySize = 10
+	
+	// BankSize is the number of slots in a player's bank.
+	BankSize = 64
+	
+	// ChatRadius is the maximum distance (in tiles) that chat messages can be heard.
+	ChatRadius = 10
+	
+	// MaxChatMessageLength is the maximum length of a chat message in characters.
+	MaxChatMessageLength = 100
+)
+
 // EntityType defines the type of an entity in the game world.
 // Entities can be players, NPCs, or items. This type is used to distinguish
 // between different entity types when processing game logic.

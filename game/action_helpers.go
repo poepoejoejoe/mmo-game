@@ -72,7 +72,7 @@ func addItemToPlayerInventory(pipe redis.Pipeliner, inventoryKey string, invento
 
 	// 1. Fill up existing, partially-filled stacks of the same item.
 	if itemProps.Stackable {
-		for i := 0; i < 10 && remainingQuantity > 0; i++ {
+		for i := 0; i < InventorySize && remainingQuantity > 0; i++ {
 			slotKey := "slot_" + strconv.Itoa(i)
 			if itemJSON, ok := inventoryData[slotKey]; ok && itemJSON != "" {
 				var item models.Item
@@ -95,7 +95,7 @@ func addItemToPlayerInventory(pipe redis.Pipeliner, inventoryKey string, invento
 
 	// 2. Add remaining items to new stacks in empty slots.
 	if remainingQuantity > 0 {
-		for i := 0; i < 10 && remainingQuantity > 0; i++ {
+		for i := 0; i < InventorySize && remainingQuantity > 0; i++ {
 			slotKey := "slot_" + strconv.Itoa(i)
 			if val, ok := inventoryData[slotKey]; !ok || val == "" {
 				amountToPlace := utils.Min(remainingQuantity, itemProps.MaxStack)
@@ -137,7 +137,7 @@ func RemoveItemFromInventory(playerID string, itemID ItemID, quantity int) (map[
 	slots := make(map[string]*models.Item)
 
 	// Deserialize inventory
-	for i := 0; i < 10; i++ {
+	for i := 0; i < InventorySize; i++ {
 		slotKey := "slot_" + strconv.Itoa(i)
 		if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
 			var item models.Item
@@ -165,7 +165,7 @@ func RemoveItemFromInventory(playerID string, itemID ItemID, quantity int) (map[
 	// Update Redis and build the final inventory map
 	pipe := rdb.Pipeline()
 	finalInventory := make(map[string]models.Item)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < InventorySize; i++ {
 		slotKey := "slot_" + strconv.Itoa(i)
 		if item, ok := slots[slotKey]; ok && item != nil {
 			if item.Quantity > 0 {
@@ -338,6 +338,24 @@ func GetGear(playerID string) (map[string]models.Item, error) {
 		gearDataTyped[slot] = item
 	}
 	return gearDataTyped, nil
+}
+
+func GetBank(playerID string) (map[string]models.Item, error) {
+	bankKey := "bank:" + playerID
+	bankDataRaw, err := rdb.HGetAll(ctx, bankKey).Result()
+	if err != nil {
+		return nil, err
+	}
+	bankDataTyped := make(map[string]models.Item)
+	for slot, itemJSON := range bankDataRaw {
+		if itemJSON == "" {
+			continue
+		}
+		var item models.Item
+		json.Unmarshal([]byte(itemJSON), &item)
+		bankDataTyped[slot] = item
+	}
+	return bankDataTyped, nil
 }
 
 func min(a, b int) int {

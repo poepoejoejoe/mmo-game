@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"mmo-game/models"
+	"strconv"
 )
 
 // SendToPlayer sends a message directly to a specific player.
@@ -85,6 +86,112 @@ func CreateNotificationMessage(message string) *models.NotificationMessage {
 	return &models.NotificationMessage{
 		Type:    string(ServerEventNotification),
 		Message: message,
+	}
+}
+
+// CreateStatsUpdateMessage creates a standardized player stats update message.
+// This includes health, experience, resonance, and other player stats.
+//
+// Usage:
+//   statsMsg := CreateStatsUpdateMessage(playerID)
+//   statsJSON, _ := json.Marshal(statsMsg)
+//   result.AddToPlayer(models.WebSocketMessage{
+//       Type:    statsMsg.Type,
+//       Payload: statsJSON,
+//   })
+func CreateStatsUpdateMessage(playerID string) *models.PlayerStatsUpdateMessage {
+	playerData, err := rdb.HGetAll(ctx, playerID).Result()
+	if err != nil {
+		log.Printf("Error getting player data for stats update: %v", err)
+		return nil
+	}
+
+	msg := &models.PlayerStatsUpdateMessage{
+		Type: string(ServerEventPlayerStatsUpdate),
+	}
+
+	// Parse health
+	if healthStr, ok := playerData["health"]; ok && healthStr != "" {
+		if health, err := strconv.Atoi(healthStr); err == nil {
+			msg.Health = &health
+		}
+	}
+
+	// Parse max health (use PlayerDefs)
+	maxHealth := PlayerDefs.MaxHealth
+	msg.MaxHealth = &maxHealth
+
+	// Parse experience
+	if expJSON, ok := playerData["experience"]; ok && expJSON != "" {
+		var experience map[models.Skill]float64
+		if err := json.Unmarshal([]byte(expJSON), &experience); err == nil {
+			msg.Experience = experience
+		}
+	}
+
+	// Parse resonance
+	if resonanceStr, ok := playerData["resonance"]; ok && resonanceStr != "" {
+		if resonance, err := strconv.ParseInt(resonanceStr, 10, 64); err == nil {
+			msg.Resonance = &resonance
+		}
+	}
+
+	// Parse max resonance
+	if maxResonanceStr, ok := playerData["maxResonance"]; ok && maxResonanceStr != "" {
+		if maxResonance, err := strconv.ParseInt(maxResonanceStr, 10, 64); err == nil {
+			msg.MaxResonance = &maxResonance
+		}
+	}
+
+	// Parse echo unlocked
+	if echoUnlockedStr, ok := playerData["echoUnlocked"]; ok && echoUnlockedStr != "" {
+		if echoUnlocked, err := strconv.ParseBool(echoUnlockedStr); err == nil {
+			msg.EchoUnlocked = &echoUnlocked
+		}
+	}
+
+	return msg
+}
+
+// CreateGearUpdateMessage creates a standardized gear update message.
+//
+// Usage:
+//   gearMsg := CreateGearUpdateMessage(playerID)
+//   gearJSON, _ := json.Marshal(gearMsg)
+//   result.AddToPlayer(models.WebSocketMessage{
+//       Type:    gearMsg.Type,
+//       Payload: gearJSON,
+//   })
+func CreateGearUpdateMessage(playerID string) *models.GearUpdateMessage {
+	gear, err := GetGear(playerID)
+	if err != nil {
+		log.Printf("Error getting gear for player %s: %v", playerID, err)
+		return nil
+	}
+	return &models.GearUpdateMessage{
+		Type: string(ServerEventGearUpdate),
+		Gear: gear,
+	}
+}
+
+// CreateBankUpdateMessage creates a standardized bank update message.
+//
+// Usage:
+//   bankMsg := CreateBankUpdateMessage(playerID)
+//   bankJSON, _ := json.Marshal(bankMsg)
+//   result.AddToPlayer(models.WebSocketMessage{
+//       Type:    bankMsg.Type,
+//       Payload: bankJSON,
+//   })
+func CreateBankUpdateMessage(playerID string) *models.BankUpdateMessage {
+	bank, err := GetBank(playerID)
+	if err != nil {
+		log.Printf("Error getting bank for player %s: %v", playerID, err)
+		return nil
+	}
+	return &models.BankUpdateMessage{
+		Type: string(ServerEventBankUpdate),
+		Bank: bank,
 	}
 }
 
