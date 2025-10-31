@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { InventoryItem } from '../types';
 import { itemDefinitions, edibleDefs } from '../definitions';
-import { send, sendLearnRecipe, sendDepositItem } from '../network';
+import { send, sendLearnRecipe, sendDepositItem, sendReorderItem } from '../network';
 import Tooltip from './Tooltip';
 import InventorySlot from './shared/InventorySlot';
 import PanelHeader from './shared/PanelHeader';
@@ -20,6 +20,7 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
   const { hoveredKey: hoveredSlot, tooltipPosition, handleMouseEnter, handleMouseLeave, clearTooltip } = useTooltip<string>();
   const [contextMenu, setContextMenu] = useState<{ slot: string; x: number; y: number } | null>(null);
   const [quantityModal, setQuantityModal] = useState<{ slot: string } | null>(null);
+  const [dragSource, setDragSource] = useState<string | null>(null);
 
   const renderTooltipContent = (item: InventoryItem) => {
     const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
@@ -114,6 +115,33 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
     }
   };
 
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, slotKey: string, item: InventoryItem | undefined) => {
+    if (item) {
+      clearTooltip(); // Hide tooltip when dragging starts
+      setDragSource(slotKey);
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, slotKey: string) => {
+    if (dragSource) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, slotKey: string) => {
+    if (dragSource && dragSource !== slotKey) {
+      e.preventDefault();
+      sendReorderItem('inventory', dragSource, slotKey);
+      setDragSource(null);
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    setDragSource(null);
+  };
+
   if (!isOpen) return null;
 
   // Ensure inventory is always an object (fallback to empty object)
@@ -141,11 +169,15 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
                 slotKey={slotKey}
                 item={item}
                 additionalClasses={additionalClasses}
-                draggable={!isBankOpen}
+                draggable={true}
                 onClick={handleSlotClick}
                 onContextMenu={handleContextMenu}
                 onMouseEnter={(e, slotKey, item) => item && handleMouseEnter(e, slotKey)}
                 onMouseLeave={handleMouseLeave}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
               />
             );
           })}

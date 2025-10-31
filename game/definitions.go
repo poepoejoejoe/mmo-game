@@ -24,6 +24,13 @@ const (
 	
 	// MaxChatMessageLength is the maximum length of a chat message in characters.
 	MaxChatMessageLength = 100
+	
+	// SlotKeyPrefix is the prefix used for slot keys (e.g., "slot_0", "slot_1").
+	SlotKeyPrefix = "slot_"
+	
+	// MinSlotKeyLength is the minimum length of a valid slot key.
+	// Slot keys are formatted as "slot_" + number, so minimum is "slot_0" (6 chars).
+	MinSlotKeyLength = len(SlotKeyPrefix) + 1
 )
 
 // EntityType defines the type of an entity in the game world.
@@ -221,6 +228,9 @@ const (
 	
 	// ClientEventWithdrawItem is sent when a player withdraws an item from the bank.
 	ClientEventWithdrawItem ClientEventType = "withdraw_item"
+	
+	// ClientEventReorderItem is sent when a player reorders items in inventory or bank.
+	ClientEventReorderItem ClientEventType = "reorder_item"
 )
 
 // ServerEventType defines outgoing WebSocket message types sent to clients.

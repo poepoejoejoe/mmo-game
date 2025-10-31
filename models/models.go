@@ -305,3 +305,9 @@ type WithdrawItemPayload struct {
 	Slot     string `json:"slot"`
 	Quantity int    `json:"quantity"`
 }
+
+type ReorderItemPayload struct {
+	Container string `json:"container"` // "inventory" or "bank"
+	FromSlot  string `json:"fromSlot"`
+	ToSlot    string `json:"toSlot"`
+}

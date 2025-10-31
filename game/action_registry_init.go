@@ -24,5 +24,6 @@ func init() {
 	RegisterAction(ClientEventDialogAction, &DialogActionHandler{})
 	RegisterAction(ClientEventDepositItem, &DepositItemActionHandler{})
 	RegisterAction(ClientEventWithdrawItem, &WithdrawItemActionHandler{})
+	RegisterAction(ClientEventReorderItem, &ReorderItemActionHandler{})
 }
 

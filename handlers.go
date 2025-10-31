@@ -288,6 +288,16 @@ func (c *Client) readPump() {
 						c.send <- wsMsg.Payload
 					}
 				}
+			case game.ClientEventReorderItem:
+				// Use the action registry for standardized processing
+				result := game.HandleAction(game.ClientEventType(msg.Type), c.id, msg.Payload)
+				if result != nil && result.Success {
+					// Send messages to the player
+					for _, wsMsg := range result.ToPlayer {
+						// Send the payload directly (not wrapped in WebSocketMessage)
+						c.send <- wsMsg.Payload
+					}
+				}
 			}
 		}
 	}

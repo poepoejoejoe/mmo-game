@@ -344,3 +344,14 @@ export function sendWithdrawItem(slot: string, quantity: number) {
         },
     });
 }
+
+export function sendReorderItem(container: 'inventory' | 'bank', fromSlot: string, toSlot: string) {
+    send({
+        type: 'reorder_item',
+        payload: {
+            container,
+            fromSlot,
+            toSlot,
+        },
+    });
+}

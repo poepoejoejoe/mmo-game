@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { InventoryItem } from '../types';
 import { itemDefinitions } from '../definitions';
-import { sendWithdrawItem } from '../network';
+import { sendWithdrawItem, sendReorderItem } from '../network';
 import Tooltip from './Tooltip';
 import InventorySlot from './shared/InventorySlot';
 import PanelHeader from './shared/PanelHeader';
@@ -16,9 +16,10 @@ interface BankPanelProps {
 }
 
 const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
-  const { hoveredKey: hoveredSlot, tooltipPosition, handleMouseEnter, handleMouseLeave } = useTooltip<string>();
+  const { hoveredKey: hoveredSlot, tooltipPosition, handleMouseEnter, handleMouseLeave, clearTooltip } = useTooltip<string>();
   const [contextMenu, setContextMenu] = useState<{ slot: string; x: number; y: number } | null>(null);
   const [quantityModal, setQuantityModal] = useState<{ slot: string } | null>(null);
+  const [dragSource, setDragSource] = useState<string | null>(null);
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>, slotKey: string, item: InventoryItem | undefined) => {
     e.preventDefault();
@@ -52,6 +53,33 @@ const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
     setContextMenu(null);
   };
 
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, slotKey: string, item: InventoryItem | undefined) => {
+    if (item) {
+      clearTooltip(); // Hide tooltip when dragging starts
+      setDragSource(slotKey);
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, slotKey: string) => {
+    if (dragSource) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, slotKey: string) => {
+    if (dragSource && dragSource !== slotKey) {
+      e.preventDefault();
+      sendReorderItem('bank', dragSource, slotKey);
+      setDragSource(null);
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    setDragSource(null);
+  };
+
 
   const renderTooltipContent = (item: InventoryItem) => {
     const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
@@ -81,10 +109,15 @@ const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
                 key={slotKey}
                 slotKey={slotKey}
                 item={item}
+                draggable={true}
                 onClick={handleSlotClick}
                 onContextMenu={handleContextMenu}
                 onMouseEnter={(e, slotKey, item) => item && handleMouseEnter(e, slotKey)}
                 onMouseLeave={handleMouseLeave}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
               />
             );
           })}
