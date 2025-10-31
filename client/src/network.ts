@@ -46,6 +46,12 @@ const stateUpdateListeners: (() => void)[] = [];
 
 export function addStateUpdateListener(callback: () => void) {
     stateUpdateListeners.push(callback);
+    return () => {
+        const index = stateUpdateListeners.indexOf(callback);
+        if (index > -1) {
+            stateUpdateListeners.splice(index, 1);
+        }
+    };
 }
 
 function onStateUpdate() {
@@ -293,7 +299,8 @@ export function initializeNetwork() {
     ws.onopen = () => {
         console.log('Connection opened!');
         console.log('Connected to the server.');
-        document.getElementById('player-coords')!.textContent = 'Connected! Waiting for world state...';
+        // This is now handled by React components.
+        // document.getElementById('player-coords')!.textContent = 'Connected! Waiting for world state...';
 
         const secretKey = localStorage.getItem('secretKey');
         send({

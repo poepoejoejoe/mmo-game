@@ -34,3 +34,4 @@ client/.env.local
 # IDE / Editor specific folders
 .idea/
 .vscode/
+node_modules/

@@ -5,8 +5,7 @@ import { initializeRenderer, startRenderLoop } from './renderer';
 import { initializeUI, updatePlayerCoords } from './ui';
 import { getMyEntity } from './state';
 
-// Initialize all the game modules when the DOM is ready.
-document.addEventListener('DOMContentLoaded', () => {
+export function initialize() {
     console.log("Game client starting...");
     
     initializeUI();
@@ -20,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     addStateUpdateListener(() => {
         const me = getMyEntity();
         if (me) {
-            updatePlayerCoords(me.x, me.y);
+            // This will be handled by React components
+            // updatePlayerCoords(me.x, me.y);
         }
     });
-});
+}

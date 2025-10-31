@@ -4,9 +4,9 @@ import { setBuildModeActive, startCooldown, gearView, inventoryView, craftingVie
 import { ACTION_COOLDOWN, TILE_SIZE, WATER_PENALTY } from './constants';
 import { getEntityProperties, getTileProperties } from './definitions';
 
-const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-const chatInputEl = document.getElementById('chat-input') as HTMLInputElement;
-const nameInputEl = document.getElementById('name-input') as HTMLInputElement;
+let gameCanvas: HTMLCanvasElement;
+let chatInputEl: HTMLInputElement;
+let nameInputEl: HTMLInputElement;
 let canPerformAction = true;
 let isBuildMode = false;
 let buildItem: 'wooden_wall' | 'fire' | null = null;
@@ -413,6 +413,10 @@ function processPathMovement() {
  * Sets up all input event listeners for the game.
  */
 export function initializeInput() {
+    gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+    chatInputEl = document.getElementById('chat-input') as HTMLInputElement;
+    nameInputEl = document.getElementById('name-input') as HTMLInputElement;
+
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
 
