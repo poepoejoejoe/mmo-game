@@ -45,7 +45,7 @@ export function useGameState(): GameState {
       const s = state.getState();
       setResonance({ current: s.resonance || 0, max: s.maxResonance || 1 });
       setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
-      setInventory(s.inventory);
+      setInventory(s.inventory ? { ...s.inventory } : {});
       setKnownRecipes(s.knownRecipes || {});
       setGear(s.gear || {});
       setQuests(s.quests || {});
@@ -58,6 +58,9 @@ export function useGameState(): GameState {
     // Subscribe to state updates
     const unsubscribe = addStateUpdateListener(() => {
       const me = state.getMyEntity();
+      const s = state.getState();
+      
+      // Update coords and health only if entity exists
       if (me) {
         setCoords(prevCoords => {
           if (prevCoords.x === me.x && prevCoords.y === me.y) {
@@ -73,24 +76,34 @@ export function useGameState(): GameState {
           return newHealth;
         });
         setPlayerName(me.name || '');
-        const s = state.getState();
-        setResonance(prevResonance => {
-          const newResonance = { current: s.resonance || 0, max: s.maxResonance || 1 };
-          if (prevResonance.current === newResonance.current && prevResonance.max === newResonance.max) {
-            return prevResonance;
-          }
-          return newResonance;
-        });
         setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
-        setInventory(s.inventory);
-        setKnownRecipes(s.knownRecipes || {});
-        setGear(s.gear || {});
-        setQuests(s.quests || {});
-        setExperience(s.experience || {});
-        setRunes(s.runes || []);
-        setActiveRune(s.activeRune || '');
-        setBank(s.bank || {});
       }
+      
+      // Update inventory, gear, bank, etc. regardless of entity existence
+      setResonance(prevResonance => {
+        const newResonance = { current: s.resonance || 0, max: s.maxResonance || 1 };
+        if (prevResonance.current === newResonance.current && prevResonance.max === newResonance.max) {
+          return prevResonance;
+        }
+        return newResonance;
+      });
+      setInventory(prevInventory => {
+        const newInventory = s.inventory ? { ...s.inventory } : {};
+        // Check if inventory actually changed by comparing JSON strings
+        const prevStr = JSON.stringify(prevInventory);
+        const newStr = JSON.stringify(newInventory);
+        if (prevStr === newStr) {
+          return prevInventory;
+        }
+        return newInventory;
+      });
+      setKnownRecipes(s.knownRecipes || {});
+      setGear(s.gear || {});
+      setQuests(s.quests || {});
+      setExperience(s.experience || {});
+      setRunes(s.runes || []);
+      setActiveRune(s.activeRune || '');
+      setBank(s.bank || {});
     });
 
     return () => {

@@ -22,7 +22,8 @@ import {
     NpcQuestStateUpdateMessage,
     ActiveRuneUpdateMessage,
     RecipeLearnedMessage,
-    BankUpdateMessage
+    BankUpdateMessage,
+    InventoryItem
 } from './types';
 import * as state from './state';
 import { showDamageIndicator } from './renderer';
@@ -170,7 +171,34 @@ function handleMessage(event: MessageEvent) {
         }
         case 'inventory_update': {
             const inventoryMsg = msg as InventoryUpdateMessage;
-            state.setInventory(inventoryMsg.inventory);
+            // Handle both direct inventory field and payload-wrapped messages
+            let safeInventory: Record<string, InventoryItem> = {};
+            
+            if (inventoryMsg.inventory) {
+                // Direct inventory field (from sendDirectMessage)
+                safeInventory = inventoryMsg.inventory;
+            } else if ((msg as any).payload) {
+                // Payload-wrapped message (from AddToPlayer)
+                try {
+                    let payloadData: InventoryUpdateMessage;
+                    
+                    // Payload can be a string (JSON string) or already parsed object
+                    if (typeof (msg as any).payload === 'string') {
+                        payloadData = JSON.parse((msg as any).payload);
+                    } else {
+                        // Already parsed object (json.RawMessage gets parsed automatically)
+                        payloadData = (msg as any).payload as InventoryUpdateMessage;
+                    }
+                    
+                    safeInventory = payloadData.inventory || {};
+                } catch (e) {
+                    console.error('Error parsing inventory update payload:', e, msg);
+                    safeInventory = {};
+                }
+            }
+            
+            console.log('Inventory update received:', safeInventory);
+            state.setInventory(safeInventory);
             onStateUpdate();
             break;
         }

@@ -116,13 +116,16 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
 
   if (!isOpen) return null;
 
+  // Ensure inventory is always an object (fallback to empty object)
+  const safeInventory = inventory || {};
+
   return (
     <div id="inventory-view" className="info-panel">
       <PanelHeader title="Inventory" onClose={onClose} />
       <div className="inventory-grid">
           {Array.from({ length: 10 }, (_, i) => {
             const slotKey = `slot_${i}`;
-            const item = inventory[slotKey];
+            const item = safeInventory[slotKey];
             
             // Build class names - only show action classes when bank is NOT open
             const additionalClasses: string[] = [];
@@ -147,19 +150,19 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
             );
           })}
       </div>
-      {hoveredSlot && inventory[hoveredSlot] && (
+      {hoveredSlot && safeInventory[hoveredSlot] && (
         <Tooltip show={true} position={tooltipPosition}>
-          {renderTooltipContent(inventory[hoveredSlot])}
+          {renderTooltipContent(safeInventory[hoveredSlot])}
         </Tooltip>
       )}
 
-      {contextMenu && inventory[contextMenu.slot] && isBankOpen && (
+      {contextMenu && safeInventory[contextMenu.slot] && isBankOpen && (
         <ContextMenu
           isOpen={true}
           position={{ x: contextMenu.x, y: contextMenu.y }}
           onClose={() => setContextMenu(null)}
           options={(() => {
-            const item = inventory[contextMenu.slot];
+            const item = safeInventory[contextMenu.slot];
             const options: ContextMenuOption[] = [];
             
             // Add quantity options (1, 5, 10)
@@ -189,11 +192,11 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
         />
       )}
 
-      {quantityModal && inventory[quantityModal.slot] && (
+      {quantityModal && safeInventory[quantityModal.slot] && (
         <QuantityModal
           isOpen={true}
           title="How many?"
-          maxQuantity={inventory[quantityModal.slot].quantity}
+          maxQuantity={safeInventory[quantityModal.slot].quantity}
           onSubmit={handleQuantitySubmit}
           onCancel={() => setQuantityModal(null)}
         />
