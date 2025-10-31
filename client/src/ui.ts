@@ -43,7 +43,7 @@ let gameCanvas: HTMLElement;
 let playerCoordsEl: HTMLElement;
 export let inventoryView: HTMLElement | null;
 export let craftingView: HTMLElement | null;
-export let gearView: HTMLElement;
+export let gearView: HTMLElement | null;
 export let questView: HTMLElement;
 export let experienceView: HTMLElement;
 export let runesView: HTMLElement;
@@ -86,7 +86,7 @@ export function initializeUI() {
     playerCoordsEl = document.getElementById('player-coords')!;
     inventoryView = document.getElementById('inventory-view'); // May be null until React renders
     craftingView = document.getElementById('crafting-view'); // May be null until React renders
-    gearView = document.getElementById('gear-view')!;
+    gearView = document.getElementById('gear-view'); // May be null until React renders
     questView = document.getElementById('quest-view')!;
     experienceView = document.getElementById('experience-view')!;
     runesView = document.getElementById('runes-view')!;
@@ -477,7 +477,10 @@ function updateButtonAndPanelSelection() {
     if (craftingView) {
         craftingView.style.display = openPanels.has('crafting') ? 'flex' : 'none';
     }
-    gearView.style.display = openPanels.has('gear') ? 'flex' : 'none';
+    // gearView is now handled by React - skip it
+    if (gearView) {
+        gearView.style.display = openPanels.has('gear') ? 'flex' : 'none';
+    }
     questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
     experienceView.style.display = openPanels.has('experience') ? 'flex' : 'none';
     runesView.style.display = openPanels.has('runes') ? 'flex' : 'none';
@@ -798,9 +801,14 @@ export function updateQuestUI(): void {
 }
 
 export function updateGearUI(): void {
+    // This function is now obsolete - gear is handled by React
+    // Keeping it for compatibility but it does nothing if gearView is null
+    if (!gearView) return;
+    
     const gear = state.getState().gear;
-    gearView.innerHTML = '';
-    gearView.appendChild(createPanelHeader('Gear', 'gear'));
+    const gearViewElement = gearView; // Store in const for TypeScript
+    gearViewElement.innerHTML = '';
+    gearViewElement.appendChild(createPanelHeader('Gear', 'gear'));
 
     gearSlots.forEach(slot => {
         const item = gear[slot];
@@ -824,7 +832,7 @@ export function updateGearUI(): void {
             nameEl.textContent = slot.replace('-slot', ''); // e.g. "weapon", "head"
             slotEl.appendChild(nameEl);
         }
-        gearView.appendChild(slotEl);
+        gearViewElement.appendChild(slotEl);
     });
 }
 

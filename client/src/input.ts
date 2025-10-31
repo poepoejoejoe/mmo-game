@@ -466,18 +466,20 @@ export function initializeInput() {
         });
     }
 
-    gearView.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        const slot = target.closest('.inventory-slot');
-        if (!slot || !slot.classList.contains('unequippable')) return;
+    if (gearView) {
+        gearView.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            const slot = target.closest('.inventory-slot');
+            if (!slot || !slot.classList.contains('unequippable')) return;
 
-        if (!canPerformAction) return;
-        const gearSlot = (slot as HTMLElement).dataset.slot;
-        if (gearSlot) {
-            startActionCooldown(ACTION_COOLDOWN);
-            network.send({ type: 'unequip', payload: { gearSlot } });
-        }
-    });
+            if (!canPerformAction) return;
+            const gearSlot = (slot as HTMLElement).dataset.slot;
+            if (gearSlot) {
+                startActionCooldown(ACTION_COOLDOWN);
+                network.send({ type: 'unequip', payload: { gearSlot } });
+            }
+        });
+    }
 
     if (craftingView) {
         craftingView.addEventListener('click', (e) => {

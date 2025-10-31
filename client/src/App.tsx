@@ -13,6 +13,7 @@ import TeleportButton from './components/TeleportButton';
 import ActionBar from './components/ActionBar';
 import InventoryPanel from './components/InventoryPanel';
 import CraftingPanel from './components/CraftingPanel';
+import GearPanel from './components/GearPanel';
 
 function App() {
   const [coords, setCoords] = useState({ x: 0, y: 0 });
@@ -23,6 +24,7 @@ function App() {
   const [openPanels, setOpenPanels] = useState(new Set<string>());
   const [inventory, setInventory] = useState<Record<string, InventoryItem>>({});
   const [knownRecipes, setKnownRecipes] = useState<Record<string, boolean>>({});
+  const [gear, setGear] = useState<Record<string, InventoryItem>>({});
   const isInitialized = useRef(false);
 
   const handleTogglePanel = (panelId: string) => {
@@ -37,7 +39,7 @@ function App() {
       return newPanels;
     });
     // Only call toggleInfoPanel for non-React panels
-    if (panelId !== 'inventory' && panelId !== 'crafting') {
+    if (panelId !== 'inventory' && panelId !== 'crafting' && panelId !== 'gear') {
       toggleInfoPanel(panelId as any);
     }
   };
@@ -61,6 +63,7 @@ function App() {
       setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
       setInventory(s.inventory);
       setKnownRecipes(s.knownRecipes || {});
+      setGear(s.gear || {});
     }
 
     const unsubscribe = addStateUpdateListener(() => {
@@ -91,6 +94,7 @@ function App() {
         setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
         setInventory(s.inventory);
         setKnownRecipes(s.knownRecipes || {});
+        setGear(s.gear || {});
       }
     });
 
@@ -158,7 +162,11 @@ function App() {
                       inventory={inventory}
                       knownRecipes={knownRecipes}
                     />
-                    <div id="gear-view" className="info-panel" style={{display: 'none'}}></div>
+                    <GearPanel
+                      isOpen={openPanels.has('gear')}
+                      onClose={() => handleTogglePanel('gear')}
+                      gear={gear}
+                    />
                     <div id="quest-view" className="info-panel" style={{display: 'none'}}></div>
                     <div id="experience-view" className="info-panel" style={{display: 'none'}}></div>
                     <div id="runes-view" className="info-panel" style={{display: 'none'}}></div>
