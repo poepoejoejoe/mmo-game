@@ -1,6 +1,6 @@
 import * as state from './state';
 import * as network from './network';
-import { setBuildModeActive, startCooldown, gearView, inventoryView, craftingView, hideDialog, closeBankWindow } from './ui';
+import { setBuildModeActive, hideDialog, closeBankWindow } from './ui';
 import { ACTION_COOLDOWN, TILE_SIZE, WATER_PENALTY } from './constants';
 import { getEntityProperties, getTileProperties } from './definitions';
 import { getWindowAPI } from './api/windowApi';
@@ -356,7 +356,6 @@ function handleMouseUpOrLeave() {
 
 function startActionCooldown(duration: number) {
     canPerformAction = false;
-    startCooldown(duration);
     setTimeout(() => { canPerformAction = true; }, duration);
 }
 
@@ -401,61 +400,8 @@ export function initializeInput() {
 
     setInterval(processPathMovement, 100);
 
-    if (inventoryView) {
-        inventoryView.addEventListener('click', (e) => {
-            const target = e.target as HTMLElement;
-            const slot = target.closest('.inventory-slot');
-            if (!slot) return;
-
-            if (slot.classList.contains('edible')) {
-                if (!canPerformAction) return;
-                const itemToEat = (slot as HTMLElement).dataset.item;
-                if (itemToEat) {
-                    startActionCooldown(ACTION_COOLDOWN);
-                    network.send({ type: 'eat', payload: { item: itemToEat } });
-                }
-            }
-            if (slot.classList.contains('equippable')) {
-                if (!canPerformAction) return;
-                const inventorySlot = (slot as HTMLElement).dataset.slot;
-                if (inventorySlot) {
-                    startActionCooldown(ACTION_COOLDOWN);
-                    network.send({ type: 'equip', payload: { inventorySlot } });
-                }
-            }
-        });
-    }
-
-    if (gearView) {
-        gearView.addEventListener('click', (e) => {
-            const target = e.target as HTMLElement;
-            const slot = target.closest('.inventory-slot');
-            if (!slot || !slot.classList.contains('unequippable')) return;
-
-            if (!canPerformAction) return;
-            const gearSlot = (slot as HTMLElement).dataset.slot;
-            if (gearSlot) {
-                startActionCooldown(ACTION_COOLDOWN);
-                network.send({ type: 'unequip', payload: { gearSlot } });
-            }
-        });
-    }
-
-    if (craftingView) {
-        craftingView.addEventListener('click', (e) => {
-            const target = e.target as HTMLElement;
-            const button = target.closest('button');
-            if (!button || button.disabled || !canPerformAction) return;
-
-            // The item to craft is now stored in the button's ID
-            const itemToCraft = button.dataset.item;
-            
-            if (itemToCraft) {
-                startActionCooldown(ACTION_COOLDOWN);
-                network.send({ type: 'craft', payload: { item: itemToCraft } });
-            }
-        });
-    }
+    // Note: Event listeners for inventory, crafting, and gear panels have been removed.
+    // These are now handled directly in the React components (InventoryPanel, CraftingPanel, GearPanel).
 }
 
 

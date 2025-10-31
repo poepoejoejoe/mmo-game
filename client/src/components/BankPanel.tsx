@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { InventoryItem } from '../types';
 import { itemDefinitions } from '../definitions';
 import { sendWithdrawItem } from '../network';
 import Tooltip from './Tooltip';
 import InventorySlot from './shared/InventorySlot';
 import PanelHeader from './shared/PanelHeader';
+import ContextMenu, { ContextMenuOption } from './shared/ContextMenu';
+import QuantityModal from './shared/QuantityModal';
 import { useTooltip } from '../hooks/useTooltip';
 
 interface BankPanelProps {
@@ -16,6 +18,7 @@ interface BankPanelProps {
 const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
   const { hoveredKey: hoveredSlot, tooltipPosition, handleMouseEnter, handleMouseLeave } = useTooltip<string>();
   const [contextMenu, setContextMenu] = useState<{ slot: string; x: number; y: number } | null>(null);
+  const [quantityModal, setQuantityModal] = useState<{ slot: string } | null>(null);
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>, slotKey: string, item: InventoryItem | undefined) => {
     e.preventDefault();
@@ -28,10 +31,17 @@ const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
     if (quantity) {
       sendWithdrawItem(slotKey, quantity);
     } else {
-      // Withdraw 1 by default
-      sendWithdrawItem(slotKey, 1);
+      // "Withdraw X" - show quantity modal
+      setQuantityModal({ slot: slotKey });
     }
     setContextMenu(null);
+  };
+
+  const handleQuantitySubmit = (quantity: number) => {
+    if (quantityModal) {
+      sendWithdrawItem(quantityModal.slot, quantity);
+      setQuantityModal(null);
+    }
   };
 
   const handleSlotClick = (slotKey: string, item: InventoryItem | undefined) => {
@@ -42,18 +52,6 @@ const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
     setContextMenu(null);
   };
 
-  // Close context menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setContextMenu(null);
-    };
-    if (contextMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => {
-        document.removeEventListener('click', handleClickOutside);
-      };
-    }
-  }, [contextMenu]);
 
   const renderTooltipContent = (item: InventoryItem) => {
     const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
@@ -104,42 +102,49 @@ const BankPanel: React.FC<BankPanelProps> = ({ isOpen, onClose, bank }) => {
       )}
 
       {contextMenu && bank[contextMenu.slot] && (
-        <div
-          id="bank-context-menu"
-          className="context-menu"
-          style={{
-            position: 'fixed',
-            left: `${contextMenu.x}px`,
-            top: `${contextMenu.y}px`,
-            display: 'block',
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          {[1, 5, 10].map((q) => {
+        <ContextMenu
+          isOpen={true}
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          onClose={() => setContextMenu(null)}
+          options={(() => {
             const item = bank[contextMenu.slot];
-            if (item && item.quantity >= q) {
-              return (
-                <button
-                  key={q}
-                  onClick={() => handleWithdraw(contextMenu.slot, q)}
-                >
-                  Withdraw {q}
-                </button>
-              );
+            const options: ContextMenuOption[] = [];
+            
+            // Add quantity options (1, 5, 10)
+            [1, 5, 10].forEach((q) => {
+              if (item && item.quantity >= q) {
+                options.push({
+                  label: `Withdraw ${q}`,
+                  onClick: () => handleWithdraw(contextMenu.slot, q),
+                });
+              }
+            });
+            
+            // Add "Withdraw All" and "Withdraw X"
+            if (item) {
+              options.push({
+                label: `Withdraw All (${item.quantity})`,
+                onClick: () => handleWithdraw(contextMenu.slot, item.quantity),
+              });
+              options.push({
+                label: 'Withdraw X',
+                onClick: () => handleWithdraw(contextMenu.slot),
+              });
             }
-            return null;
-          })}
-          {bank[contextMenu.slot] && (
-            <>
-              <button onClick={() => handleWithdraw(contextMenu.slot, bank[contextMenu.slot].quantity)}>
-                Withdraw All
-              </button>
-              <button onClick={() => handleWithdraw(contextMenu.slot)}>
-                Withdraw X
-              </button>
-            </>
-          )}
-        </div>
+            
+            return options;
+          })()}
+        />
+      )}
+
+      {quantityModal && bank[quantityModal.slot] && (
+        <QuantityModal
+          isOpen={true}
+          title="How many?"
+          maxQuantity={bank[quantityModal.slot].quantity}
+          onSubmit={handleQuantitySubmit}
+          onCancel={() => setQuantityModal(null)}
+        />
       )}
     </>
   );

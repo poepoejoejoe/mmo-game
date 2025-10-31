@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { InventoryItem } from '../types';
 import { itemDefinitions, edibleDefs } from '../definitions';
 import { send, sendLearnRecipe, sendDepositItem } from '../network';
 import Tooltip from './Tooltip';
 import InventorySlot from './shared/InventorySlot';
 import PanelHeader from './shared/PanelHeader';
+import ContextMenu, { ContextMenuOption } from './shared/ContextMenu';
+import QuantityModal from './shared/QuantityModal';
 import { useTooltip } from '../hooks/useTooltip';
 
 interface InventoryPanelProps {
@@ -17,6 +19,7 @@ interface InventoryPanelProps {
 const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, inventory, isBankOpen = false }) => {
   const { hoveredKey: hoveredSlot, tooltipPosition, handleMouseEnter, handleMouseLeave, clearTooltip } = useTooltip<string>();
   const [contextMenu, setContextMenu] = useState<{ slot: string; x: number; y: number } | null>(null);
+  const [quantityModal, setQuantityModal] = useState<{ slot: string } | null>(null);
 
   const renderTooltipContent = (item: InventoryItem) => {
     const itemDef = itemDefinitions[item.id] || itemDefinitions['default'];
@@ -73,30 +76,19 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
     if (quantity) {
       sendDepositItem(slotKey, quantity);
     } else {
-      // "Deposit X" - prompt for quantity
-      const input = window.prompt('How many?');
-      if (input) {
-        const qty = parseInt(input, 10);
-        if (!isNaN(qty) && qty > 0) {
-          sendDepositItem(slotKey, qty);
-        }
-      }
+      // "Deposit X" - show quantity modal
+      setQuantityModal({ slot: slotKey });
     }
     setContextMenu(null);
   };
 
-  // Close context menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setContextMenu(null);
-    };
-    if (contextMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => {
-        document.removeEventListener('click', handleClickOutside);
-      };
+  const handleQuantitySubmit = (quantity: number) => {
+    if (quantityModal) {
+      sendDepositItem(quantityModal.slot, quantity);
+      setQuantityModal(null);
     }
-  }, [contextMenu]);
+  };
+
 
   const handleSlotClick = (slotKey: string, item: InventoryItem | undefined) => {
     if (!item) return;
@@ -162,42 +154,49 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ isOpen, onClose, invent
       )}
 
       {contextMenu && inventory[contextMenu.slot] && isBankOpen && (
-        <div
-          id="bank-context-menu"
-          className="context-menu"
-          style={{
-            position: 'fixed',
-            left: `${contextMenu.x}px`,
-            top: `${contextMenu.y}px`,
-            display: 'block',
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          {[1, 5, 10].map((q) => {
+        <ContextMenu
+          isOpen={true}
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          onClose={() => setContextMenu(null)}
+          options={(() => {
             const item = inventory[contextMenu.slot];
-            if (item && item.quantity >= q) {
-              return (
-                <button
-                  key={q}
-                  onClick={() => handleDeposit(contextMenu.slot, q)}
-                >
-                  Deposit {q}
-                </button>
-              );
+            const options: ContextMenuOption[] = [];
+            
+            // Add quantity options (1, 5, 10)
+            [1, 5, 10].forEach((q) => {
+              if (item && item.quantity >= q) {
+                options.push({
+                  label: `Deposit ${q}`,
+                  onClick: () => handleDeposit(contextMenu.slot, q),
+                });
+              }
+            });
+            
+            // Add "Deposit All" and "Deposit X"
+            if (item) {
+              options.push({
+                label: `Deposit All (${item.quantity})`,
+                onClick: () => handleDeposit(contextMenu.slot, item.quantity),
+              });
+              options.push({
+                label: 'Deposit X',
+                onClick: () => handleDeposit(contextMenu.slot),
+              });
             }
-            return null;
-          })}
-          {inventory[contextMenu.slot] && (
-            <>
-              <button onClick={() => handleDeposit(contextMenu.slot, inventory[contextMenu.slot].quantity)}>
-                Deposit All
-              </button>
-              <button onClick={() => handleDeposit(contextMenu.slot)}>
-                Deposit X
-              </button>
-            </>
-          )}
-        </div>
+            
+            return options;
+          })()}
+        />
+      )}
+
+      {quantityModal && inventory[quantityModal.slot] && (
+        <QuantityModal
+          isOpen={true}
+          title="How many?"
+          maxQuantity={inventory[quantityModal.slot].quantity}
+          onSubmit={handleQuantitySubmit}
+          onCancel={() => setQuantityModal(null)}
+        />
       )}
     </div>
   );

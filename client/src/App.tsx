@@ -228,15 +228,6 @@ function App() {
 
       {/* Help Tooltip */}
       <HelpTooltip />
-
-      <div id="bank-context-menu" className="context-menu" style={{display: 'none'}}></div>
-      <div id="quantity-modal" className="modal">
-          <div className="modal-content">
-              <h3>How many?</h3>
-              <input type="number" id="quantity-input" min="1" />
-              <button id="quantity-submit">OK</button>
-          </div>
-      </div>
     </>
   );
 }
