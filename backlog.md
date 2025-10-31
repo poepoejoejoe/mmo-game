@@ -46,6 +46,12 @@
 - could use a better shield icon / defense icon
 
 ## Idea backlog
+- if you're echo stays logged out for a certain amount of time, you can get items or recipes 
+- bows and arrows
+- bombs / throwables
+- magic (magic is utility mostly, little dmg?)
+- dark magic (?) can only use magic and get little utility but good damage
+- some kind of bank in the sanctuary lol?
 
 ### Echo ideas
 - echos and defending themselves?

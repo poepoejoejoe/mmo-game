@@ -7,6 +7,7 @@ To make icons, we need to create a asset-generation/prompts/<icon-name>-icon.jso
 When we make a new set of icons, we should run X number of commands per each newly created icon. So like python asset_generation/generate_image.py asset_generation/prompts/prompt-1.json; python asset_generation/generate_image.py asset_generation/prompts/prompt-2.json; etc. and just put that in a big command to run. 
 Whenever you are done with .go file changes and you are ready to respond to the user to try it out, run the go build command and fix the compile errors
 Whenever you are done editing .ts files, check the project for ts linter errors
+Asset generation is only used for icons. Not drawing entities, resources or tiles in the world.
 
 1. Critical Loops Must Be Non-Blocking
 High-frequency, critical loops (like the main AI tick) are the heartbeat of the server and must never be blocked. Any intentional delays, staggering, or long-running operations should be offloaded to background goroutines.

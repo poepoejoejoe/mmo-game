@@ -43,7 +43,7 @@ func GetNaturalTileType(x, y int) TileType {
 
 	if noiseVal < -0.5 {
 		return TileTypeWater
-	} else if oreNoiseVal > 0.60 {
+	} else if oreNoiseVal > 0.7 {
 		return TileTypeIronRock
 	} else if noiseVal > 0.58 {
 		return TileTypeRock

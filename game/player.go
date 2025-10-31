@@ -389,6 +389,10 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 	gearKey := string(RedisKeyPlayerGear) + playerID
 
 	pipe := rdb.Pipeline()
+
+	firstSanctuary := Sanctuaries[0]
+	bindingCoords := strconv.Itoa(firstSanctuary.X) + "," + strconv.Itoa(firstSanctuary.Y)
+
 	// Set the player's position, cooldown, and entityType
 	pipe.HSet(ctx, playerID,
 		"x", spawnX,
@@ -408,6 +412,7 @@ func InitializePlayer(playerID string) *models.InitialStateMessage {
 		"runes", `["chop_trees", "mine_ore"]`,
 		"activeRune", "",
 		"knownRecipes", `{"wooden_wall":true, "fire":true, "cooked_rat_meat":true, "crude_axe":true}`,
+		"binding", bindingCoords,
 	)
 	// --- Player position in Geo set ---
 	lon, lat := NormalizeCoords(spawnX, spawnY)
