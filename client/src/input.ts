@@ -479,19 +479,21 @@ export function initializeInput() {
         }
     });
 
-    craftingView.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        const button = target.closest('button');
-        if (!button || button.disabled || !canPerformAction) return;
+    if (craftingView) {
+        craftingView.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            const button = target.closest('button');
+            if (!button || button.disabled || !canPerformAction) return;
 
-        // The item to craft is now stored in the button's ID
-        const itemToCraft = button.dataset.item;
-        
-        if (itemToCraft) {
-            startActionCooldown(ACTION_COOLDOWN);
-            network.send({ type: 'craft', payload: { item: itemToCraft } });
-        }
-    });
+            // The item to craft is now stored in the button's ID
+            const itemToCraft = button.dataset.item;
+            
+            if (itemToCraft) {
+                startActionCooldown(ACTION_COOLDOWN);
+                network.send({ type: 'craft', payload: { item: itemToCraft } });
+            }
+        });
+    }
 }
 
 

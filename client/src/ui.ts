@@ -42,7 +42,7 @@ let gameCanvas: HTMLElement;
 // Bottom Bar
 let playerCoordsEl: HTMLElement;
 export let inventoryView: HTMLElement | null;
-export let craftingView: HTMLElement;
+export let craftingView: HTMLElement | null;
 export let gearView: HTMLElement;
 export let questView: HTMLElement;
 export let experienceView: HTMLElement;
@@ -85,7 +85,7 @@ export function initializeUI() {
     // Bottom Bar
     playerCoordsEl = document.getElementById('player-coords')!;
     inventoryView = document.getElementById('inventory-view'); // May be null until React renders
-    craftingView = document.getElementById('crafting-view')!;
+    craftingView = document.getElementById('crafting-view'); // May be null until React renders
     gearView = document.getElementById('gear-view')!;
     questView = document.getElementById('quest-view')!;
     experienceView = document.getElementById('experience-view')!;
@@ -473,7 +473,10 @@ function updateButtonAndPanelSelection() {
     if (inventoryView) {
         inventoryView.style.display = openPanels.has('inventory') ? 'flex' : 'none';
     }
-    craftingView.style.display = openPanels.has('crafting') ? 'flex' : 'none';
+    // craftingView is now handled by React - skip it
+    if (craftingView) {
+        craftingView.style.display = openPanels.has('crafting') ? 'flex' : 'none';
+    }
     gearView.style.display = openPanels.has('gear') ? 'flex' : 'none';
     questView.style.display = openPanels.has('quest') ? 'flex' : 'none';
     experienceView.style.display = openPanels.has('experience') ? 'flex' : 'none';
@@ -701,6 +704,10 @@ function hideGearTooltip() {
 }
 
 export function updateCraftingUI(): void {
+    // This function is now obsolete - crafting is handled by React
+    // Keeping it for compatibility but it does nothing if craftingView is null
+    if (!craftingView) return;
+    
     const s = state.getState();
     const inventory = s.inventory;
     const knownRecipes = s.knownRecipes || {};

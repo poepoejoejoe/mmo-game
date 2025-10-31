@@ -12,6 +12,7 @@ import EchoButton from './components/EchoButton';
 import TeleportButton from './components/TeleportButton';
 import ActionBar from './components/ActionBar';
 import InventoryPanel from './components/InventoryPanel';
+import CraftingPanel from './components/CraftingPanel';
 
 function App() {
   const [coords, setCoords] = useState({ x: 0, y: 0 });
@@ -21,6 +22,7 @@ function App() {
   const [echo, setEcho] = useState({ isEcho: false, unlocked: false });
   const [openPanels, setOpenPanels] = useState(new Set<string>());
   const [inventory, setInventory] = useState<Record<string, InventoryItem>>({});
+  const [knownRecipes, setKnownRecipes] = useState<Record<string, boolean>>({});
   const isInitialized = useRef(false);
 
   const handleTogglePanel = (panelId: string) => {
@@ -34,8 +36,8 @@ function App() {
       }
       return newPanels;
     });
-    // Only call toggleInfoPanel for non-inventory panels for now
-    if (panelId !== 'inventory') {
+    // Only call toggleInfoPanel for non-React panels
+    if (panelId !== 'inventory' && panelId !== 'crafting') {
       toggleInfoPanel(panelId as any);
     }
   };
@@ -58,6 +60,7 @@ function App() {
       setResonance({ current: s.resonance || 0, max: s.maxResonance || 1 });
       setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
       setInventory(s.inventory);
+      setKnownRecipes(s.knownRecipes || {});
     }
 
     const unsubscribe = addStateUpdateListener(() => {
@@ -87,6 +90,7 @@ function App() {
         });
         setEcho({ isEcho: me.isEcho || false, unlocked: s.echoUnlocked || false });
         setInventory(s.inventory);
+        setKnownRecipes(s.knownRecipes || {});
       }
     });
 
@@ -148,7 +152,12 @@ function App() {
                       onClose={() => handleTogglePanel('inventory')}
                       inventory={inventory}
                     />
-                    <div id="crafting-view" className="info-panel" style={{display: 'none'}}></div>
+                    <CraftingPanel
+                      isOpen={openPanels.has('crafting')}
+                      onClose={() => handleTogglePanel('crafting')}
+                      inventory={inventory}
+                      knownRecipes={knownRecipes}
+                    />
                     <div id="gear-view" className="info-panel" style={{display: 'none'}}></div>
                     <div id="quest-view" className="info-panel" style={{display: 'none'}}></div>
                     <div id="experience-view" className="info-panel" style={{display: 'none'}}></div>
