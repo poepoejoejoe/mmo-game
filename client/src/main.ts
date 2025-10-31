@@ -4,9 +4,13 @@ import { initializeInput } from './input';
 import { initializeRenderer, startRenderLoop } from './renderer';
 import { initializeUI, updatePlayerCoords } from './ui';
 import { getMyEntity } from './state';
+import { initializeDrawingRegistry } from './drawing/registryInit';
 
 export function initialize() {
     console.log("Game client starting...");
+    
+    // Initialize drawing registry first (before renderer needs it)
+    initializeDrawingRegistry();
     
     initializeUI();
     initializeRenderer(); // Set up the canvas
