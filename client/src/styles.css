@@ -851,6 +851,53 @@ body {
 }
 
 
+/* --- Help Tooltip Styles --- */
+.help-tooltip {
+    max-width: 350px;
+    min-width: 250px;
+    pointer-events: auto; /* Re-enable pointer events for the tooltip itself */
+}
+
+.help-tooltip-content {
+    background-color: #2a2a2a;
+    border: 2px solid #4a627a;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.help-tooltip-header {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #4a627a;
+}
+
+.help-tooltip-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.help-tooltip-body {
+    color: #ddd;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.help-tooltip-item {
+    margin: 8px 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+.help-tooltip-item b {
+    color: #fff;
+    font-weight: bold;
+    margin-right: 4px;
+}
+
 /* --- Modal Styles --- */
 .modal {
     display: none;

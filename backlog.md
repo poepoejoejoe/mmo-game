@@ -51,6 +51,7 @@ remember the state the inventory was in. So if we open the bank and our inventor
 
 there is a bug where after i die, i cannot move around (i think its a client state issue?)
 
+moving needs to cancel the teleport to sanctuary. maybe need to flush out the concept of is casting state
 
 
 - echo well

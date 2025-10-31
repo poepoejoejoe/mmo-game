@@ -21,6 +21,10 @@ import RunesPanel from './components/RunesPanel';
 import Dialog from './components/Dialog';
 import Chat from './components/Chat';
 import BankPanel from './components/BankPanel';
+import Registration from './components/Registration';
+import ChannelingBar from './components/ChannelingBar';
+import HelpTooltip from './components/HelpModal';
+import CraftSuccessAnimation from './components/CraftSuccessAnimation';
 import { DialogOption } from './types';
 
 function App() {
@@ -185,17 +189,14 @@ function App() {
         {/* Top Info bar */}
         <div className="top-info">
             <img src="assets/game-title.png" id="game-title-logo" alt="Game Title" />
-            {/* Registration will be shown here if needed */}
-            <div id="welcome-message"></div>
+            <Registration playerName={playerName} />
             <button className="help-button" id="help-button">?</button>
         </div>
 
         {/* Game World */}
         <div className="main-content">
-            <div id="effect-container"></div>
-            <div id="channeling-container">
-                <div id="channeling-bar"></div>
-            </div>
+            <CraftSuccessAnimation />
+            <ChannelingBar />
             <canvas id="game-canvas"></canvas>
         </div>
         
@@ -219,11 +220,6 @@ function App() {
                     <Chat isOpen={isChatOpen} onToggle={toggleChat} />
                 </div>
             )}
-
-            <div id="registration-container" style={{display: 'none', marginTop: '10px'}}>
-                <input type="text" id="name-input" placeholder="Enter name to save progress" maxLength={15} />
-                <button id="register-button">Save</button>
-            </div>
 
             <div id="player-hud-bottom">
                 <PlayerNameDisplay name={playerName} />
@@ -292,20 +288,8 @@ function App() {
         onClose={hideDialog}
       />
 
-      {/* Help Modal */}
-      <div id="help-modal" className="modal">
-          <div className="modal-content">
-              <div className="modal-header">
-                  <h2>Controls</h2>
-                  <span className="close-button" id="help-modal-close">&times;</span>
-              </div>
-              <p><b>Arrow Keys / WASD:</b>Move 1 tile</p>
-              <p><b>Right Click:</b>Click to move (if valid path exists)</p>
-              <p><b>Left-Click (and hold) Adjacent Resource:</b> Gather</p>
-              <p><b>B:</b> Build Wall mode (left click to place wall)</p>
-              <p><b>F:</b> Build Fire mode (left click to place fire)</p>
-          </div>
-      </div>
+      {/* Help Tooltip */}
+      <HelpTooltip />
 
       <div id="bank-context-menu" className="context-menu" style={{display: 'none'}}></div>
       <div id="quantity-modal" className="modal">

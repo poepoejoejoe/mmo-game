@@ -317,60 +317,6 @@ function handleRightClick(e: MouseEvent) {
         sendMoveCommand(moveDx, moveDy, false);
     }
 
-    // --- Drag and Drop Logic ---
-    const bankView = document.getElementById('bank-view')!;
-
-    const handleDragStart = (e: DragEvent, sourcePanel: 'inventory' | 'bank') => {
-        const target = e.target as HTMLElement;
-        const slotEl = target.closest('.inventory-slot') as HTMLElement;
-        if (slotEl && slotEl.dataset.slot) {
-            const s = state.getState();
-            const item = sourcePanel === 'inventory' ? s.inventory[slotEl.dataset.slot] : s.bank[slotEl.dataset.slot];
-            if (item) {
-                e.dataTransfer!.setData('application/json', JSON.stringify({
-                    sourcePanel,
-                    slot: slotEl.dataset.slot,
-                    quantity: item.quantity
-                }));
-                e.dataTransfer!.effectAllowed = 'move';
-            } else {
-                e.preventDefault();
-            }
-        } else {
-             e.preventDefault();
-        }
-    };
-
-    const handleDragOver = (e: DragEvent) => {
-        e.preventDefault();
-    };
-
-    const handleDrop = (e: DragEvent, targetPanel: 'inventory' | 'bank') => {
-        e.preventDefault();
-        const data = e.dataTransfer!.getData('application/json');
-        if (!data) return;
-
-        try {
-            const { sourcePanel, slot, quantity } = JSON.parse(data);
-            if (sourcePanel === 'inventory' && targetPanel === 'bank') {
-                network.sendDepositItem(slot, quantity);
-            } else if (sourcePanel === 'bank' && targetPanel === 'inventory') {
-                network.sendWithdrawItem(slot, quantity);
-            }
-        } catch (err) {
-            console.error("Error parsing drag data", err);
-        }
-    };
-
-    if (inventoryView) {
-        inventoryView.addEventListener('dragstart', (e) => handleDragStart(e, 'inventory'));
-        inventoryView.addEventListener('dragover', handleDragOver);
-        inventoryView.addEventListener('drop', (e) => handleDrop(e, 'inventory'));
-    }
-    bankView.addEventListener('dragstart', (e) => handleDragStart(e, 'bank'));
-    bankView.addEventListener('dragover', handleDragOver);
-    bankView.addEventListener('drop', (e) => handleDrop(e, 'bank'));
-
     // 2. Send find-path request to server
     network.send({ type: 'find-path', payload: { x: coords.x, y: coords.y } });
 }

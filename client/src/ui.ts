@@ -28,13 +28,7 @@ function createIconElement(itemDef: any): HTMLElement {
     return iconEl;
 }
 
-// Top Bar
-let registrationContainer: HTMLElement;
-let nameInput: HTMLInputElement;
-let registerButton: HTMLButtonElement;
-let welcomeMessageEl: HTMLElement;
-let helpButton: HTMLButtonElement;
-let helpModalClose: HTMLElement;
+// Help modal is now handled by React - no longer needed here
 
 // Main Content
 let gameCanvas: HTMLElement;
@@ -65,12 +59,8 @@ const openPanels = new Set<'inventory' | 'crafting' | 'gear' | 'quest' | 'experi
 
 export function initializeUI() {
     // Top Bar
-    registrationContainer = document.getElementById('registration-container')!;
-    nameInput = document.getElementById('name-input') as HTMLInputElement;
-    registerButton = document.getElementById('register-button') as HTMLButtonElement;
-    welcomeMessageEl = document.getElementById('welcome-message')!;
-    helpButton = document.getElementById('help-button') as HTMLButtonElement;
-    helpModalClose = document.getElementById('help-modal-close') as HTMLElement;
+    // Registration is now handled by React - no initialization needed
+    // Help button is now handled by React HelpModal component - no initialization needed
 
     // Main Content
     gameCanvas = document.getElementById('game-canvas')!;
@@ -106,20 +96,9 @@ export function initializeUI() {
     });
     document.getElementById('main-action-bar')?.appendChild(bankButton);
 
+    // Registration button is now handled by React Registration component
+    // Help button is now handled by React HelpModal component
 
-    registerButton.addEventListener('click', () => {
-        const name = nameInput.value.trim();
-        if (name) {
-            send({
-                type: 'register',
-                payload: { name: name }
-            });
-            registrationContainer.style.display = 'none';
-        }
-    });
-
-    helpButton.addEventListener('click', () => toggleModal('help-modal', true));
-    helpModalClose.addEventListener('click', () => toggleModal('help-modal', false));
     // Dialog event listeners are now handled by React Dialog component
     // Chat event listeners are now handled by React Chat component
     
@@ -406,34 +385,20 @@ export function updateBankUI() {
 }
 
 export function showCraftSuccess(itemId: string) {
-    const itemDef = itemDefinitions[itemId] || itemDefinitions.default;
-    if (!itemDef || !itemDef.asset) return;
-
-    const container = document.getElementById('effect-container');
-    if (!container) return;
-
-    const icon = document.createElement('img');
-    icon.src = itemDef.asset;
-    icon.className = 'floating-icon';
-
-    if (!inventoryView) return;
-    const rect = inventoryView.getBoundingClientRect(); // Changed from inventoryButton
-    const containerRect = container.getBoundingClientRect();
-
-    icon.style.left = `${rect.left - containerRect.left + (rect.width / 2)}px`;
-    icon.style.top = `${rect.top - containerRect.top}px`;
-
-    container.appendChild(icon);
-
-    icon.addEventListener('animationend', () => {
-        icon.remove();
-    });
+    // This function is now obsolete - craft success animation is handled by React
+    // Keeping it for compatibility but redirecting to window.showCraftSuccess
+    const showCraftSuccessFn = (window as any).showCraftSuccess;
+    if (showCraftSuccessFn) {
+        showCraftSuccessFn(itemId);
+    }
 }
 
 export function promptForRegistration() {
-    if (!localStorage.getItem('secretKey')) {
-        registrationContainer.style.display = 'flex';
-        welcomeMessageEl.style.display = 'none';
+    // This function is now obsolete - registration is handled by React
+    // Keeping it for compatibility but redirecting to window.promptForRegistration
+    const promptForRegistrationFn = (window as any).promptForRegistration;
+    if (promptForRegistrationFn) {
+        promptForRegistrationFn();
     }
 }
 
@@ -505,16 +470,7 @@ function updateButtonAndPanelSelection() {
     }
 }
 
-function toggleModal(modalId: string, show: boolean) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        if (show) {
-            modal.classList.add('active');
-        } else {
-            modal.classList.remove('active');
-        }
-    }
-}
+// toggleModal is now obsolete - modals are handled by React components
 
 export function showDialog(dialogMsg: { npcName?: string, text: string, options: { text: string, action: string, context?: string }[] }, position: {x: number, y: number} | null) {
     // This function is now obsolete - dialog is handled by React
@@ -920,15 +876,9 @@ export function updatePlayerIdDisplay() {
     // This is now handled by updatePlayerNameDisplay
 }
 
-export function updatePlayerNameDisplay(name: string) {
-    if (name) {
-        welcomeMessageEl.textContent = `Welcome, ${name}!`;
-        // playerNameDisplayEl.textContent = name; This is now a React component
-        registrationContainer.style.display = 'none';
-        welcomeMessageEl.style.display = 'block';
-    } else {
-        welcomeMessageEl.style.display = 'none';
-    }
+export function updatePlayerNameDisplay(_name: string) {
+    // This function is now obsolete - registration/welcome message is handled by React
+    // Keeping it for compatibility but it does nothing (React handles it via props)
 }
 
 export function updatePlayerHealth() {
@@ -989,45 +939,22 @@ export function updatePlayerCoords(x: number, y: number) {
     playerCoordsEl.textContent = `(${x}, ${y})`;
 }
 
-let channelBarTimeout: number | null = null;
+// Channeling bar is now handled by React - no longer needed here
 
 export function showChannelingBar(duration: number) {
-	const container = document.getElementById('channeling-container');
-	const bar = document.getElementById('channeling-bar');
-	if (!container || !bar) return;
-
-	// Clear any existing timer
-	if (channelBarTimeout) {
-		clearTimeout(channelBarTimeout);
-		bar.style.transition = 'none';
-		bar.style.width = '0%';
+	// This function is now obsolete - channeling bar is handled by React
+	// Keeping it for compatibility but redirecting to window.showChannelingBar
+	const showChannelingBarFn = (window as any).showChannelingBar;
+	if (showChannelingBarFn) {
+		showChannelingBarFn(duration);
 	}
-	
-	container.style.display = 'block';
-
-	// We trigger the animation slightly after display to ensure the transition plays
-	setTimeout(() => {
-		bar.style.transition = `width ${duration}ms linear`;
-		bar.style.width = '100%';
-	}, 10);
-
-	// Hide the bar after the duration
-	channelBarTimeout = setTimeout(() => {
-		hideChannelingBar();
-	}, duration);
 }
 
 export function hideChannelingBar() {
-	const container = document.getElementById('channeling-container');
-	const bar = document.getElementById('channeling-bar');
-	if (!container || !bar) return;
-
-	if (channelBarTimeout) {
-		clearTimeout(channelBarTimeout);
-		channelBarTimeout = null;
+	// This function is now obsolete - channeling bar is handled by React
+	// Keeping it for compatibility but redirecting to window.hideChannelingBar
+	const hideChannelingBarFn = (window as any).hideChannelingBar;
+	if (hideChannelingBarFn) {
+		hideChannelingBarFn();
 	}
-
-	container.style.display = 'none';
-	bar.style.transition = 'none';
-	bar.style.width = '0%';
 }

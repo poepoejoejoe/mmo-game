@@ -26,11 +26,7 @@ import {
 } from './types';
 import * as state from './state';
 import { 
-    promptForRegistration, 
-    showCraftSuccess, 
     updateInventoryUI, 
-    showChannelingBar,
-    hideChannelingBar,
     openBankWindow,
     updateBankUI
 } from './ui';
@@ -89,7 +85,10 @@ function handleMessage(event: MessageEvent) {
                 // This is now handled by React state
             } else {
                 // If we logged in but don't have a name, show the registration prompt.
-                promptForRegistration();
+                const promptForRegistrationFn = (window as any).promptForRegistration;
+                if (promptForRegistrationFn) {
+                    promptForRegistrationFn();
+                }
             }
             onStateUpdate();
             break;
@@ -116,11 +115,17 @@ function handleMessage(event: MessageEvent) {
         }
         case 'teleport_channel_start': {
             const channelMsg = msg as any; // Quick type assertion
-            showChannelingBar(channelMsg.duration);
+            const showChannelingBarFn = (window as any).showChannelingBar;
+            if (showChannelingBarFn) {
+                showChannelingBarFn(channelMsg.duration);
+            }
             break;
         }
         case 'teleport_channel_end': {
-            hideChannelingBar();
+            const hideChannelingBarFn = (window as any).hideChannelingBar;
+            if (hideChannelingBarFn) {
+                hideChannelingBarFn();
+            }
             break;
         }
         case 'show_dialog': {
@@ -206,7 +211,10 @@ function handleMessage(event: MessageEvent) {
         }
         case 'craft_success': {
             const craftMsg = msg as CraftSuccessMessage;
-            showCraftSuccess(craftMsg.itemId);
+            const showCraftSuccessFn = (window as any).showCraftSuccess;
+            if (showCraftSuccessFn) {
+                showCraftSuccessFn(craftMsg.itemId);
+            }
             break;
         }
         case 'player_appearance_changed': {
