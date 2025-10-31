@@ -25,11 +25,6 @@ import {
     BankUpdateMessage
 } from './types';
 import * as state from './state';
-import { 
-    updateInventoryUI, 
-    openBankWindow,
-    updateBankUI
-} from './ui';
 import { showDamageIndicator } from './renderer';
 import { setPath } from './input';
 
@@ -79,7 +74,6 @@ function handleMessage(event: MessageEvent) {
                 initialState.activeRune || '',
                 initialState.knownRecipes || {},
             );
-            updateInventoryUI();
             const myEntity = state.getMyEntity();
             if (myEntity && myEntity.name) {
                 // This is now handled by React state
@@ -96,14 +90,12 @@ function handleMessage(event: MessageEvent) {
         case 'active_rune_update': {
             const runeMsg = msg as ActiveRuneUpdateMessage;
             state.setActiveRune(runeMsg.activeRune);
-            updateInventoryUI(); // This will trigger a runes UI update
             onStateUpdate();
             break;
         }
         case 'quest_update': {
             const questMsg = msg as QuestUpdateMessage;
             state.setQuests(questMsg.quests);
-            updateInventoryUI(); // This will trigger a quest UI update
             onStateUpdate();
             break;
         }
@@ -190,22 +182,18 @@ function handleMessage(event: MessageEvent) {
         case 'inventory_update': {
             const inventoryMsg = msg as InventoryUpdateMessage;
             state.setInventory(inventoryMsg.inventory);
-            updateInventoryUI();
             onStateUpdate();
             break;
         }
         case 'bank_update': {
             const bankMsg = msg as BankUpdateMessage;
             state.setBank(bankMsg.bank);
-            updateBankUI();
             onStateUpdate();
             break;
         }
         case 'gear_update': {
             const gearMsg = msg as GearUpdateMessage;
             state.setGear(gearMsg.gear);
-            // We need to update both UI sections as equipping/unequipping affects both.
-            updateInventoryUI(); 
             onStateUpdate();
             break;
         }
@@ -262,7 +250,6 @@ function handleMessage(event: MessageEvent) {
             if (statsMsg.echoUnlocked !== undefined) {
                 state.setEchoUnlocked(statsMsg.echoUnlocked);
             }
-            updateInventoryUI(); // This will trigger an experience UI update
             onStateUpdate();
             break;
         }
@@ -279,7 +266,6 @@ function handleMessage(event: MessageEvent) {
         case 'recipe_learned': {
             const recipeMsg = msg as RecipeLearnedMessage;
             state.learnRecipe(recipeMsg.recipeId);
-            updateInventoryUI(); // This will trigger a crafting UI update
             onStateUpdate();
             break;
         }
@@ -297,9 +283,14 @@ function handleMessage(event: MessageEvent) {
         case 'valid-path':
             setPath(msg.payload.directions);
             break;
-        case 'open_bank_window':
-            openBankWindow();
+        case 'open_bank_window': {
+            // Bank opening is now handled by React via state updates
+            const togglePanelFn = (window as any).togglePanel;
+            if (togglePanelFn) {
+                togglePanelFn('bank');
+            }
             break;
+        }
         case 'dead':
             // handlePlayerDeath(msg.payload.message); // This function is not defined in the original file
             break;
