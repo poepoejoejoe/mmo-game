@@ -44,6 +44,7 @@ function App() {
     position: null,
   });
   const isInitialized = useRef(false);
+  const inventoryStateBeforeBank = useRef<boolean | null>(null);
 
   const showDialog = useCallback((dialogMsg: { npcName?: string, text: string, options: DialogOption[] }, position: {x: number, y: number} | null) => {
     setDialog({
@@ -68,11 +69,41 @@ function App() {
     // This function now drives the state for both React and the legacy UI
     setOpenPanels(prevPanels => {
       const newPanels = new Set(prevPanels);
-      if (newPanels.has(panelId)) {
+      const wasOpen = newPanels.has(panelId);
+      
+      // When opening the bank, remember the inventory state BEFORE modifying panels
+      if (panelId === 'bank' && !wasOpen) {
+        const inventoryWasOpen = prevPanels.has('inventory');
+        inventoryStateBeforeBank.current = inventoryWasOpen;
+      }
+      
+      if (wasOpen) {
         newPanels.delete(panelId);
       } else {
         newPanels.add(panelId);
       }
+      
+      // When opening the bank, open inventory if it was closed
+      if (panelId === 'bank' && !wasOpen) {
+        if (inventoryStateBeforeBank.current === false) {
+          newPanels.add('inventory');
+        }
+      }
+      
+      // When closing the bank (manual close via toggle), restore inventory state
+      if (panelId === 'bank' && wasOpen) {
+        if (inventoryStateBeforeBank.current !== null) {
+          if (inventoryStateBeforeBank.current === false) {
+            // Inventory was closed, so close it now
+            newPanels.delete('inventory');
+          } else {
+            // Inventory was open, make sure it stays open
+            newPanels.add('inventory');
+          }
+          inventoryStateBeforeBank.current = null;
+        }
+      }
+      
       return newPanels;
     });
     // Only call toggleInfoPanel for non-React panels
@@ -83,12 +114,33 @@ function App() {
 
   const closeBankPanel = useCallback(() => {
     setOpenPanels(prevPanels => {
-      if (prevPanels.has('bank')) {
-        const newPanels = new Set(prevPanels);
-        newPanels.delete('bank');
-        return newPanels;
+      if (!prevPanels.has('bank')) {
+        return prevPanels;
       }
-      return prevPanels;
+      
+      const newPanels = new Set(prevPanels);
+      newPanels.delete('bank');
+      
+      // Restore inventory state to what it was before opening the bank
+      const savedState = inventoryStateBeforeBank.current;
+      if (savedState !== null && savedState !== undefined) {
+        if (savedState === false) {
+          // Inventory was closed before bank opened, so close it now
+          newPanels.delete('inventory');
+        } else {
+          // Inventory was open before bank opened, make sure it stays open
+          newPanels.add('inventory');
+        }
+        inventoryStateBeforeBank.current = null;
+      } else {
+        // Fallback: if ref is null (edge case), close inventory if it's currently open
+        // This handles cases where the ref might have been reset unexpectedly
+        if (prevPanels.has('inventory')) {
+          newPanels.delete('inventory');
+        }
+      }
+      
+      return newPanels;
     });
   }, []);
 
