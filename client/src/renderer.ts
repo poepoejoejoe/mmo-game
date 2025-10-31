@@ -1,11 +1,11 @@
 import * as state from './state';
 import { TILE_SIZE, BACKGROUND_TILE_SIZE } from './constants';
-// --- UPDATED ---
 import { getTileProperties, getEntityProperties, itemDefinitions } from './definitions';
 import { findTileGroups, findSanctuaryGroups } from './grouper';
 import { drawWaterGroup, crackImages, drawQuestIndicator, tracePerimeter, drawSmoothPath, ramerDouglasPeucker } from './drawing';
 import { SeededRandom } from './utils';
 import { EntityProperties, ItemProperties, TileProperties } from './types';
+import { CHAT, OPACITY } from './utils/drawingConstants';
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -18,7 +18,7 @@ interface DamageIndicator {
     life: number; // Time in ms until it disappears
 }
 const damageIndicators: DamageIndicator[] = [];
-const DAMAGE_INDICATOR_LIFETIME = 1000; // 1 second
+const DAMAGE_INDICATOR_LIFETIME = 1000; // 1 second - moved to constants but keeping here for now
 
 export const assetImages: { [key: string]: HTMLImageElement } = {};
 
@@ -381,7 +381,7 @@ function drawEntities(startX: number, startY: number, time: number) {
 
         if (onSanctuary) {
             // Ethereal State (on sanctuary): Slight transparency.
-            ctx.globalAlpha = 0.8;
+            ctx.globalAlpha = OPACITY.SANCTUARY_ENTITY;
         }
 
         // Draw the entity (player, item, etc.)
@@ -400,29 +400,26 @@ function drawEntities(startX: number, startY: number, time: number) {
 
         // --- NEW: Render Chat Message ---
         if (entity.lastChatMessage && entity.lastChatTimestamp) {
-            const CHAT_MESSAGE_DURATION = 5000; // 5 seconds
             const timeSinceChat = Date.now() - entity.lastChatTimestamp;
 
-            if (timeSinceChat < CHAT_MESSAGE_DURATION) {
-                const fadeAlpha = 1.0 - (timeSinceChat / CHAT_MESSAGE_DURATION);
+            if (timeSinceChat < CHAT.DURATION) {
+                const fadeAlpha = OPACITY.TEXT_FADE_MAX - (timeSinceChat / CHAT.DURATION) * (OPACITY.TEXT_FADE_MAX - OPACITY.TEXT_FADE_MIN);
                 
-                ctx.font = "12px 'Inter', sans-serif";
+                ctx.font = `${CHAT.FONT_SIZE}px ${CHAT.FONT_FAMILY}`;
                 ctx.textAlign = 'center';
                 ctx.fillStyle = `rgba(255, 255, 255, ${fadeAlpha})`;
 
                 // Simple word wrapping
-                const maxWidth = 150;
                 const words = entity.lastChatMessage.split(' ');
                 let line = '';
-                let yOffset = screenY - 10;
-                const lineHeight = 14;
+                let yOffset = screenY - CHAT.Y_OFFSET;
                 const lines = [];
 
                 for (let n = 0; n < words.length; n++) {
                     const testLine = line + words[n] + ' ';
                     const metrics = ctx.measureText(testLine);
                     const testWidth = metrics.width;
-                    if (testWidth > maxWidth && n > 0) {
+                    if (testWidth > CHAT.MAX_WIDTH && n > 0) {
                         lines.push(line);
                         line = words[n] + ' ';
                     } else {
@@ -434,7 +431,7 @@ function drawEntities(startX: number, startY: number, time: number) {
                 // Draw the text lines, starting from the bottom up
                 for (let i = lines.length - 1; i >= 0; i--) {
                     ctx.fillText(lines[i].trim(), screenX + TILE_SIZE / 2, yOffset);
-                    yOffset -= lineHeight;
+                    yOffset -= CHAT.LINE_HEIGHT;
                 }
             }
         }
