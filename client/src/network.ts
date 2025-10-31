@@ -25,6 +25,7 @@ import {
     BankUpdateMessage,
     ValidPathMessage,
     NotificationMessage,
+    TeleportChannelStartMessage,
 } from './types';
 import * as state from './state';
 import { showDamageIndicator } from './renderer';
@@ -107,11 +108,12 @@ function handleMessage(event: MessageEvent) {
             break;
         }
         case 'teleport_channel_start': {
-            const channelMsg = msg as any; // Quick type assertion
+            const channelMsg = msg as TeleportChannelStartMessage;
             callWindowFunction('showChannelingBar', channelMsg.duration);
             break;
         }
         case 'teleport_channel_end': {
+            // Teleport channel ended (either completed or canceled by movement)
             callWindowFunction('hideChannelingBar');
             break;
         }

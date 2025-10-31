@@ -11,42 +11,6 @@ import (
 
 const teleportChannelTime = 3 * time.Second
 
-func ProcessTeleport(playerID string, payload json.RawMessage) (*models.StateCorrectionMessage, *models.InventoryUpdateMessage) {
-	playerData, err := rdb.HGetAll(ctx, playerID).Result()
-	if err != nil {
-		return nil, nil
-	}
-
-	if _, ok := playerData["teleportingUntil"]; ok {
-		// Already teleporting, do nothing.
-		return nil, nil
-	}
-
-	binding, ok := playerData["binding"]
-	if !ok || binding == "" {
-		sendNotification(playerID, "You have no binding point set.")
-		return nil, nil
-	}
-
-	// --- Start Channeling ---
-	teleportCompleteAt := time.Now().Add(teleportChannelTime)
-	rdb.HSet(ctx, playerID, "teleportingUntil", teleportCompleteAt.UnixMilli())
-
-	channelStartMsg := map[string]interface{}{
-		"type":     string(ServerEventTeleportChannelStart),
-		"duration": teleportChannelTime.Milliseconds(),
-	}
-	msgJSON, _ := json.Marshal(channelStartMsg)
-	sendDirectMessage(playerID, msgJSON)
-
-	// Schedule the teleport to complete
-	time.AfterFunc(teleportChannelTime, func() {
-		completeTeleport(playerID, teleportCompleteAt)
-	})
-
-	return nil, nil
-}
-
 func completeTeleport(playerID string, expectedCompleteTime time.Time) {
 	playerData, err := rdb.HGetAll(ctx, playerID).Result()
 	if err != nil {

@@ -456,3 +456,87 @@ func getBankUpdateMessage(bankKey string) *models.BankUpdateMessage {
 		Bank: newBank,
 	}
 }
+
+// findItemInInventory searches for an item in raw inventory data and returns the slot key, item, and whether it was found.
+func findItemInInventory(inventoryDataRaw map[string]string, itemID ItemID) (string, models.Item, bool) {
+	for i := 0; i < InventorySize; i++ {
+		slotKey := "slot_" + strconv.Itoa(i)
+		if itemJSON, ok := inventoryDataRaw[slotKey]; ok && itemJSON != "" {
+			var item models.Item
+			if err := json.Unmarshal([]byte(itemJSON), &item); err == nil {
+				if item.ID == string(itemID) {
+					return slotKey, item, true
+				}
+			}
+		}
+	}
+	return "", models.Item{}, false
+}
+
+// scheduleFireExpiration schedules a fire to expire after its duration.
+func scheduleFireExpiration(x, y int) {
+	fireProps := TileDefs[TileTypeFire]
+	time.AfterFunc(time.Duration(fireProps.Duration)*time.Millisecond, func() {
+		expireFire(x, y)
+	})
+}
+
+// expireFire removes a fire tile and updates the world.
+func expireFire(x, y int) {
+	coordKey := strconv.Itoa(x) + "," + strconv.Itoa(y)
+	tileJSON, err := rdb.HGet(ctx, string(RedisKeyWorldZone0), coordKey).Result()
+	if err != nil {
+		return
+	}
+
+	var tile models.WorldTile
+	if err := json.Unmarshal([]byte(tileJSON), &tile); err != nil {
+		log.Printf("Failed to unmarshal tile at %s: %v", coordKey, err)
+		return
+	}
+
+	if TileType(tile.Type) == TileTypeFire {
+		tile.Type = string(TileTypeGround)
+		newTileJSON, _ := json.Marshal(tile)
+		rdb.HSet(ctx, string(RedisKeyWorldZone0), coordKey, string(newTileJSON))
+
+		// Remove the fire from the resource positions set
+		member := string(TileTypeFire) + ":" + coordKey
+		rdb.ZRem(ctx, string(RedisKeyResourcePositions), member)
+
+		worldUpdate := models.WorldUpdateMessage{
+			Type: string(ServerEventWorldUpdate),
+			X:    x,
+			Y:    y,
+			Tile: tile,
+		}
+		PublishUpdate(worldUpdate)
+	}
+}
+
+// convertPathToDirections converts a path of nodes to a list of direction strings.
+func convertPathToDirections(path []*Node) []string {
+	if len(path) < 2 {
+		return []string{}
+	}
+
+	directions := make([]string, 0, len(path)-1)
+	for i := 0; i < len(path)-1; i++ {
+		currentNode := path[i]
+		nextNode := path[i+1]
+
+		dx := nextNode.X - currentNode.X
+		dy := nextNode.Y - currentNode.Y
+
+		if dx == 1 && dy == 0 {
+			directions = append(directions, "right")
+		} else if dx == -1 && dy == 0 {
+			directions = append(directions, "left")
+		} else if dx == 0 && dy == 1 {
+			directions = append(directions, "down")
+		} else if dx == 0 && dy == -1 {
+			directions = append(directions, "up")
+		}
+	}
+	return directions
+}

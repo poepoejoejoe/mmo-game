@@ -314,3 +314,12 @@ export interface ValidPathMessage extends ServerMessage {
     type: 'valid-path';
     directions: string[];
 }
+
+export interface TeleportChannelStartMessage extends ServerMessage {
+    type: 'teleport_channel_start';
+    duration: number;
+}
+
+export interface TeleportChannelEndMessage extends ServerMessage {
+    type: 'teleport_channel_end';
+}

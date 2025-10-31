@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"log"
 	"mmo-game/models"
 	"strconv"
@@ -18,6 +19,21 @@ func ProcessMove(entityID string, direction MoveDirection) *models.StateCorrecti
 	if !canAct {
 		return nil
 	}
+
+	// --- CANCEL TELEPORT IF PLAYER MOVES ---
+	// If a player is teleporting and attempts to move, cancel the teleport
+	if strings.HasPrefix(entityID, "player:") {
+		if _, ok := entityData["teleportingUntil"]; ok {
+			// Cancel the teleport by removing the teleportingUntil field
+			rdb.HDel(ctx, entityID, "teleportingUntil")
+
+			// Notify the client that the teleport channel was canceled
+			channelEndMsg := map[string]interface{}{"type": string(ServerEventTeleportChannelEnd)}
+			msgJSON, _ := json.Marshal(channelEndMsg)
+			sendDirectMessage(entityID, msgJSON)
+		}
+	}
+	// --- END CANCEL TELEPORT ---
 
 	// Use new generic helper
 	currentX, currentY := GetEntityPosition(entityData)
