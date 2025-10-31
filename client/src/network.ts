@@ -24,10 +24,11 @@ import {
     RecipeLearnedMessage,
     BankUpdateMessage,
     ValidPathMessage,
-    InventoryItem
+    NotificationMessage,
 } from './types';
 import * as state from './state';
 import { showDamageIndicator } from './renderer';
+import { showErrorMessage } from './renderer/layers/errorMessages';
 import { setPath } from './input';
 import { callWindowFunction } from './api/windowApi';
 
@@ -255,6 +256,12 @@ function handleMessage(event: MessageEvent) {
         case 'recipe_learned': {
             const recipeMsg = msg as RecipeLearnedMessage;
             state.learnRecipe(recipeMsg.recipeId);
+            onStateUpdate();
+            break;
+        }
+        case 'notification': {
+            const notificationMsg = msg as NotificationMessage;
+            showErrorMessage(notificationMsg.message);
             onStateUpdate();
             break;
         }

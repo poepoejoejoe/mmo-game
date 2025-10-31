@@ -10,4 +10,5 @@ export { renderSanctuaryDust } from './sanctuaryDust';
 export { renderWorld } from './world';
 export { renderEntities } from './entities';
 export { renderDamageIndicators, showDamageIndicator, damageIndicators } from './damageIndicators';
+export { renderErrorMessages, showErrorMessage } from './errorMessages';
 

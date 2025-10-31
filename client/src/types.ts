@@ -259,6 +259,11 @@ export interface PlayerChatMessage extends ServerMessage {
     message: string;
 }
 
+export interface NotificationMessage extends ServerMessage {
+    type: 'notification';
+    message: string;
+}
+
 export interface SendChatMessage {
     type: 'send_chat';
     message: string;

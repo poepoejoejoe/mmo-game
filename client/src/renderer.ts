@@ -89,6 +89,8 @@ function registerRenderingLayers() {
         order: 5,
         render: renderDamageIndicators,
     });
+
+    // Error messages are now rendered via React component, not canvas
 }
 
 function render(time: number) {

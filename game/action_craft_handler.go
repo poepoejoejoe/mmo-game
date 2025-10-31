@@ -5,6 +5,7 @@ import (
 	"log"
 	"mmo-game/models"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -127,6 +128,10 @@ func (h *CraftActionHandler) Process(playerID string, payload json.RawMessage) *
 	finalInventory, err := AddItemToInventory(playerID, ItemID(craftData.Item), recipe.Yield)
 	if err != nil {
 		log.Printf("Redis error during crafting (adding item) for player %s: %v", playerID, err)
+		if strings.Contains(err.Error(), "inventory full") {
+			notification := CreateNotificationMessage("Your inventory is full.")
+			SendPrivately(playerID, notification)
+		}
 		return Failed()
 	}
 

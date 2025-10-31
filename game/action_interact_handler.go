@@ -5,6 +5,7 @@ import (
 	"log"
 	"mmo-game/models"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -91,6 +92,10 @@ func (h *InteractActionHandler) Process(playerID string, payload json.RawMessage
 				newInventory, err := AddItemToInventory(playerID, itemID, quantity)
 				if err != nil {
 					log.Printf("could not add item to inventory: %v", err)
+					if strings.Contains(err.Error(), "inventory full") {
+						notification := CreateNotificationMessage("Your inventory is full.")
+						SendPrivately(playerID, notification)
+					}
 					return Failed()
 				}
 
@@ -180,6 +185,9 @@ func (h *InteractActionHandler) Process(playerID string, payload json.RawMessage
 				AddExperience(playerID, props.GatherSkill, props.GatherXP)
 			}
 			CheckObjectives(playerID, models.ObjectiveGather, string(props.GatherResource))
+		} else if strings.Contains(err.Error(), "inventory full") {
+			notification := CreateNotificationMessage("Your inventory is full.")
+			SendPrivately(playerID, notification)
 		}
 	}
 

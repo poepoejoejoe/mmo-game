@@ -6,6 +6,7 @@ import (
 	"mmo-game/game/utils"
 	"mmo-game/models"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -84,6 +85,13 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 				newInventory, err := AddItemToInventory(playerID, itemID, quantity)
 				if err != nil {
 					log.Printf("could not add item to inventory: %v", err)
+					if strings.Contains(err.Error(), "inventory full") {
+						notification := models.NotificationMessage{
+							Type:    string(ServerEventNotification),
+							Message: "Your inventory is full.",
+						}
+						PublishPrivately(playerID, notification)
+					}
 					return nil, nil
 				}
 
@@ -168,6 +176,12 @@ func ProcessInteract(playerID string, payload json.RawMessage) (*models.StateCor
 			// --- NEW: Quest Completion Check for Gathering ---
 			CheckObjectives(playerID, models.ObjectiveGather, string(props.GatherResource))
 			// --- END NEW ---
+		} else if strings.Contains(err.Error(), "inventory full") {
+			notification := models.NotificationMessage{
+				Type:    string(ServerEventNotification),
+				Message: "Your inventory is full.",
+			}
+			PublishPrivately(playerID, notification)
 		}
 	}
 

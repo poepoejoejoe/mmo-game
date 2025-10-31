@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"mmo-game/models"
+	"strings"
 )
 
 func GetWizardDialog(playerID string) models.DialogMessage {
@@ -84,7 +85,12 @@ func HandleWizardDialogAction(playerID string, action string) *models.DialogMess
 		// Give reward
 		var newInventory map[string]models.Item
 		if turnInAction.RewardItem != "" {
-			newInventory, _ = AddItemToInventory(playerID, turnInAction.RewardItem, turnInAction.RewardQuantity)
+			var err error
+			newInventory, err = AddItemToInventory(playerID, turnInAction.RewardItem, turnInAction.RewardQuantity)
+			if err != nil && strings.Contains(err.Error(), "inventory full") {
+				notification := CreateNotificationMessage("Your inventory is full.")
+				SendPrivately(playerID, notification)
+			}
 		}
 
 		// Mark quest as completed

@@ -600,12 +600,14 @@ body {
 }
 
 .inventory-slot.equippable,
-.inventory-slot.edible {
+.inventory-slot.edible,
+.inventory-slot.unequippable {
     cursor: pointer;
 }
 
 .inventory-slot.equippable:hover,
-.inventory-slot.edible:hover {
+.inventory-slot.edible:hover,
+.inventory-slot.unequippable:hover {
     background-color: #555;
     border-color: #888;
 }

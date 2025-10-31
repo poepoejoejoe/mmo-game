@@ -164,3 +164,16 @@ export const CHAT = {
   Y_OFFSET: 10,
 } as const;
 
+// === Error Message Constants ===
+export const ERROR_MESSAGE = {
+  DURATION: 3000, // 3 seconds
+  FONT_SIZE: 14,
+  FONT_FAMILY: "'Inter', sans-serif",
+  COLOR_R: 231, // Red color RGB values
+  COLOR_G: 76,
+  COLOR_B: 60,
+  FADE_MIN: 0.3,
+  FADE_MAX: 1.0,
+  FLOAT_DISTANCE: 80, // Pixels to float up
+} as const;
+

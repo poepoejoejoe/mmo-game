@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"mmo-game/models"
+	"strings"
 	"time"
 )
 
@@ -52,6 +53,10 @@ func (h *WithdrawItemActionHandler) Process(playerID string, payload json.RawMes
 	_, _, err = addItemToPlayerInventory(pipe, inventoryKey, inventoryData, ItemID(item.ID), withdrawData.Quantity)
 	if err != nil {
 		log.Printf("Failed to add item to inventory for player %s: %v", playerID, err)
+		if strings.Contains(err.Error(), "inventory full") {
+			notification := CreateNotificationMessage("Your inventory is full.")
+			SendPrivately(playerID, notification)
+		}
 		return Failed()
 	}
 

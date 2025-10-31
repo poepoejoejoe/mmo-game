@@ -25,6 +25,7 @@ import Registration from './components/Registration';
 import ChannelingBar from './components/ChannelingBar';
 import HelpTooltip from './components/HelpModal';
 import CraftSuccessAnimation from './components/CraftSuccessAnimation';
+import ErrorMessages from './components/ErrorMessages';
 
 function App() {
   const gameState = useGameState();
@@ -228,6 +229,9 @@ function App() {
 
       {/* Help Tooltip */}
       <HelpTooltip />
+
+      {/* Error Messages */}
+      <ErrorMessages />
     </>
   );
 }
